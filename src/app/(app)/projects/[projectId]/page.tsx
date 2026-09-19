@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { eq, desc } from "drizzle-orm";
@@ -14,6 +15,18 @@ import { NewTaskForm } from "./new-task-form";
 import { Board } from "./board";
 import { ChatPanel } from "./chat-panel";
 import { FilterBar } from "./filter-bar";
+
+const PROJECT_TYPE_LABEL: Record<string, string> = {
+  course: "课程项目",
+  innovation: "大创项目",
+  competition: "竞赛项目",
+  research: "科研项目",
+};
+
+const PROJECT_STATUS_LABEL: Record<string, string> = {
+  active: "进行中",
+  archived: "已归档",
+};
 
 export default async function ProjectPage({
   params,
@@ -74,23 +87,61 @@ export default async function ProjectPage({
     .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
 
   return (
-    <main className="mx-auto max-w-5xl space-y-8 py-8">
+    <main className="mx-auto max-w-6xl space-y-8 py-8">
       <header>
-        <div className="flex items-start justify-between gap-3">
-          <h1 className="font-display text-2xl font-semibold text-ink">{project.name}</h1>
-          <a
-            href={`/projects/${projectId}/timeline`}
-            className="ac-btn-ghost whitespace-nowrap"
-          >
-            时间线
-          </a>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="ac-badge bg-primary-soft text-primary">
+                {PROJECT_TYPE_LABEL[project.projectType] ?? "项目"}
+              </span>
+              <span
+                className={`ac-badge ${
+                  project.status === "archived" ? "bg-low-soft text-low" : "bg-done/12 text-done"
+                }`}
+              >
+                {PROJECT_STATUS_LABEL[project.status] ?? project.status}
+              </span>
+            </div>
+            <h1 className="mt-2 truncate font-display text-3xl font-semibold text-ink">
+              {project.name}
+            </h1>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/projects/${projectId}/documents`} className="ac-btn-ghost whitespace-nowrap">
+              项目资料
+            </Link>
+            <Link href={`/projects/${projectId}/timeline`} className="ac-btn-ghost whitespace-nowrap">
+              时间线
+            </Link>
+          </div>
         </div>
         {project.description && (
           <p className="mt-1 text-sm text-ink-soft">{project.description}</p>
         )}
         <p className="mt-1 text-xs text-ink-faint">
-          {project.startDate ?? "?"} ~ {project.endDate ?? "?"} · {project.status}
+          {project.startDate ?? "未设置开始日期"} ~ {project.endDate ?? "未设置结束日期"}
         </p>
+        <nav className="mt-5 flex flex-wrap gap-1 border-b border-line" aria-label="项目导航">
+          <Link
+            href={`/projects/${projectId}`}
+            className="border-b-2 border-primary px-3 py-2 text-sm font-medium text-primary"
+          >
+            项目概览
+          </Link>
+          <Link
+            href={`/projects/${projectId}/documents`}
+            className="border-b-2 border-transparent px-3 py-2 text-sm text-ink-soft hover:border-line-strong hover:text-ink"
+          >
+            项目资料
+          </Link>
+          <Link
+            href={`/projects/${projectId}/timeline`}
+            className="border-b-2 border-transparent px-3 py-2 text-sm text-ink-soft hover:border-line-strong hover:text-ink"
+          >
+            时间线
+          </Link>
+        </nav>
       </header>
 
       <MilestoneSection

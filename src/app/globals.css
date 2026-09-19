@@ -68,7 +68,7 @@ body {
 /* 衬线标题工具类 */
 .font-display {
   font-family: var(--font-display);
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 
 @layer components {

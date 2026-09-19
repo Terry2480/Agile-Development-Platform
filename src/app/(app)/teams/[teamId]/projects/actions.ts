@@ -9,6 +9,7 @@ import { AppError, ForbiddenError } from "@/lib/errors";
 const schema = z.object({
   teamId: z.uuid(),
   name: z.string().trim().min(1, "请填写项目名称"),
+  projectType: z.enum(["course", "innovation", "competition", "research"]),
   description: z.string().trim().optional(),
   startDate: z.iso.date("日期格式不正确").optional(),
   endDate: z.iso.date("日期格式不正确").optional(),
@@ -35,6 +36,7 @@ export async function createProjectAction(
   try {
     await createProject(session.user.id, parsed.data.teamId, {
       name: parsed.data.name,
+      projectType: parsed.data.projectType,
       description: parsed.data.description,
       startDate: parsed.data.startDate,
       endDate: parsed.data.endDate,

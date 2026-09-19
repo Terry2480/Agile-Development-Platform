@@ -2,11 +2,13 @@ import { desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   milestones,
+  projectDocuments,
   projects,
   teamMembers,
   teams,
   tasks,
   type ProjectStatus,
+  type ProjectType,
 } from "@/db/schema";
 import { AppError, ForbiddenError } from "./errors";
 import { getTeamMembership, requireTeamRole } from "./team";
@@ -17,22 +19,40 @@ export async function createProject(
   input: {
     name: string;
     description?: string;
+    projectType?: ProjectType;
     startDate?: string;
     endDate?: string;
   },
 ) {
   await requireTeamRole(actorId, teamId, ["admin"]);
-  const [project] = await db
-    .insert(projects)
-    .values({
-      teamId,
-      name: input.name,
-      description: input.description,
-      startDate: input.startDate,
-      endDate: input.endDate,
-    })
-    .returning();
-  return project;
+  return db.transaction(async (tx) => {
+    const [project] = await tx
+      .insert(projects)
+      .values({
+        teamId,
+        name: input.name,
+        description: input.description,
+        projectType: input.projectType ?? "course",
+        startDate: input.startDate,
+        endDate: input.endDate,
+      })
+      .returning();
+
+    const documentTemplates = [
+      { title: "项目说明", kind: "custom" as const, content: "# 项目目标\n\n## 要解决的问题\n\n## 预期成果\n" },
+      { title: "会议纪要", kind: "meeting" as const, content: "# 会议纪要\n\n日期：\n参与成员：\n\n## 讨论内容\n\n## 决策与待办\n" },
+    ];
+    await tx.insert(projectDocuments).values(
+      documentTemplates.map((document) => ({
+        projectId: project.id,
+        ...document,
+        createdById: actorId,
+        updatedById: actorId,
+      })),
+    );
+
+    return project;
+  });
 }
 
 export async function listTeamProjects(actorId: string, teamId: string) {
@@ -148,6 +168,7 @@ export async function listMyProjects(actorId: string) {
     .select({
       id: projects.id,
       name: projects.name,
+      projectType: projects.projectType,
       status: projects.status,
       teamId: projects.teamId,
       teamName: teams.name,

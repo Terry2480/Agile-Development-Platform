@@ -52,10 +52,17 @@ export const teamMembers = pgTable(
 );
 
 export const projectStatusEnum = pgEnum("project_status", ["active", "archived"]);
+export const projectTypeEnum = pgEnum("project_type", [
+  "course",
+  "innovation",
+  "competition",
+  "research",
+]);
 export const milestoneStatusEnum = pgEnum("milestone_status", ["open", "done"]);
 export const taskStatusEnum = pgEnum("task_status", ["todo", "doing", "done"]);
 export const taskPriorityEnum = pgEnum("task_priority", ["low", "medium", "high"]);
 export type ProjectStatus = (typeof projectStatusEnum.enumValues)[number];
+export type ProjectType = (typeof projectTypeEnum.enumValues)[number];
 export type TaskStatus = (typeof taskStatusEnum.enumValues)[number];
 export type TaskPriority = (typeof taskPriorityEnum.enumValues)[number];
 
@@ -68,6 +75,7 @@ export const projects = pgTable(
       .references(() => teams.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     description: text("description"),
+    projectType: projectTypeEnum("project_type").notNull().default("course"),
     status: projectStatusEnum("status").notNull().default("active"),
     startDate: date("start_date"),
     endDate: date("end_date"),
@@ -127,6 +135,41 @@ export const tasks = pgTable(
     index("tasks_project_idx").on(t.projectId),
     index("tasks_assignee_idx").on(t.assigneeId),
     index("tasks_parent_idx").on(t.parentTaskId),
+  ],
+);
+
+export const documentKindEnum = pgEnum("document_kind", [
+  "custom",
+  "proposal",
+  "meeting",
+  "weekly",
+  "research",
+]);
+export type DocumentKind = (typeof documentKindEnum.enumValues)[number];
+
+// 项目资料是任务之外的第二条主线：开题、会议纪要、周报和研究记录都归属于项目。
+export const projectDocuments = pgTable(
+  "project_documents",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    kind: documentKindEnum("kind").notNull().default("custom"),
+    content: text("content").notNull().default(""),
+    createdById: uuid("created_by_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    updatedById: uuid("updated_by_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("project_documents_project_idx").on(t.projectId),
+    index("project_documents_updated_idx").on(t.updatedAt),
   ],
 );
 
