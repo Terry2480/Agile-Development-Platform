@@ -27,11 +27,15 @@ cp .env.example .env          # 填入 AUTH_SECRET（openssl rand -base64 32）�
 npm install
 npm run db:push               # 推送 schema 到开发库
 npm run db:push:test          # 推送 schema 到测试库
-npm run dev
+npm run dev -- -p 3001
 ```
 
 > `scripts/init-test-db.sql` 仅在 Postgres 数据卷**首次初始化**时执行。若改过 init 脚本或测试库缺失，需 `docker compose down -v` 重建数据卷再 `up`（会清空本地开发数据）。
 > 本机若用 colima 提供 Docker：先 `colima start`。
+
+Windows 原生 PostgreSQL 的安装、数据库创建、环境变量和常用故障排查见
+[`docs/windows-local-setup.md`](docs/windows-local-setup.md)。如果 Docker Desktop 因
+WSL 未启用而无法启动，可先使用原生 PostgreSQL，不影响前端和数据库开发。
 
 测试：`npm test`
 
