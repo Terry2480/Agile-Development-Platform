@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { createUser } from "@/lib/user";
-import { createTeam, joinTeam } from "@/lib/team";
+import { createTeam } from "@/lib/team";
 import { createProject } from "@/lib/project";
 import { createApiToken } from "@/lib/api-token";
 import { listProjectTasks } from "@/lib/task";
