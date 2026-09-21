@@ -165,8 +165,69 @@
     padding:5px 11px; font-size:13px; color:var(--ink-soft); font-weight:500;
   }
 
+  /* ---------- Opening Report ---------- */
+  .opening{ background:var(--surface); border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+  .opening-grid{ display:grid; grid-template-columns:1.55fr 1fr; gap:24px; align-items:stretch; }
+  .video-card{
+    display:flex; flex-direction:column;
+    background:var(--canvas); border:1px solid var(--line); border-radius:var(--radius-card);
+    overflow:hidden; box-shadow:var(--shadow-card);
+    transition:box-shadow .2s, transform .2s;
+  }
+  .video-card:hover{ box-shadow:var(--shadow-pop); transform:translateY(-3px); }
+  .video-frame{
+    position:relative; aspect-ratio:16/9; overflow:hidden;
+    background:linear-gradient(135deg, #1E3A60 0%, #294A78 48%, #BF6A34 135%);
+    display:grid; place-items:center;
+  }
+  .video-frame::after{
+    content:""; position:absolute; inset:0;
+    background:radial-gradient(circle at 78% 20%, rgba(255,255,255,.16), transparent 42%),
+               radial-gradient(circle at 16% 84%, rgba(255,255,255,.10), transparent 46%);
+  }
+  .video-play{
+    position:relative; z-index:1; width:72px; height:72px; border-radius:50%;
+    background:rgba(255,255,255,.95); color:var(--primary); display:grid; place-items:center;
+    box-shadow:var(--shadow-pop); transition:transform .18s, background .18s;
+  }
+  .video-card:hover .video-play{ transform:scale(1.08); background:#fff; }
+  .video-play svg{ margin-left:4px; }
+  .video-live{
+    position:absolute; z-index:1; top:16px; left:16px;
+    display:inline-flex; align-items:center; gap:8px;
+    background:rgba(26,25,19,.72); color:#fff; backdrop-filter:blur(4px);
+    border-radius:999px; padding:6px 14px; font-size:12px; font-weight:600;
+  }
+  .video-live .dot{ width:7px; height:7px; border-radius:50%; background:#FF6B5E; box-shadow:0 0 0 3px rgba(255,107,94,.28); }
+  .video-meta{ display:flex; align-items:center; justify-content:space-between; gap:16px; padding:20px 22px; }
+  .video-meta h3{ font-family:var(--font-display); font-size:19px; font-weight:600; }
+  .video-meta p{ margin-top:4px; font-size:13px; color:var(--ink-faint); }
+  .video-arrow{
+    flex:none; width:40px; height:40px; border-radius:10px;
+    background:var(--primary-soft); color:var(--primary); display:grid; place-items:center;
+    font-size:18px; transition:background .18s, color .18s;
+  }
+  .video-card:hover .video-arrow{ background:var(--primary); color:#fff; }
+  .doc-card{
+    display:flex; flex-direction:column; justify-content:center;
+    background:var(--canvas); border:1px solid var(--line); border-radius:var(--radius-card);
+    padding:28px; box-shadow:var(--shadow-card);
+  }
+  .doc-card .icon{
+    width:44px; height:44px; border-radius:10px; background:var(--accent-soft);
+    display:grid; place-items:center; color:var(--accent); margin-bottom:14px; font-size:20px;
+  }
+  .doc-card h3{ font-family:var(--font-display); font-size:20px; font-weight:600; margin-bottom:8px; }
+  .doc-card p{ font-size:14px; color:var(--ink-soft); }
+  .tag-mini{
+    display:inline-block; vertical-align:2px; margin-left:8px;
+    font-family:var(--font-sans); font-size:11px; font-weight:600; letter-spacing:0;
+    color:var(--primary); background:var(--primary-soft); border:1px solid var(--primary-ring);
+    border-radius:999px; padding:2px 9px;
+  }
+
   /* ---------- Reports ---------- */
-  .report-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:20px; }
+  .report-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
   .report{
     background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-card);
     box-shadow:var(--shadow-card); padding:28px 24px; position:relative; overflow:hidden;
@@ -218,7 +279,7 @@
   .foot .copy{ font-size:13px; color:var(--ink-faint); }
 
   @media (max-width:900px){
-    .hero-grid, .about-grid, .tech-groups, .week .wbody{ grid-template-columns:1fr; }
+    .hero-grid, .about-grid, .tech-groups, .opening-grid, .week .wbody{ grid-template-columns:1fr; }
     .feat-grid, .report-grid, .stats{ grid-template-columns:repeat(2,1fr); }
     .nav-links{ display:none; }
     .hero h1{ font-size:44px; }
@@ -238,6 +299,7 @@
       <a href="#about">项目简介</a>
       <a href="#features">核心功能</a>
       <a href="#tech">技术栈</a>
+      <a href="#opening">开题报告</a>
       <a href="#reports">汇报成果</a>
       <a href="#weekly">每周进度</a>
     </nav>
@@ -261,17 +323,17 @@
         <span class="badge">时间线甘特</span>
       </div>
       <div class="hero-cta">
-        <a class="btn btn-primary" href="#reports">观看演示视频</a>
+        <a class="btn btn-primary" href="https://meeting.tencent.com/crm/KE6dz9V736" target="_blank" rel="noopener">观看开题演示视频</a>
         <a class="btn btn-ghost" href="https://github.com/Terry2480/Agile-Development-Platform" target="_blank">查看源码</a>
       </div>
     </div>
     <div class="hero-media">
-      <div class="frame">
+      <a class="frame" href="https://meeting.tencent.com/crm/KE6dz9V736" target="_blank" rel="noopener" aria-label="播放开题报告演示视频">
         <div class="play">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
         </div>
-      </div>
-      <div class="cap"><span>演示视频</span><span>▶ 播放</span></div>
+      </a>
+      <div class="cap"><span>开题报告演示视频</span><span>▶ 播放</span></div>
     </div>
   </div>
 </section>
@@ -329,38 +391,65 @@
   </div>
 </section>
 
+<!-- Opening Report -->
+<section class="opening" id="opening">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">开题报告 · 独立汇报</span>
+      <h2>开题报告内容</h2>
+      <p>开题报告是一次独立的汇报，与后续的第一次、第二次、终期汇报区分开。</p>
+    </div>
+    <div class="opening-grid">
+      <a class="video-card" href="https://meeting.tencent.com/crm/KE6dz9V736" target="_blank" rel="noopener">
+        <div class="video-frame">
+          <span class="video-live"><span class="dot"></span>腾讯会议录制</span>
+          <div class="video-play">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          </div>
+        </div>
+        <div class="video-meta">
+          <div>
+            <h3>开题报告演示视频<span class="tag-mini">独立汇报</span></h3>
+            <p>腾讯会议 · 开题汇报完整录制</p>
+          </div>
+          <span class="video-arrow">↗</span>
+        </div>
+      </a>
+      <div class="doc-card">
+        <div class="icon">📄</div>
+        <h3>开题报告要点</h3>
+        <p>项目背景与痛点、技术选型、需求分析、里程碑规划，以及演示视频中展示的核心功能。</p>
+        <span class="status done" style="align-self:flex-start; margin-top:14px;">已完成</span>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- Reports -->
 <section id="reports">
   <div class="wrap">
     <div class="sec-head">
       <span class="eyebrow">汇报成果</span>
-      <h2>项目里程碑</h2>
-      <p>从开题到终期，四个阶段的汇报成果。</p>
+      <h2>阶段汇报进度</h2>
+      <p>开题报告为独立汇报（见上方），以下为开题后的第一次、第二次与终期三次汇报。</p>
     </div>
     <div class="report-grid">
       <div class="report done">
         <div class="idx">01</div>
-        <h3>开题报告</h3>
-        <span class="status done">已完成</span>
-        <div class="date">2026 · 开题阶段</div>
-        <a class="view" href="#" target="_blank">查看文档 →</a>
-      </div>
-      <div class="report done">
-        <div class="idx">02</div>
         <h3>第一次汇报</h3>
-        <span class="status done">已完成</span>
+        <span class="status done">进行中</span>
         <div class="date">2026 · 第一次汇报</div>
         <a class="view" href="#" target="_blank">查看材料 →</a>
       </div>
       <div class="report doing">
-        <div class="idx">03</div>
+        <div class="idx">02</div>
         <h3>第二次汇报</h3>
         <span class="status doing">进行中</span>
         <div class="date">2026 · 第二次汇报</div>
         <a class="view" href="#" target="_blank">查看材料 →</a>
       </div>
       <div class="report">
-        <div class="idx">04</div>
+        <div class="idx">03</div>
         <h3>终期汇报</h3>
         <span class="status todo">待开始</span>
         <div class="date">2026 · 终期</div>
