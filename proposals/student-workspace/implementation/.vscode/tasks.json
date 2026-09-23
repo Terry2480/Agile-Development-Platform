@@ -1,0 +1,59 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "npm: dev 3001",
+      "type": "shell",
+      "command": "npm run dev -- -p 3001",
+      "isBackground": true,
+      "options": {
+        "env": {
+          "NEXT_TELEMETRY_DISABLED": "1"
+        }
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "npm: build",
+      "type": "shell",
+      "command": "npm run build",
+      "group": "build",
+      "options": {
+        "env": {
+          "NEXT_TELEMETRY_DISABLED": "1"
+        }
+      },
+      "problemMatcher": ["$tsc"]
+    },
+    {
+      "label": "npm: lint",
+      "type": "shell",
+      "command": "npm run lint",
+      "problemMatcher": ["$eslint-stylish"]
+    },
+    {
+      "label": "npm: test",
+      "type": "shell",
+      "command": "npm test",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "npm: db:push",
+      "type": "shell",
+      "command": "npm run db:push",
+      "problemMatcher": []
+    },
+    {
+      "label": "npm: db:push:test",
+      "type": "shell",
+      "command": "npm run db:push:test",
+      "problemMatcher": []
+    }
+  ]
+}

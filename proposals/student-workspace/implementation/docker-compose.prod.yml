@@ -1,0 +1,58 @@
+# 生产全栈——app + db 同网络，一键成军。
+# 用法：cp .env.example .env（填齐密钥）→ docker compose -f docker-compose.prod.yml up -d --build
+# 密码经 .env 变量插值（POSTGRES_PASSWORD），单一来源、不落 compose 明文。
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: agilecampus
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?须在 .env 设 POSTGRES_PASSWORD}
+      POSTGRES_DB: agilecampus
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # 不向宿主暴露 5432：仅容器内网访问（生产收敛攻击面）
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agilecampus -d agilecampus"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # 一次性建表：用 builder 阶段镜像（含 drizzle-kit，runner 精简版无），
+  # 待 db 健康后跑 db:push，成功退出后 app 方起。
+  migrate:
+    build:
+      context: .
+      target: builder
+    env_file: .env
+    environment:
+      # 覆盖 .env 的 localhost：容器内经服务名 db 连粮草
+      DATABASE_URL: postgres://agilecampus:${POSTGRES_PASSWORD}@db:5432/agilecampus
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["npm", "run", "db:push"]
+    restart: "no"
+
+  app:
+    build:
+      context: .
+      target: runner
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://agilecampus:${POSTGRES_PASSWORD}@db:5432/agilecampus
+      # Auth.js v5 self-host 须信任反代/非 localhost 的 Host 头，否则登录报 UntrustedHost
+      AUTH_TRUST_HOST: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      # 宿主 3000 常被占用；默认避让至 3080，可经 .env 的 APP_PORT 覆盖
+      - "${APP_PORT:-3080}:3000"
+
+volumes:
+  pgdata:
