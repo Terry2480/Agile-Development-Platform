@@ -1,0 +1,15 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "bradlc.vscode-tailwindcss",
+    "esbenp.prettier-vscode",
+    "usernamehw.errorlens",
+    "eamodio.gitlens",
+    "github.vscode-pull-request-github",
+    "ms-azuretools.vscode-docker",
+    "redhat.vscode-yaml",
+    "humao.rest-client",
+    "mtxr.sqltools",
+    "mtxr.sqltools-driver-pg"
+  ]
+}
