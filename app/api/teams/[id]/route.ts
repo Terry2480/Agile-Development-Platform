@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { teams, teamMembers, users } from "@/db/schema";
-import { requireUser, parseBody, parseId, requireTeamAccess, handleApiError } from "@/lib/api";
+import { requireUser, parseBody, parseId, requireTeamAccess, handleApiError, displayName } from "@/lib/api";
 
 // 团队详情：GET / PUT / DELETE /api/teams/[id]
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -19,6 +19,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         email: users.email,
         gender: users.gender,
         role: teamMembers.role,
+        duty: teamMembers.duty,
+        online: sql<boolean>`exists (select 1 from sessions where sessions.user_id = ${users.id} and sessions.expires_at > now() and sessions.last_active_at > now() - interval '5 minutes')`,
         joinedAt: teamMembers.joinedAt,
       })
       .from(teamMembers)
@@ -26,7 +28,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       .where(eq(teamMembers.teamId, teamId))
       .orderBy(teamMembers.joinedAt);
 
-    return Response.json({ team, myRole: membership.role, members });
+    return Response.json({ team, myRole: membership.role, members: members.map((m) => ({ ...m, displayName: displayName(m) })) });
   } catch (error) {
     return handleApiError(error);
   }

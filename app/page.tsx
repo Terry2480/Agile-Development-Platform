@@ -15,7 +15,8 @@ import { ProjectSidebar } from "@/components/ws/ProjectSidebar";
 import { TopBar } from "@/components/ws/TopBar";
 import { TaskPanel, TodosView, NotificationsView, TaskDrawer, NewTaskModal } from "@/components/ws/TaskPanel";
 import { ChatPanel } from "@/components/ws/ChatPanel";
-import { TeamPanel } from "@/components/ws/TeamPanel";
+import { ManagementPanel } from "@/components/ws/ManagementPanel";
+import { ProjectActivitySidebar } from "@/components/ws/ProjectActivitySidebar";
 import { SpacePanel, NewSprintModal, InviteModal } from "@/components/ws/SpacePanel";
 import { NewTeamModal, NewProjectModal } from "@/components/ws/Modals";
 
@@ -185,6 +186,22 @@ export default function WorkspacePage() {
       await api("/api/teams", { method: "POST", json: { name, description: description ?? null } });
       await afterProjectMutation();
     },
+    async deleteWorkspaceItem(kind, id) {
+      await api(`/api/${kind === "project" ? "projects" : "teams"}/${id}`, { method: "DELETE" });
+      const removesSelection = kind === "project"
+        ? selectedIdRef.current === id
+        : projects.some((p) => p.id === selectedIdRef.current && p.teamId === id);
+      if (removesSelection) {
+        selectProject(null);
+        setDetail(null); setTasks([]); setChat([]); setActivities([]); setFiles([]);
+      }
+      // 删除已成功，立即移除本地列表；刷新失败不应让用户再次删除。
+      setProjects((items) => items.filter((p) => kind === "project" ? p.id !== id : p.teamId !== id));
+      if (kind === "team") setTeams((items) => items.filter((t) => t.id !== id));
+      await Promise.allSettled([
+        refreshProjects(), refreshTeams(), refreshOverview(), refreshMyTasks(), refreshNotifications(),
+      ]);
+    },
     async createProject(teamId, name, key, description) {
       const d = await api<{ project: { id: number } }>("/api/projects", {
         method: "POST", json: { teamId, name, key, description: description ?? null },
@@ -258,7 +275,8 @@ export default function WorkspacePage() {
     me, railView, focusSection, teams, projects, selectedId, detail, tasks, myTasks, chat,
     activities, files, notifications, unreadCount, overview, taskSearch, modal, drawerTaskId,
     selectProject, refreshProjects, refreshProjectData, refreshTasks, refreshChat,
-    refreshActivities, refreshFiles, refreshNotifications, refreshMyTasks, afterProjectMutation, afterTaskMutation,
+    refreshActivities, refreshFiles, refreshNotifications, refreshMyTasks, refreshDetail, refreshTeams, refreshOverview,
+    afterProjectMutation, afterTaskMutation,
   ]);
 
   /* ---------- 渲染 ---------- */
@@ -270,7 +288,7 @@ export default function WorkspacePage() {
     <WorkspaceContext.Provider value={store}>
       <div className="ws-app">
         <IconRail />
-        <ProjectSidebar />
+        {railView === "projects" && <ProjectSidebar />}
 
         <div className="ws-main">
           <TopBar />
@@ -279,10 +297,12 @@ export default function WorkspacePage() {
               {railView === "projects" && focusSection === "tasks" && <TaskPanel />}
               {railView === "projects" && focusSection === "chat" && <ChatPanel />}
               {railView === "projects" && focusSection === "space" && <SpacePanel />}
-              {railView === "projects" && focusSection === "team" && <TeamPanel key={selectedId} />}
+              {railView === "projectManagement" && <ManagementPanel kind="project" />}
+              {railView === "teamManagement" && <ManagementPanel key="teams" kind="team" />}
               {railView === "todos" && <TodosView />}
               {railView === "notifications" && <NotificationsView />}
             </div>
+            {railView === "projects" && <ProjectActivitySidebar />}
           </div>
           <div className="ws-statusbar">
             <span className="ws-dot" /> 已连接

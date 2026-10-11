@@ -1,18 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { api, type ProjectMember } from "@/lib/api-client";
 import { canManageDuties, DEFAULT_DUTIES, LEADER_DUTY, memberDuty } from "@/lib/team-duties";
 import { useWorkspace, Avatar, Icon, Modal } from "./shared";
 
+import { InviteModal } from "./SpacePanel";
+type TeamDetail = { team: { id: number; name: string; description: string | null }; myRole: string; members: ProjectMember[] };
 const ROLE_TEXT: Record<string, string> = { owner: "创建者", admin: "管理员", member: "成员" };
 
-export function TeamPanel() {
+export function TeamPanel({ teamId }: { teamId: number }) {
   const ws = useWorkspace();
   const [editing, setEditing] = useState<ProjectMember | null>(null);
-  if (!ws.selectedId) return <div className="ws-empty">选择项目查看所属团队</div>;
-  const detail = ws.detail;
-  if (!detail || detail.project.id !== ws.selectedId) return <div className="ws-empty">正在加载团队…</div>;
+  const [detail, setDetail] = useState<TeamDetail | null>(null);
+  const [error, setError] = useState("");
+  const [inviting, setInviting] = useState(false);
+  const refresh = useCallback(async () => {
+    const data = await api<TeamDetail>(`/api/teams/${teamId}`);
+    setDetail(data); setError("");
+  }, [teamId]);
+  useEffect(() => {
+    let active = true;
+    const load = () => api<TeamDetail>(`/api/teams/${teamId}`).then((d) => { if (active) { setDetail(d); setError(""); } }).catch((e: Error) => { if (active) setError(e.message); });
+    load(); const timer = setInterval(load, 20000);
+    return () => { active = false; clearInterval(timer); };
+  }, [teamId]);
+  if (!detail) return <div className="ws-empty">{error || "正在加载团队…"}{error && <button className="ws-btn" onClick={() => refresh().catch((e: Error) => setError(e.message))}>重试</button>}</div>;
   const canInvite = detail.myRole === "owner" || detail.myRole === "admin";
   const online = detail.members.filter((m) => m.online).length;
   const me = detail.members.find((m) => m.userId === ws.me.id);
@@ -23,7 +36,7 @@ export function TeamPanel() {
     <section className="ws-team">
       <div className="ws-panel-head">
         <h2>团队管理 <span className="ws-count-pill">{detail.members.length} 位成员</span></h2>
-        {canInvite && <button className="ws-btn primary" onClick={() => ws.openModal({ type: "invite" })}><Icon name="plus" size={14} /> 邀请成员</button>}
+        {canInvite && <button className="ws-btn primary" onClick={() => setInviting(true)}><Icon name="plus" size={14} /> 邀请成员</button>}
       </div>
       <div className="ws-team-summary">
         <Icon name="users" size={28} />
@@ -49,12 +62,13 @@ export function TeamPanel() {
           </article>
         ))}
       </div>
-      {editing && <DutyModal member={editing} choices={choices} teamId={detail.team.id} onClose={() => setEditing(null)} />}
+      {editing && <DutyModal member={editing} choices={choices} teamId={detail.team.id} onSaved={refresh} onClose={() => setEditing(null)} />}
+      {inviting && <InviteModal teamId={teamId} onInvited={refresh} onClose={() => setInviting(false)} />}
     </section>
   );
 }
 
-function DutyModal({ member, choices, teamId, onClose }: { member: ProjectMember; choices: string[]; teamId: number; onClose(): void }) {
+function DutyModal({ member, choices, teamId, onClose, onSaved }: { member: ProjectMember; choices: string[]; teamId: number; onClose(): void; onSaved(): Promise<void> }) {
   const ws = useWorkspace();
   const [selection, setSelection] = useState(memberDuty(member) ? `duty:${memberDuty(member)}` : "");
   const [custom, setCustom] = useState("");
@@ -69,6 +83,7 @@ function DutyModal({ member, choices, teamId, onClose }: { member: ProjectMember
     try {
       await api(`/api/teams/${teamId}/members/${member.userId}/duty`, { method: "PUT", json: { duty: duty || null } });
       setSaved(true);
+      await onSaved();
       await ws.refreshProjectData();
       onClose();
     } catch (e) {

@@ -1,8 +1,8 @@
 "use client";
 
-// 项目空间栏：本轮进度（Sprint）、项目日志、项目成员、项目文件
+// 项目概览：项目文件；进度与日志在右侧栏显示
 import { useRef, useState } from "react";
-import { fmtSize, daysUntil } from "@/lib/api-client";
+import { api, fmtSize } from "@/lib/api-client";
 import { useWorkspace, Icon, Modal } from "./shared";
 
 
@@ -20,80 +20,8 @@ export function SpacePanel() {
     );
   }
 
-  const detail = ws.detail;
-  const sprint = detail?.sprints.find((s) => s.status === "active") ?? null;
-  // 本轮进度：优先统计当前活跃迭代内的任务，否则统计整个项目
-  const scoped = sprint ? ws.tasks.filter((t) => t.sprintId === sprint.id) : ws.tasks;
-  const total = scoped.length;
-  const done = scoped.filter((t) => t.status === "done").length;
-  const doingCount = scoped.filter((t) => t.status === "doing").length;
-  const todoCount = scoped.filter((t) => t.status === "todo").length;
-  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-
   return (
     <aside className="ws-space">
-      {/* 本轮进度（迭代详情卡片） */}
-      <section className="ws-space-section">
-        <div className="ws-space-title">
-          本轮进度
-          {sprint && (detail?.myRole === "owner" || detail?.myRole === "admin") && sprint.status === "active" && (
-            <button className="ws-icon-btn" title="完成当前迭代" onClick={() => ws.completeSprint(sprint.id)}>✓</button>
-          )}
-        </div>
-        {sprint ? (
-          <>
-            <div className="ws-sprint-head">
-              <span className="ws-sprint-name-lg">{sprint.name}</span>
-              {sprint.endsOn && (
-                <span className="ws-sprint-countdown">
-                  {daysUntil(sprint.endsOn) >= 0 ? `距交付还有 ${daysUntil(sprint.endsOn)} 天` : "已逾期交付"}
-                </span>
-              )}
-            </div>
-            {(sprint.startsOn || sprint.endsOn) && (
-              <div className="ws-sprint-range">
-                {[sprint.startsOn, sprint.endsOn].filter(Boolean).map(d => d!.slice(5).replace("-", ".")).join(" – ")}
-              </div>
-            )}
-            <div className="ws-progress"><i style={{ width: `${pct}%` }} /></div>
-            <div className="ws-sprint-meta">
-              <span><b>{done}</b> / {total} 已完成</span>
-              <span><b>{pct}%</b></span>
-            </div>
-            <div className="ws-stat-grid">
-              <div className="ws-stat-cell"><b>{todoCount}</b><span>待开始</span></div>
-              <div className="ws-stat-cell"><b>{doingCount}</b><span>进行中</span></div>
-              <div className="ws-stat-cell"><b>{done}</b><span>已完成</span></div>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="ws-sprint-head">
-              <span className="ws-sprint-name-lg">未开启迭代</span>
-            </div>
-            <div className="ws-progress"><i style={{ width: "0%" }} /></div>
-            <div className="ws-sprint-meta"><span>{total} 个任务未规划迭代</span></div>
-            <button className="ws-btn primary" style={{ marginTop: 12, padding: "7px 12px", fontSize: 12, width: "100%" }} onClick={() => ws.openModal({ type: "newSprint" })}>
-              ＋ 创建迭代
-            </button>
-          </>
-        )}
-      </section>
-
-      {/* 项目日志 */}
-      <section className="ws-space-section">
-        <div className="ws-space-title">项目日志</div>
-        {ws.activities.length === 0 && <div className="ws-empty" style={{ padding: "16px 12px" }}>暂无动态</div>}
-        {ws.activities.slice(0, 12).map((a) => (
-          <div key={a.id} className="ws-activity">
-            <div className="act-detail">{a.detail}</div>
-            <div className="act-time">
-              {new Date(a.createdAt).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-            </div>
-          </div>
-        ))}
-      </section>
-
       {/* 项目文件库 */}
       <section className="ws-space-section">
         <div className="ws-space-title">
@@ -195,7 +123,7 @@ export function NewSprintModal({ onClose }: { onClose: () => void }) {
 }
 
 /* ---------- 邀请成员弹窗 ---------- */
-export function InviteModal({ onClose }: { onClose: () => void }) {
+export function InviteModal({ onClose, teamId, onInvited }: { onClose: () => void; teamId?: number; onInvited?: () => Promise<void> }) {
   const ws = useWorkspace();
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
@@ -205,7 +133,10 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
     if (!email.trim()) return setError("请填写对方邮箱");
     setBusy(true);
     try {
-      await ws.inviteMember(email.trim());
+      if (teamId !== undefined) {
+        await api(`/api/teams/${teamId}/members`, { method: "POST", json: { email: email.trim() } });
+        await onInvited?.(); await ws.refreshProjects();
+      } else await ws.inviteMember(email.trim());
       onClose();
     } catch (e) {
       setError((e as Error).message);

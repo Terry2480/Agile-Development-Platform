@@ -9,6 +9,9 @@ import type {
 
 /* ---------- 图标（feather 风格线条图标，stroke 继承 currentColor） ---------- */
 const ICON_PATHS: Record<string, string> = {
+  chevronRight: "M9 5l7 7-7 7",
+  chevronDown: "M5 9l7 7 7-7",
+  collapse: "M8 3h11a2 2 0 012 2v11M5 7h10a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V9a2 2 0 012-2zM7 14h6",
   grid: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z",
   bell: "M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0",
   check: "M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11",
@@ -74,8 +77,8 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
 }
 
 /* ---------- 工作空间状态（page.tsx 提供实现） ---------- */
-export type RailView = "projects" | "todos" | "notifications";
-export type FocusSection = "tasks" | "chat" | "space" | "team";
+export type RailView = "projects" | "todos" | "notifications" | "projectManagement" | "teamManagement";
+export type FocusSection = "tasks" | "chat" | "space";
 export type ModalState =
   | { type: "newTeam" }
   | { type: "newProject" }
@@ -120,6 +123,7 @@ export interface WorkspaceStore {
   refreshNotifications(): Promise<void>;
   refreshMyTasks(): Promise<void>;
   createTeam(name: string, description?: string): Promise<void>;
+  deleteWorkspaceItem(kind: "project" | "team", id: number): Promise<void>;
   createProject(teamId: number, name: string, key: string, description?: string): Promise<void>;
   createTask(input: Record<string, unknown>): Promise<void>;
   updateTask(id: number, patch: Record<string, unknown>): Promise<void>;

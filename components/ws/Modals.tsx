@@ -45,7 +45,8 @@ export function NewTeamModal({ onClose }: { onClose: () => void }) {
 
 export function NewProjectModal({ onClose }: { onClose: () => void }) {
   const ws = useWorkspace();
-  const [teamId, setTeamId] = useState<string>(ws.teams[0] ? String(ws.teams[0].id) : "");
+  const availableTeams = ws.teams.filter((t) => t.role === "owner" || t.role === "admin");
+  const [teamId, setTeamId] = useState<string>(availableTeams[0] ? String(availableTeams[0].id) : "");
   const [name, setName] = useState("");
   const [key, setKey] = useState("");
   const [description, setDescription] = useState("");
@@ -73,8 +74,8 @@ export function NewProjectModal({ onClose }: { onClose: () => void }) {
       <div className="ws-field">
         <label>所属团队</label>
         <select className="ws-select" value={teamId} onChange={(e) => setTeamId(e.target.value)}>
-          {ws.teams.length === 0 && <option value="">（请先创建团队）</option>}
-          {ws.teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          {availableTeams.length === 0 && <option value="">（请先创建团队或联系团队管理员）</option>}
+          {availableTeams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 130px", gap: 12 }}>
