@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useWorkspace } from "./shared";
 import { DeleteWorkspaceModal, type DeleteTarget } from "./DeleteWorkspaceModal";
 import { TeamPanel } from "./TeamPanel";
+import { TeamInvitations } from "./TeamInvitations";
 
 export function ManagementPanel({ kind }: { kind: "project" | "team" }) {
   const ws = useWorkspace();
@@ -18,6 +19,7 @@ export function ManagementPanel({ kind }: { kind: "project" | "team" }) {
     <div className="ws-panel-head"><h2>{isTeam ? "团队管理" : "项目管理"}<span className="ws-count-pill">{isTeam ? ws.teams.length : ws.projects.length}</span></h2>
       <button className="ws-btn primary" onClick={() => ws.openModal({ type: isTeam ? "newTeam" : "newProject" })}>＋ {isTeam ? "创建团队" : "创建项目"}</button></div>
     <p className="ws-team-note">{isTeam ? "统一查看团队、管理成员与分工。" : "在这里创建、查看和删除课程项目。"}</p>
+    {isTeam && <TeamInvitations />}
     <input className="ws-input" aria-label={isTeam ? "搜索团队" : "搜索项目"} placeholder={isTeam ? "搜索团队…" : "搜索项目…"} value={query} onChange={(e) => setQuery(e.target.value)} />
     {notice && <p role="status">{notice}</p>}
     <div className="ws-management-list">

@@ -115,6 +115,7 @@ export interface WorkspaceStore {
   openTask(id: number): void;
   closeTask(): void;
   refreshProjects(): Promise<void>;
+  refreshTeams(): Promise<void>;
   refreshProjectData(): Promise<void>;
   refreshTasks(): Promise<void>;
   refreshChat(): Promise<void>;

@@ -6,6 +6,8 @@ import { canManageDuties, DEFAULT_DUTIES, LEADER_DUTY, memberDuty } from "@/lib/
 import { useWorkspace, Avatar, Icon, Modal } from "./shared";
 
 import { InviteModal } from "./SpacePanel";
+import { TeamInvitations } from "./TeamInvitations";
+import { canManageInvites } from "@/lib/team-invites";
 type TeamDetail = { team: { id: number; name: string; description: string | null }; myRole: string; members: ProjectMember[] };
 const ROLE_TEXT: Record<string, string> = { owner: "创建者", admin: "管理员", member: "成员" };
 
@@ -44,6 +46,7 @@ export function TeamPanel({ teamId }: { teamId: number }) {
         <span>{online} 人在线 · {detail.members.length} 位成员</span>
       </div>
       <h3 className="ws-team-heading">团队成员</h3>
+      {(me && canManageInvites(me)) && <TeamInvitations teamId={teamId} onMembersChanged={refresh} />}
       <p className="ws-team-note">分工由负责人统一分配，同一团队的所有项目共享。展示人负责项目汇报，开发者负责核心开发。</p>
       {!canAssign && <p className="ws-team-note">你可以查看成员分工；需要调整时，请联系负责人。</p>}
       {!canInvite && <p className="ws-team-note">团队创建者和管理员可以邀请新成员。</p>}

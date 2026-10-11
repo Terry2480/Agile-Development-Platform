@@ -9,6 +9,8 @@
     "lint": "eslint",
     "db:push": "drizzle-kit push",
     "db:add-member-duty": "tsx db/add-member-duty.ts",
+    "db:add-milestones": "tsx db/add-milestones.ts",
+    "db:add-team-invites": "tsx db/add-team-invites.ts",
     "db:seed": "tsx db/seed.ts",
     "db:studio": "drizzle-kit studio"
   },

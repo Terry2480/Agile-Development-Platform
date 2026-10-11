@@ -54,6 +54,18 @@ export const teamMembers = pgTable("team_members", {
 }, (t) => [unique("team_members_team_user_uq").on(t.teamId, t.userId)]);
 
 /* ============ 项目 ============ */
+export const teamInvites = pgTable("team_invites", {
+  teamId: integer("team_id").primaryKey().references(() => teams.id, { onDelete: "cascade" }),
+  code: text("code").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+});
+export const teamJoinRequests = pgTable("team_join_requests", {
+  id: serial("id").primaryKey(),
+  teamId: integer("team_id").notNull().references(() => teams.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  status: text("status").notNull().default("pending"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => [unique("team_join_requests_team_user_uq").on(t.teamId, t.userId)]);
 
 // 项目表：团队下的协作单元；key 为短代码（如 WEB），与任务 number 组成编号 WEB-024
 export const projects = pgTable("projects", {
@@ -84,6 +96,19 @@ export const projectStars = pgTable("project_stars", {
 }, (t) => [unique("project_stars_project_user_uq").on(t.projectId, t.userId)]);
 
 /* ============ Sprint（迭代） ============ */
+export const milestones = pgTable("milestones", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  dueOn: date("due_on").notNull(),
+  requirements: text("requirements").notNull().default(""),
+  completed: boolean("completed").notNull().default(false),
+});
+
+export const milestoneTasks = pgTable("milestone_tasks", {
+  milestoneId: integer("milestone_id").notNull().references(() => milestones.id, { onDelete: "cascade" }),
+  taskId: integer("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+}, (t) => [unique("milestone_tasks_uq").on(t.milestoneId, t.taskId)]);
 
 // 冲刺表：项目的时间盒迭代（如 SPRINT 08），同一项目同时最多一个 active
 export const sprints = pgTable("sprints", {

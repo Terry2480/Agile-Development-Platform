@@ -180,7 +180,7 @@ export default function WorkspacePage() {
     drawerTaskId,
     openTask: (id) => setDrawerTaskId(id),
     closeTask: () => setDrawerTaskId(null),
-    refreshProjects, refreshProjectData, refreshTasks, refreshChat, refreshActivities, refreshFiles, refreshNotifications, refreshMyTasks,
+    refreshTeams, refreshProjects, refreshProjectData, refreshTasks, refreshChat, refreshActivities, refreshFiles, refreshNotifications, refreshMyTasks,
 
     async createTeam(name, description) {
       await api("/api/teams", { method: "POST", json: { name, description: description ?? null } });

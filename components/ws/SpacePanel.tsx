@@ -4,6 +4,8 @@
 import { useRef, useState } from "react";
 import { api, fmtSize } from "@/lib/api-client";
 import { useWorkspace, Icon, Modal } from "./shared";
+import { MilestonePanel } from "./MilestonePanel";
+import { ReportPanel } from "./ReportPanel";
 
 
 
@@ -22,6 +24,8 @@ export function SpacePanel() {
 
   return (
     <aside className="ws-space">
+      <MilestonePanel key={project.id} projectId={project.id} />
+      <ReportPanel key={`report-${project.id}`} projectId={project.id} />
       {/* 项目文件库 */}
       <section className="ws-space-section">
         <div className="ws-space-title">
