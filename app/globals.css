@@ -208,6 +208,15 @@
 .ws-btn{padding:9px 16px;border-radius:8px;font-size:13px;cursor:pointer;border:1px solid #2a2d3d;background:#1c1e2a;color:#c6cbdb}
 .ws-btn:hover{border-color:#3a3f52}
 .ws-btn.primary{background:#3b6ef5;border-color:transparent;color:#fff}
+.ws-btn.danger{background:#ba3848;border-color:transparent;color:#fff}
+.ws-btn:disabled{opacity:.5;cursor:default}
+.ws-delete-action{color:#c88790;flex-shrink:0}
+.ws-delete-action:hover{color:#ff9aa7;background:#38232b}
+.ws-team-manage-row{display:flex;align-items:center;gap:8px;padding:8px;color:#c6cbdb;font-size:12px}
+.ws-team-manage-row>span{flex:1;min-width:0;overflow-wrap:anywhere}
+.ws-team-manage-row small{display:block;color:#777e92;font-size:11px;margin-top:4px}
+.ws-delete-warning{font-size:13px;line-height:1.8;color:#e7a4ac;overflow-wrap:anywhere}
+.ws-delete-notice{padding:12px 8px;color:#8ab4ff;font-size:12px}
 .ws-btn.primary:disabled{background:#2a3a5e;color:#7c8194;cursor:default}
 .ws-chip-row{display:flex;flex-wrap:wrap;gap:6px}
 .ws-chip{padding:4px 11px;border-radius:999px;font-size:11px;border:1px solid #2a2d3d;background:transparent;color:#9aa1b5;cursor:pointer}

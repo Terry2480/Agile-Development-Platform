@@ -184,6 +184,22 @@ export default function WorkspacePage() {
       await api("/api/teams", { method: "POST", json: { name, description: description ?? null } });
       await afterProjectMutation();
     },
+    async deleteWorkspaceItem(kind, id) {
+      await api(`/api/${kind === "project" ? "projects" : "teams"}/${id}`, { method: "DELETE" });
+      const removesSelection = kind === "project"
+        ? selectedIdRef.current === id
+        : projects.some((p) => p.id === selectedIdRef.current && p.teamId === id);
+      if (removesSelection) {
+        selectProject(null);
+        setDetail(null); setTasks([]); setChat([]); setActivities([]); setFiles([]);
+      }
+      // 删除已成功，立即移除本地列表；刷新失败不应让用户再次删除。
+      setProjects((items) => items.filter((p) => kind === "project" ? p.id !== id : p.teamId !== id));
+      if (kind === "team") setTeams((items) => items.filter((t) => t.id !== id));
+      await Promise.allSettled([
+        refreshProjects(), refreshTeams(), refreshOverview(), refreshMyTasks(), refreshNotifications(),
+      ]);
+    },
     async createProject(teamId, name, key, description) {
       const d = await api<{ project: { id: number } }>("/api/projects", {
         method: "POST", json: { teamId, name, key, description: description ?? null },
@@ -257,7 +273,8 @@ export default function WorkspacePage() {
     me, railView, focusSection, teams, projects, selectedId, detail, tasks, myTasks, chat,
     activities, files, notifications, unreadCount, overview, taskSearch, modal, drawerTaskId,
     selectProject, refreshProjects, refreshProjectData, refreshTasks, refreshChat,
-    refreshActivities, refreshFiles, refreshNotifications, refreshMyTasks, afterProjectMutation, afterTaskMutation,
+    refreshActivities, refreshFiles, refreshNotifications, refreshMyTasks, refreshDetail, refreshTeams, refreshOverview,
+    afterProjectMutation, afterTaskMutation,
   ]);
 
   /* ---------- 渲染 ---------- */

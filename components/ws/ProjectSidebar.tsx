@@ -3,11 +3,15 @@
 // 项目列表栏：搜索、我的工作空间/已收藏分组、选中项目子导航、底部 Sprint 卡
 import { useMemo, useState } from "react";
 import { avatarColor, daysUntil } from "@/lib/api-client";
-import { useWorkspace, Icon } from "./shared";
+import { useWorkspace, Icon, Modal } from "./shared";
+
+type DeleteTarget = { kind: "project" | "team"; id: number; name: string };
 
 export function ProjectSidebar() {
   const ws = useWorkspace();
   const [query, setQuery] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [notice, setNotice] = useState("");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -42,7 +46,7 @@ export function ProjectSidebar() {
           <>
             <div className="ws-group-label">已收藏</div>
             {starred.map((p) => (
-              <ProjectItem key={p.id} id={p.id} />
+              <ProjectItem key={p.id} id={p.id} onDelete={setDeleteTarget} />
             ))}
           </>
         )}
@@ -53,21 +57,37 @@ export function ProjectSidebar() {
           </div>
         )}
         {mine.map((p) => (
-          <ProjectItem key={p.id} id={p.id} />
+          <ProjectItem key={p.id} id={p.id} onDelete={setDeleteTarget} />
         ))}
+        <div className="ws-group-label">我的团队</div>
+        {ws.teams.map((team) => (
+          <div key={team.id} className="ws-team-manage-row">
+            <span>{team.name}<small>{team.projectCount} 个项目 · {team.memberCount} 位成员</small></span>
+            {team.role === "owner" && (
+              <button className="ws-icon-btn ws-delete-action" title={`解散团队 ${team.name}`} aria-label={`解散团队 ${team.name}`}
+                onClick={() => setDeleteTarget({ kind: "team", id: team.id, name: team.name })}>
+                <Icon name="trash" size={14} />
+              </button>
+            )}
+          </div>
+        ))}
+        {notice && <div className="ws-delete-notice" role="status">{notice}</div>}
       </div>
 
       <SprintCard />
       {selected && <div style={{ height: 6 }} />}
+      {deleteTarget && <DeleteWorkspaceModal target={deleteTarget} onClose={() => setDeleteTarget(null)}
+        onDeleted={() => { setNotice(deleteTarget.kind === "team" ? "团队已解散" : "项目已删除"); setDeleteTarget(null); }} />}
     </aside>
   );
 }
 
-function ProjectItem({ id }: { id: number }) {
+function ProjectItem({ id, onDelete }: { id: number; onDelete(target: DeleteTarget): void }) {
   const ws = useWorkspace();
   const p = ws.projects.find((x) => x.id === id)!;
   const active = ws.selectedId === id && ws.railView === "projects";
   const color = avatarColor(p.key);
+  const role = ws.teams.find((team) => team.id === p.teamId)?.role;
 
   return (
     <div>
@@ -97,6 +117,12 @@ function ProjectItem({ id }: { id: number }) {
             </span>
           </span>
         </span>
+        {(role === "owner" || role === "admin") && (
+          <button className="ws-icon-btn ws-delete-action" title={`删除项目 ${p.name}`} aria-label={`删除项目 ${p.name}`}
+            onClick={(e) => { e.stopPropagation(); onDelete({ kind: "project", id: p.id, name: p.name }); }}>
+            <Icon name="trash" size={13} />
+          </button>
+        )}
         <button
           className={`ws-proj-star ${p.starred ? "on" : ""}`}
           title={p.starred ? "取消收藏" : "收藏项目"}
@@ -123,6 +149,48 @@ function ProjectItem({ id }: { id: number }) {
         </div>
       )}
     </div>
+  );
+}
+
+function DeleteWorkspaceModal({ target, onClose, onDeleted }: {
+  target: DeleteTarget; onClose(): void; onDeleted(): void;
+}) {
+  const ws = useWorkspace();
+  const [confirmation, setConfirmation] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const action = target.kind === "team" ? "解散团队" : "删除项目";
+  async function submit() {
+    if (busy || confirmation !== target.name) return;
+    setBusy(true); setError("");
+    try {
+      await ws.deleteWorkspaceItem(target.kind, target.id);
+      onDeleted();
+    } catch (e) {
+      setError((e as Error).message);
+      setBusy(false);
+    }
+  }
+  return (
+    <Modal title={action} onClose={() => { if (!busy) onClose(); }}>
+      <p className="ws-delete-warning">
+        确定要{action}「{target.name}」吗？
+        {target.kind === "team" ? "团队下所有项目及其任务、聊天记录、迭代和文件记录将一并删除。" : "项目的任务、聊天记录、迭代和文件记录将一并删除。"}
+        此操作无法撤销。
+      </p>
+      <div className="ws-field">
+        <label htmlFor="delete-confirmation">输入完整{target.kind === "team" ? "团队" : "项目"}名称以确认：{target.name}</label>
+        <input id="delete-confirmation" className="ws-input" autoFocus disabled={busy} value={confirmation}
+          onChange={(e) => setConfirmation(e.target.value)} />
+      </div>
+      {error && <div className="ws-error" role="alert">{error}</div>}
+      <div className="ws-modal-actions">
+        <button className="ws-btn" disabled={busy} onClick={onClose}>取消</button>
+        <button className="ws-btn danger" disabled={busy || confirmation !== target.name} onClick={submit}>
+          {busy ? "处理中…" : action}
+        </button>
+      </div>
+    </Modal>
   );
 }
 

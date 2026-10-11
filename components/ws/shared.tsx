@@ -120,6 +120,7 @@ export interface WorkspaceStore {
   refreshNotifications(): Promise<void>;
   refreshMyTasks(): Promise<void>;
   createTeam(name: string, description?: string): Promise<void>;
+  deleteWorkspaceItem(kind: "project" | "team", id: number): Promise<void>;
   createProject(teamId: number, name: string, key: string, description?: string): Promise<void>;
   createTask(input: Record<string, unknown>): Promise<void>;
   updateTask(id: number, patch: Record<string, unknown>): Promise<void>;
