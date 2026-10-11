@@ -75,7 +75,7 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
 
 /* ---------- 工作空间状态（page.tsx 提供实现） ---------- */
 export type RailView = "projects" | "todos" | "notifications";
-export type FocusSection = "tasks" | "chat" | "space";
+export type FocusSection = "tasks" | "chat" | "space" | "team";
 export type ModalState =
   | { type: "newTeam" }
   | { type: "newProject" }

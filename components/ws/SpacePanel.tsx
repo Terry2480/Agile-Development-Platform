@@ -3,9 +3,9 @@
 // 项目空间栏：本轮进度（Sprint）、项目日志、项目成员、项目文件
 import { useRef, useState } from "react";
 import { fmtSize, daysUntil } from "@/lib/api-client";
-import { useWorkspace, Icon, Avatar, Modal } from "./shared";
+import { useWorkspace, Icon, Modal } from "./shared";
 
-const ROLE_TEXT: Record<string, string> = { owner: "创建者", admin: "管理员", member: "成员" };
+
 
 export function SpacePanel() {
   const ws = useWorkspace();
@@ -90,27 +90,6 @@ export function SpacePanel() {
             <div className="act-time">
               {new Date(a.createdAt).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}
             </div>
-          </div>
-        ))}
-      </section>
-
-      {/* 项目成员（在线/离线） */}
-      <section className="ws-space-section">
-        <div className="ws-space-title">
-          团队成员（{detail?.members.length ?? 0}）
-          <button className="ws-icon-btn" title="邀请成员" onClick={() => ws.openModal({ type: "invite" })}>
-            <Icon name="plus" size={13} />
-          </button>
-        </div>
-        {detail?.members.map((m) => (
-          <div key={m.userId} className="ws-member-row">
-            <span className="ws-avatar-pos">
-              <Avatar name={m.displayName} colorKey={m.userId} size="sm" />
-              <i className={`ws-online-dot ${m.online ? "on" : ""}`} title={m.online ? "在线" : "离线"} />
-            </span>
-            <span className="m-name">{m.displayName}</span>
-            <span className={`ws-online-text ${m.online ? "on" : ""}`}>{m.online ? "在线" : "离线"}</span>
-            <span className="ws-role-tag">{ROLE_TEXT[m.role] ?? m.role}</span>
           </div>
         ))}
       </section>

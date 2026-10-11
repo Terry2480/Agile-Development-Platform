@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "db:push": "drizzle-kit push",
+    "db:add-member-duty": "tsx db/add-member-duty.ts",
     "db:seed": "tsx db/seed.ts",
     "db:studio": "drizzle-kit studio"
   },

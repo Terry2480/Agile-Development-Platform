@@ -22,6 +22,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         studentId: users.studentId,
         email: users.email,
         role: teamMembers.role,
+        duty: teamMembers.duty,
       })
       .from(projectMembers)
       .innerJoin(users, eq(users.id, projectMembers.userId))

@@ -15,6 +15,7 @@ import { ProjectSidebar } from "@/components/ws/ProjectSidebar";
 import { TopBar } from "@/components/ws/TopBar";
 import { TaskPanel, TodosView, NotificationsView, TaskDrawer, NewTaskModal } from "@/components/ws/TaskPanel";
 import { ChatPanel } from "@/components/ws/ChatPanel";
+import { TeamPanel } from "@/components/ws/TeamPanel";
 import { SpacePanel, NewSprintModal, InviteModal } from "@/components/ws/SpacePanel";
 import { NewTeamModal, NewProjectModal } from "@/components/ws/Modals";
 
@@ -275,12 +276,13 @@ export default function WorkspacePage() {
           <TopBar />
           <div className="ws-body">
             <div className="ws-center" id="ws-center">
-              {railView === "projects" && <TaskPanel />}
+              {railView === "projects" && focusSection === "tasks" && <TaskPanel />}
+              {railView === "projects" && focusSection === "chat" && <ChatPanel />}
+              {railView === "projects" && focusSection === "space" && <SpacePanel />}
+              {railView === "projects" && focusSection === "team" && <TeamPanel key={selectedId} />}
               {railView === "todos" && <TodosView />}
               {railView === "notifications" && <NotificationsView />}
             </div>
-            <ChatPanel />
-            <SpacePanel />
           </div>
           <div className="ws-statusbar">
             <span className="ws-dot" /> 已连接

@@ -111,13 +111,16 @@ function ProjectItem({ id }: { id: number }) {
 
       {active && (
         <div className="ws-subnav">
-          <button className={ws.focusSection === "chat" ? "active" : ""} onClick={() => ws.setFocusSection("chat")}>
+          <button className={ws.focusSection === "team" ? "active" : ""} onClick={() => ws.setFocusSection("team")}>
+            <Icon name="users" size={13} /> 团队管理
+          </button>
+          <button className={ws.railView === "projects" && ws.focusSection === "chat" ? "active" : ""} onClick={() => { ws.setRailView("projects"); ws.setFocusSection("chat"); }}>
             <Icon name="message" size={13} /> 团队聊天
           </button>
-          <button className={ws.focusSection === "tasks" ? "active" : ""} onClick={() => ws.setFocusSection("tasks")}>
+          <button className={ws.railView === "projects" && ws.focusSection === "tasks" ? "active" : ""} onClick={() => { ws.setRailView("projects"); ws.setFocusSection("tasks"); }}>
             <Icon name="grid" size={13} /> 项目任务
           </button>
-          <button className={ws.focusSection === "space" ? "active" : ""} onClick={() => ws.setFocusSection("space")}>
+          <button className={ws.railView === "projects" && ws.focusSection === "space" ? "active" : ""} onClick={() => { ws.setRailView("projects"); ws.setFocusSection("space"); }}>
             <Icon name="file" size={13} /> 项目概览
           </button>
         </div>

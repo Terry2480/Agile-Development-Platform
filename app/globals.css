@@ -80,6 +80,26 @@
 .ws-center{flex:1;min-width:0;overflow-y:auto;padding:18px 24px 64px}
 .ws-chat{width:332px;flex-shrink:0;background:#101119;border-left:1px solid #1f212c;display:flex;flex-direction:column;min-height:0}
 .ws-space{width:296px;flex-shrink:0;background:#0f1017;border-left:1px solid #1f212c;overflow-y:auto;padding:16px}
+.ws-center:has(>.ws-chat){display:flex;padding:0;overflow:hidden}
+.ws-center>.ws-chat{display:flex;width:100%;min-width:0;flex:1;border-left:0}
+.ws-center>.ws-space{display:block;width:100%;border-left:0;padding:8px 0;background:transparent}
+.ws-team{max-width:1100px;margin:0 auto}
+.ws-team-summary{display:flex;align-items:center;gap:18px;padding:24px;margin:22px 0 28px;border:1px solid #263450;border-radius:14px;background:linear-gradient(130deg,#182338,#121722);color:#8fa9e6}
+.ws-team-summary h3{margin:0 0 8px;color:#fff;font-size:20px}
+.ws-team-summary p{margin:0;color:#9aa1b5;font-size:13px;line-height:1.7}
+.ws-team-summary>span{margin-left:auto;font-size:12px;white-space:nowrap}
+.ws-team-heading{font-size:14px;margin:0 0 16px}
+.ws-team-note{font-size:12px;color:#9aa1b5}
+.ws-team-members{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:14px}
+.ws-team-member{display:flex;align-items:center;gap:12px;background:#141722;border:1px solid #262a38;border-radius:12px;padding:20px;min-width:0}
+.ws-team-identity{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.ws-team-identity>span{font-size:12px;color:#7c8194;overflow-wrap:anywhere}
+.ws-team-identity>.ws-duty-tag{align-self:flex-start;border:1px solid #304467;border-radius:6px;background:#1b2942;color:#9cbcff;padding:4px 8px;line-height:1.5;max-width:100%}
+.ws-team-identity>.ws-duty-tag.leader{background:#332916;border-color:#594728;color:#e9c47b}
+.ws-duty-edit{align-self:flex-start;background:transparent;border:0;color:#8fa9e6;font-size:12px;padding:3px 0;cursor:pointer}
+.ws-duty-edit:hover{color:#fff}
+.ws-team-identity .ws-team-note{margin:0;font-size:11px;line-height:1.5}
+@media(max-width:900px){.ws-team-summary{flex-wrap:wrap}.ws-team-summary>span{margin-left:0}.ws-topbar{height:auto;min-height:54px;flex-wrap:wrap;padding:10px 18px}.ws-top-menu{flex-wrap:wrap}.ws-top-right{margin-left:0}}
 .ws-statusbar{height:27px;background:#0a0b10;border-top:1px solid #1c1e28;display:flex;align-items:center;gap:9px;padding:0 16px;font-size:11px;color:#5d6273;flex-shrink:0}
 .ws-dot{width:7px;height:7px;border-radius:50%;background:#6f9bff}
 /* ── 任务面板 ── */

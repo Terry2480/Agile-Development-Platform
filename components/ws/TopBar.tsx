@@ -39,9 +39,10 @@ export function TopBar() {
       <div className="ws-brand"><i>◇</i>AgileCampus</div>
 
       <nav className="ws-top-menu">
-        <button className={ws.focusSection === "tasks" ? "active" : ""} onClick={() => ws.setFocusSection("tasks")}>项目任务</button>
-        <button className={ws.focusSection === "chat" ? "active" : ""} onClick={() => ws.setFocusSection("chat")}>团队聊天</button>
-        <button className={ws.focusSection === "space" ? "active" : ""} onClick={() => ws.setFocusSection("space")}>项目概览</button>
+        <button className={ws.railView === "projects" && ws.focusSection === "team" ? "active" : ""} onClick={() => { ws.setRailView("projects"); ws.setFocusSection("team"); }}>团队管理</button>
+        <button className={ws.railView === "projects" && ws.focusSection === "tasks" ? "active" : ""} onClick={() => { ws.setRailView("projects"); ws.setFocusSection("tasks"); }}>项目任务</button>
+        <button className={ws.railView === "projects" && ws.focusSection === "chat" ? "active" : ""} onClick={() => { ws.setRailView("projects"); ws.setFocusSection("chat"); }}>团队聊天</button>
+        <button className={ws.railView === "projects" && ws.focusSection === "space" ? "active" : ""} onClick={() => { ws.setRailView("projects"); ws.setFocusSection("space"); }}>项目概览</button>
       </nav>
 
       <div className="ws-top-right">
