@@ -11,9 +11,9 @@ export async function notify(input: {
   title: string;
   entityType?: "task" | "project";
   entityId?: number;
-}) {
+}, executor: Pick<typeof db, "insert"> = db) {
   if (input.userId === input.actorId) return; // 自己操作不给自己发通知
-  await db.insert(notifications).values({
+  await executor.insert(notifications).values({
     userId: input.userId,
     type: input.type,
     title: input.title,
@@ -49,7 +49,7 @@ export async function notifyMentions(input: {
   title: string;
   entityType?: "task" | "project";
   entityId?: number;
-}) {
+}, executor: Pick<typeof db, "insert"> = db) {
   const ids = extractMentionIds(input.content, input.members);
   await Promise.all(
     ids.map((userId) =>
@@ -60,7 +60,7 @@ export async function notifyMentions(input: {
         title: input.title,
         entityType: input.entityType,
         entityId: input.entityId,
-      }),
+      }, executor),
     ),
   );
 }

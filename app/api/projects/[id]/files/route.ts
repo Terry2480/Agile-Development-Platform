@@ -7,11 +7,11 @@ import { attachments, tasks, users, projects, teams, fileCleanup } from "@/db/sc
 import { uploadPath, tryFileCleanup } from "@/lib/file-cleanup";
 import { requireUser, parseId, requireProjectAccess, ApiError, handleApiError, displayName } from "@/lib/api";
 import { logActivity } from "@/lib/activity";
+import { MAX_UPLOAD_BYTES, UPLOAD_LIMIT_MESSAGE } from "@/lib/upload-limits";
 
 // 项目文件：GET /api/projects/[id]/files?taskId=  文件列表（可不带 taskId 查项目全部）
-//             POST multipart/form-data { file, taskId? }  上传（≤20MB，存本地 uploads/ 目录）
+//             POST multipart/form-data { file, taskId? }  上传（≤100MB，存本地 uploads/ 目录）
 const UPLOAD_DIR = path.join(process.cwd(), "uploads");
-const MAX_SIZE = 20 * 1024 * 1024;
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -30,6 +30,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const rows = await db
       .select({
         id: attachments.id,
+        uploaderId: attachments.uploaderId,
         taskId: attachments.taskId,
         originalName: attachments.originalName,
         mimeType: attachments.mimeType,
@@ -56,12 +57,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const projectId = parseId((await params).id, "项目 ID");
     const { project } = await requireProjectAccess(user.id, projectId);
 
-    const form = await request.formData().catch(() => null);
-    if (!form) throw new ApiError(400, "请使用表单上传文件");
+    const form = await request.formData().catch((error: unknown) => {
+      console.error("[file-upload] 上传表单解析失败", error);
+      throw new ApiError(400, "上传内容无法解析，可能未完整传输，请重新上传（文件不能超过 100MB）");
+    });
     const file = form.get("file");
     if (!(file instanceof File)) throw new ApiError(400, "请选择要上传的文件");
     if (file.size === 0) throw new ApiError(400, "文件为空");
-    if (file.size > MAX_SIZE) throw new ApiError(400, "文件不能超过 20MB");
+    if (file.size > MAX_UPLOAD_BYTES) throw new ApiError(413, UPLOAD_LIMIT_MESSAGE);
 
     // 可选：挂到某个任务（校验任务属于本项目）
     let taskId: number | null = null;

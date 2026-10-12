@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { tasks, comments, users, teamMembers } from "@/db/schema";
+import { tasks, comments, users, teamMembers, teams, projects } from "@/db/schema";
 import {
   requireUser, parseBody, parseId, requireProjectAccess, ApiError, handleApiError, displayName, taskCode,
 } from "@/lib/api";
@@ -37,16 +37,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   try {
     const user = await requireUser(request);
     const taskId = parseId((await params).id, "任务 ID");
-    const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
-    if (!task) throw new ApiError(404, "任务不存在");
-    const { project } = await requireProjectAccess(user.id, task.projectId);
+    const [initialTask] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
+    if (!initialTask) throw new ApiError(404, "任务不存在");
+    const { project } = await requireProjectAccess(user.id, initialTask.projectId);
 
     const body = await parseBody(
       request,
       z.object({ content: z.string().trim().min(1, "请填写评论内容").max(2000, "评论内容过长") }),
     );
 
-    const [comment] = await db
+    const comment = await db.transaction(async (tx) => {
+      await tx.select({ id: teams.id }).from(teams).where(eq(teams.id, project.teamId)).for("share");
+      await tx.select({ id: projects.id }).from(projects).where(eq(projects.id, project.id)).for("update");
+      await requireProjectAccess(user.id, project.id, "member", tx);
+      const [task] = await tx.select().from(tasks).where(eq(tasks.id, taskId)).for("update");
+      if (!task) throw new ApiError(404, "任务不存在");
+    const [comment] = await tx
       .insert(comments)
       .values({ taskId, authorId: user.id, content: body.content })
       .returning();
@@ -58,9 +64,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       await notify({
         userId: task.assigneeId, actorId: user.id, type: "comment",
         title: `${actor} 评论了任务 ${code}`, entityType: "task", entityId: taskId,
-      });
+      }, tx);
     }
-    const members = await db
+    const members = await tx
       .select({ userId: users.id, name: users.name, studentId: users.studentId })
       .from(teamMembers)
       .innerJoin(users, eq(users.id, teamMembers.userId))
@@ -68,8 +74,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     await notifyMentions({
       content: body.content, actorId: user.id, members,
       title: `${actor} 在任务 ${code} 中提到了你`, entityType: "task", entityId: taskId,
-    });
+    }, tx);
 
+      return comment;
+    });
     return Response.json({
       comment: {
         ...comment,

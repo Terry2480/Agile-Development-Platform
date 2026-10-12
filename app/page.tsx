@@ -21,6 +21,7 @@ import { SpacePanel, NewSprintModal, InviteModal } from "@/components/ws/SpacePa
 import { NewTeamModal, NewProjectModal } from "@/components/ws/Modals";
 
 import { RequestGate } from "@/lib/request-gate";
+import { startPolling } from "@/lib/polling";
 
 const projectResources = ["detail", "tasks", "chat", "activities", "files"];
 const resourceNames: Record<string, string> = { projects: "项目列表", teams: "团队列表", overview: "统计", notifications: "通知", myTasks: "我的待办", detail: "项目详情", tasks: "项目任务", chat: "团队聊天", activities: "项目日志", files: "文件列表" };
@@ -92,7 +93,7 @@ export default function WorkspacePage() {
       if (!request.current()) return;
       setLoads((prev) => ({ ...prev, [key]: { loaded: prev[key]?.loaded ?? false, loading: false, error: (e as Error).message } }));
       throw e;
-    }
+    } finally { request.finish(); }
   }, [gate]);
   const afterSaved = useCallback(async (requests: Promise<void>[]) => {
     const results = await Promise.allSettled(requests);
@@ -140,14 +141,11 @@ export default function WorkspacePage() {
   useEffect(() => {
     if (!me) return;
     Promise.all([refreshTeams(), refreshProjects(), refreshOverview(), refreshNotifications(), refreshMyTasks()]).catch(() => {});
-    const timer = setInterval(() => {
-      refreshNotifications().catch(() => {});
-      refreshOverview().catch(() => {});
-      refreshMyTasks().catch(() => {});
-      refreshDetail().catch(() => {}); // 成员在线状态等
-    }, 20000);
-    return () => clearInterval(timer);
-  }, [me, refreshTeams, refreshProjects, refreshOverview, refreshNotifications, refreshMyTasks, refreshDetail]);
+    const stop = [
+      ["notifications", refreshNotifications], ["overview", refreshOverview], ["myTasks", refreshMyTasks],
+    ].map(([key, refresh]) => startPolling(() => gate.isPending(key as string) ? Promise.resolve() : (refresh as () => Promise<void>)(), 20000));
+    return () => stop.forEach((cancel) => cancel());
+  }, [me, gate, refreshTeams, refreshProjects, refreshOverview, refreshNotifications, refreshMyTasks]);
 
   // 切换项目时拉取项目数据
   useEffect(() => {
@@ -160,12 +158,11 @@ export default function WorkspacePage() {
   // 聊天 / 日志轮询（8 秒，保证赞同、置顶与新消息同步）
   useEffect(() => {
     if (!me || selectedId === null) return;
-    const timer = setInterval(() => {
-      refreshChat().catch(() => {});
-      refreshActivities().catch(() => {});
-    }, 8000);
-    return () => clearInterval(timer);
-  }, [me, selectedId, refreshChat, refreshActivities]);
+    const stopChat = startPolling(() => gate.isPending("chat") ? Promise.resolve() : refreshChat(), 8000);
+    const stopActivities = startPolling(() => gate.isPending("activities") ? Promise.resolve() : refreshActivities(), 8000);
+    const stopDetail = startPolling(() => gate.isPending("detail") ? Promise.resolve() : refreshDetail(), 20000);
+    return () => { stopChat(); stopActivities(); stopDetail(); };
+  }, [me, selectedId, gate, refreshChat, refreshActivities, refreshDetail]);
 
   /* ---------- 动作 ---------- */
   const afterProjectMutation = useCallback(async () => {
@@ -225,6 +222,11 @@ export default function WorkspacePage() {
       await api(`/api/tasks/${id}`, { method: "PUT", json: patch });
       await afterTaskMutation();
     },
+    async deleteTask(id) {
+      await api(`/api/tasks/${id}`, { method: "DELETE" });
+      setTasks((items) => items.filter((t) => t.id !== id));
+      await afterSaved([refreshTasks(), refreshProjects(), refreshActivities(), refreshMyTasks(), refreshOverview(), refreshFiles()]);
+    },
     async createSprint(input) {
       const id = selectedIdRef.current;
       if (!id) return;
@@ -268,6 +270,11 @@ export default function WorkspacePage() {
       const d = await apiUpload<{ file: { originalName: string } }>(`/api/projects/${id}/files`, file);
       await afterSaved([refreshFiles()]);
       return d.file.originalName;
+    },
+    async withdrawFile(id) {
+      await api(`/api/files/${id}`, { method: "DELETE" });
+      setFiles((items) => items.filter((f) => f.id !== id));
+      await afterSaved([refreshFiles(), refreshActivities()]);
     },
     async uploadTaskFile(taskId, file) {
       const id = selectedIdRef.current;

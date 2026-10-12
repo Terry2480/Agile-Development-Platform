@@ -141,13 +141,18 @@ export async function POST(request: Request) {
     const body = await parseBody(request, createSchema);
     const { project } = await requireProjectAccess(user.id, body.projectId);
 
+    // 事务内分配项目内递增编号，避免并发冲突
+    const result = await db.transaction(async (tx) => {
+      await tx.select({ id: teams.id }).from(teams).where(eq(teams.id, project.teamId)).for("share");
+      await tx.select({ id: projects.id }).from(projects).where(eq(projects.id, project.id)).for("update");
+      await requireProjectAccess(user.id, project.id, "member", tx);
     // 校验可选关联
     if (body.sprintId) {
-      const [sprint] = await db.select().from(sprints).where(eq(sprints.id, body.sprintId)).limit(1);
+      const [sprint] = await tx.select().from(sprints).where(eq(sprints.id, body.sprintId)).limit(1);
       if (!sprint || sprint.projectId !== body.projectId) throw new ApiError(400, "迭代不属于该项目");
     }
     if (body.assigneeId) {
-      const [member] = await db
+      const [member] = await tx
         .select({ id: teamMembers.id })
         .from(teamMembers)
         .innerJoin(teams, eq(teams.id, teamMembers.teamId))
@@ -156,12 +161,16 @@ export async function POST(request: Request) {
       if (!member) throw new ApiError(400, "负责人不是该团队成员");
     }
     if (body.parentTaskId) {
-      const [parent] = await db.select().from(tasks).where(eq(tasks.id, body.parentTaskId)).limit(1);
+      const [parent] = await tx.select().from(tasks).where(eq(tasks.id, body.parentTaskId)).limit(1);
       if (!parent || parent.projectId !== body.projectId) throw new ApiError(400, "父任务不存在");
     }
 
-    // 事务内分配项目内递增编号，避免并发冲突
-    const created = await db.transaction(async (tx) => {
+      if (body.labelIds?.length) {
+        const ids = [...new Set(body.labelIds)];
+        const valid = await tx.select({ id: labels.id }).from(labels).where(and(eq(labels.teamId, project.teamId), inArray(labels.id, ids)));
+        if (valid.length !== ids.length) throw new ApiError(400, "标签不属于该团队");
+      }
+
       const [{ max }] = await tx
         .select({ max: sql<number>`coalesce(max(${tasks.number}), 0)::int` })
         .from(tasks)
@@ -188,9 +197,7 @@ export async function POST(request: Request) {
           .values(body.labelIds.map((labelId) => ({ taskId: task.id, labelId })))
           .onConflictDoNothing();
       }
-      return task;
-    });
-
+      const created = task;
     const code = taskCode(project.key, created.number);
     await logActivity({
       projectId: body.projectId,
@@ -198,7 +205,7 @@ export async function POST(request: Request) {
       actorId: user.id,
       action: "task.created",
       detail: `${displayName(user)} 创建了任务 ${code} ${created.title}`,
-    });
+    }, tx);
     if (created.assigneeId) {
       await notify({
         userId: created.assigneeId,
@@ -207,10 +214,12 @@ export async function POST(request: Request) {
         title: `${displayName(user)} 将任务 ${code} 指派给你`,
         entityType: "task",
         entityId: created.id,
-      });
+      }, tx);
     }
 
-    return Response.json({ task: { ...created, code } }, { status: 201 });
+      return { ...created, code };
+    });
+    return Response.json({ task: result }, { status: 201 });
   } catch (error) {
     return handleApiError(error);
   }

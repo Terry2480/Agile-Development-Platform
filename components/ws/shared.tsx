@@ -128,6 +128,7 @@ export interface WorkspaceStore {
   createProject(teamId: number, name: string, key: string, description?: string): Promise<void>;
   createTask(input: Record<string, unknown>): Promise<void>;
   updateTask(id: number, patch: Record<string, unknown>): Promise<void>;
+  deleteTask(id: number): Promise<void>;
   createSprint(input: Record<string, unknown>): Promise<void>;
   completeSprint(id: number): Promise<void>;
   inviteMember(email: string): Promise<void>;
@@ -136,6 +137,7 @@ export interface WorkspaceStore {
   toggleLike(messageId: number): Promise<void>;
   togglePin(messageId: number, pinned: boolean): Promise<void>;
   uploadProjectFile(file: File): Promise<string>;
+  withdrawFile(id: number): Promise<void>;
   uploadTaskFile(taskId: number, file: File): Promise<void>;
   markRead(ids?: number[]): Promise<void>;
 }

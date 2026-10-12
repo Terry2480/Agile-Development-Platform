@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import {
   tasks, users, projects, sprints, labels, taskLabels, comments, attachments, activities, teamMembers, teams,
@@ -112,16 +112,27 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   try {
     const user = await requireUser(request);
     const taskId = parseId((await params).id, "任务 ID");
-    const { task: before, project } = await requireTask(user.id, taskId);
+    const { project } = await requireTask(user.id, taskId);
     const body = await parseBody(request, updateSchema);
 
+    const result = await db.transaction(async (tx) => {
+      await tx.select({ id: teams.id }).from(teams).where(eq(teams.id, project.teamId)).for("share");
+      await tx.select({ id: projects.id }).from(projects).where(eq(projects.id, project.id)).for("update");
+      await requireProjectAccess(user.id, project.id, "member", tx);
+      const [before] = await tx.select().from(tasks).where(eq(tasks.id, taskId)).for("update");
+      if (!before) throw new ApiError(404, "任务不存在");
+      if (body.labelIds?.length) {
+        const ids = [...new Set(body.labelIds)];
+        const valid = await tx.select({ id: labels.id }).from(labels).where(and(eq(labels.teamId, project.teamId), inArray(labels.id, ids)));
+        if (valid.length !== ids.length) throw new ApiError(400, "标签不属于该团队");
+      }
     // 关联校验
     if (body.sprintId) {
-      const [sprint] = await db.select().from(sprints).where(eq(sprints.id, body.sprintId)).limit(1);
+      const [sprint] = await tx.select().from(sprints).where(eq(sprints.id, body.sprintId)).limit(1);
       if (!sprint || sprint.projectId !== before.projectId) throw new ApiError(400, "迭代不属于该项目");
     }
     if (body.assigneeId) {
-      const [member] = await db
+      const [member] = await tx
         .select({ id: teamMembers.id })
         .from(teamMembers)
         .innerJoin(teams, eq(teams.id, teamMembers.teamId))
@@ -131,11 +142,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     }
     if (body.parentTaskId) {
       if (body.parentTaskId === taskId) throw new ApiError(400, "任务不能作为自己的父任务");
-      const [parent] = await db.select().from(tasks).where(eq(tasks.id, body.parentTaskId)).limit(1);
+      const [parent] = await tx.select().from(tasks).where(eq(tasks.id, body.parentTaskId)).limit(1);
       if (!parent || parent.projectId !== before.projectId) throw new ApiError(400, "父任务不存在");
     }
 
-    const [after] = await db
+    const [after] = await tx
       .update(tasks)
       .set({
         ...(body.title !== undefined ? { title: body.title } : {}),
@@ -153,9 +164,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
     // 标签同步：全量替换
     if (body.labelIds) {
-      await db.delete(taskLabels).where(eq(taskLabels.taskId, taskId));
+      await tx.delete(taskLabels).where(eq(taskLabels.taskId, taskId));
       if (body.labelIds.length > 0) {
-        await db
+        await tx
           .insert(taskLabels)
           .values(body.labelIds.map((labelId) => ({ taskId, labelId })))
           .onConflictDoNothing();
@@ -168,36 +179,38 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const changes: string[] = [];
     if (body.status !== undefined && before.status !== after.status) {
       changes.push(`${actor} 将 ${code} 移至「${STATUS_LABEL[after.status]}」`);
-      await logActivity({ projectId: project.id, taskId, actorId: user.id, action: "task.status_changed", detail: changes[changes.length - 1] });
+      await logActivity({ projectId: project.id, taskId, actorId: user.id, action: "task.status_changed", detail: changes[changes.length - 1] }, tx);
     }
     if (body.assigneeId !== undefined && before.assigneeId !== after.assigneeId) {
       let target = "未分配";
       if (after.assigneeId) {
-        const [u] = await db.select({ name: users.name, studentId: users.studentId }).from(users).where(eq(users.id, after.assigneeId)).limit(1);
+        const [u] = await tx.select({ name: users.name, studentId: users.studentId }).from(users).where(eq(users.id, after.assigneeId)).limit(1);
         if (u) target = displayName(u);
       }
       changes.push(`${actor} 将 ${code} 指派给 ${target}`);
-      await logActivity({ projectId: project.id, taskId, actorId: user.id, action: "task.assigned", detail: changes[changes.length - 1] });
+      await logActivity({ projectId: project.id, taskId, actorId: user.id, action: "task.assigned", detail: changes[changes.length - 1] }, tx);
       if (after.assigneeId) {
         await notify({
           userId: after.assigneeId, actorId: user.id, type: "assigned",
           title: `${actor} 将任务 ${code} 指派给你`, entityType: "task", entityId: taskId,
-        });
+        }, tx);
       }
     }
     if (body.priority !== undefined && before.priority !== after.priority) {
       changes.push(`${actor} 将 ${code} 优先级调整为「${PRIORITY_LABEL[after.priority]}」`);
-      await logActivity({ projectId: project.id, taskId, actorId: user.id, action: "task.priority_changed", detail: changes[changes.length - 1] });
+      await logActivity({ projectId: project.id, taskId, actorId: user.id, action: "task.priority_changed", detail: changes[changes.length - 1] }, tx);
     }
     if (body.dueOn !== undefined && before.dueOn !== after.dueOn) {
       changes.push(`${actor} 将 ${code} 截止日期改为 ${after.dueOn ?? "无"}`);
-      await logActivity({ projectId: project.id, taskId, actorId: user.id, action: "task.due_changed", detail: changes[changes.length - 1] });
+      await logActivity({ projectId: project.id, taskId, actorId: user.id, action: "task.due_changed", detail: changes[changes.length - 1] }, tx);
     }
     if (body.title !== undefined && before.title !== after.title) {
-      await logActivity({ projectId: project.id, taskId, actorId: user.id, action: "task.renamed", detail: `${actor} 修改了 ${code} 的标题` });
+      await logActivity({ projectId: project.id, taskId, actorId: user.id, action: "task.renamed", detail: `${actor} 修改了 ${code} 的标题` }, tx);
     }
 
-    return Response.json({ task: { ...after, code } });
+      return { ...after, code };
+    });
+    return Response.json({ task: result });
   } catch (error) {
     return handleApiError(error);
   }
@@ -208,13 +221,17 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   try {
     const user = await requireUser(request);
     const taskId = parseId((await params).id, "任务 ID");
-    const { task, project } = await requireTask(user.id, taskId);
-
-    const code = taskCode(project.key, task.number);
-    await db.delete(tasks).where(eq(tasks.id, taskId));
-    await logActivity({
-      projectId: project.id, actorId: user.id, action: "task.deleted",
-      detail: `${displayName(user)} 删除了任务 ${code} ${task.title}`,
+    const { project } = await requireTask(user.id, taskId);
+    await db.transaction(async (tx) => {
+      await tx.select({ id: teams.id }).from(teams).where(eq(teams.id, project.teamId)).for("share");
+      await tx.select({ id: projects.id }).from(projects).where(eq(projects.id, project.id)).for("update");
+      await requireProjectAccess(user.id, project.id, "member", tx);
+      const [task] = await tx.select().from(tasks).where(eq(tasks.id, taskId)).for("update");
+      if (!task) throw new ApiError(404, "任务不存在");
+      const code = taskCode(project.key, task.number);
+      await tx.delete(tasks).where(eq(tasks.id, taskId));
+      await logActivity({ projectId: project.id, actorId: user.id, action: "task.deleted",
+        detail: `${displayName(user)} 删除了任务 ${code} ${task.title}` }, tx);
     });
     return Response.json({ ok: true });
   } catch (error) {

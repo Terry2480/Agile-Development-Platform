@@ -1,5 +1,6 @@
 // 前端统一请求封装 + 业务类型定义（与后端 docs/API.md 一一对应）
 // 用法：api<T>(path, { json: {...} }) 自动带 JSON 头；失败抛 Error(中文提示)
+import { MAX_UPLOAD_BYTES, UPLOAD_LIMIT_MESSAGE } from "./upload-limits";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -37,6 +38,8 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
 }
 
 export async function uploadFile<T>(path: string, file: File, taskId?: number): Promise<T> {
+  if (file.size > MAX_UPLOAD_BYTES) throw new Error(UPLOAD_LIMIT_MESSAGE);
+  if (file.size === 0) throw new Error("文件为空");
   const form = new FormData();
   form.append("file", file);
   if (taskId) form.append("taskId", String(taskId));
@@ -175,6 +178,7 @@ export type ActivityItem = {
 
 export type FileItem = {
   id: number;
+  uploaderId: number;
   taskId: number | null;
   originalName: string;
   mimeType: string | null;

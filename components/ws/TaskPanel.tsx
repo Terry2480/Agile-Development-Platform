@@ -2,6 +2,7 @@
 
 // 主内容区：项目任务面板（状态分组 / Tab / 筛选 / 新建）、我的待办视图、通知视图、任务详情抽屉
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { TaskAction } from "@/lib/task-action";
 import { RequestGate } from "@/lib/request-gate";
 import {
   api, uploadFile as apiUpload, type TaskItem, type ProjectDetail,
@@ -261,6 +262,11 @@ export function TaskDrawer() {
   const [task, setTask] = useState<TaskFull | null>(null);
   const [comment, setComment] = useState("");
   const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [busy, setBusy] = useState("");
+  const [action] = useState(() => new TaskAction());
+  const alive = useRef(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const id = ws.drawerTaskId;
   const [gate] = useState(() => new RequestGate());
@@ -271,18 +277,20 @@ export function TaskDrawer() {
     try {
       const data = await api<{ task: TaskFull }>(`/api/tasks/${id}`, { signal: request.signal });
       if (!request.current()) return;
-      setError("");
+      setLoadError("");
       setTask(data.task);
     } catch (e) {
       if (!request.current()) return;
-      setError((e as Error).message);
+      setLoadError((e as Error).message);
+      throw e;
     }
   }, [id, gate]);
 
   useEffect(() => {
     let active = true;
-    void Promise.resolve().then(() => { if (active) return load(); });
-    return () => { active = false; gate.cancel(); };
+    alive.current = true;
+    void Promise.resolve().then(() => { if (active) return load().catch(() => {}); });
+    return () => { active = false; alive.current = false; gate.cancel(); };
   }, [load, gate]);
 
   if (!id) return null;
@@ -290,42 +298,50 @@ export function TaskDrawer() {
   const detail: ProjectDetail | null = ws.detail;
   const memberNames = detail?.members.map((m) => m.displayName) ?? [];
 
-  async function patch(fields: Record<string, unknown>) {
+  async function runAction(label: string, write: () => Promise<void>, refresh: () => Promise<void>) {
+    let started = false;
     try {
-      await ws.updateTask(id!, fields);
-      await load();
+      const result = await action.run(async () => {
+        started = true;
+        setBusy(label); setError(""); setNotice("");
+        await write();
+      }, refresh);
+      if (!alive.current || result === "busy") return;
+      setNotice(result === "refresh-failed" ? `${label}已成功，但刷新失败。请重试加载，无需重复提交。` : `${label}成功`);
     } catch (e) {
-      setError((e as Error).message);
-    }
+      if (alive.current) setError(`${label}失败：${(e as Error).message}`);
+    } finally { if (started && alive.current) setBusy(""); }
   }
 
+  async function patch(fields: Record<string, unknown>) {
+    await runAction("保存", () => ws.updateTask(id!, fields), load);
+  }
   async function submitComment() {
     const content = comment.trim();
-    if (!content) return;
-    try {
+    if (!content || busy) return;
+    await runAction("发表评论", async () => {
       await api(`/api/tasks/${id}/comments`, { method: "POST", json: { content } });
-      setComment("");
-      await load();
-      await ws.refreshTasks();
-      await ws.refreshNotifications();
-    } catch (e) {
-      setError((e as Error).message);
-    }
+      if (alive.current) setComment("");
+    }, async () => { await Promise.all([load(), ws.refreshTasks(), ws.refreshNotifications()]); });
   }
 
   return (
     <>
-      <div className="ws-backdrop" style={{ zIndex: 55, background: "transparent" }} onClick={() => ws.closeTask()} />
+      <div className="ws-backdrop" style={{ zIndex: 55, background: "transparent" }} onClick={() => { if (!busy) ws.closeTask(); }} />
       <aside className="ws-drawer">
         <div className="ws-drawer-head">
           <span className="d-code">{task?.code ?? "…"}</span>
-          <button className="ws-icon-btn" onClick={() => ws.closeTask()}><Icon name="x" size={18} /></button>
+          <button className="ws-icon-btn" onClick={() => { if (!busy) ws.closeTask(); }}><Icon name="x" size={18} /></button>
         </div>
 
         <div className="ws-drawer-body">
-          {error && <div className="ws-error" role="alert" style={{ marginTop: 0 }}>{error} <button className="ws-btn" onClick={() => void load()}>重试加载</button></div>}
+          {busy && <div role="status">{busy}中…</div>}
+          {error && <div className="ws-error" role="alert">{error}</div>}
+          {notice && <div role="status">{notice}</div>}
+          {loadError && <div className="ws-error" role="alert">详情加载失败：{loadError}</div>}
+          {(loadError || notice.includes("刷新失败")) && <button className="ws-btn" disabled={!!busy} onClick={() => void Promise.all([load(), ws.refreshTasks(), ws.refreshFiles(), ws.refreshNotifications()]).then(() => { setNotice(""); }).catch(() => {})}>重试加载</button>}
           {!task ? (
-            <div style={{ padding: 40, textAlign: "center", color: "#5d6273", fontSize: 13 }}>{error ? "任务加载失败" : "加载中…"}</div>
+            <div style={{ padding: 40, textAlign: "center", color: "#5d6273", fontSize: 13 }}>{loadError ? "任务加载失败" : "加载中…"}</div>
           ) : (
             <>
               <h2>{task.title}</h2>
@@ -335,19 +351,20 @@ export function TaskDrawer() {
               <div style={{ marginTop: 16 }}>
                 <div className="ws-detail-row">
                   <label>状态</label>
-                  <select className="ws-select" value={task.status} onChange={(e) => patch({ status: e.target.value })}>
+                  <select disabled={!!busy} className="ws-select" value={task.status} onChange={(e) => patch({ status: e.target.value })}>
                     {Object.entries(STATUS_TEXT).map(([v, t]) => <option key={v} value={v}>{t}</option>)}
                   </select>
                 </div>
                 <div className="ws-detail-row">
                   <label>优先级</label>
-                  <select className="ws-select" value={task.priority} onChange={(e) => patch({ priority: e.target.value })}>
+                  <select disabled={!!busy} className="ws-select" value={task.priority} onChange={(e) => patch({ priority: e.target.value })}>
                     {Object.entries(PRIORITY_TEXT).map(([v, t]) => <option key={v} value={v}>{t}</option>)}
                   </select>
                 </div>
                 <div className="ws-detail-row">
                   <label>负责人</label>
                   <select
+                    disabled={!!busy}
                     className="ws-select"
                     value={task.assignee?.id ?? ""}
                     onChange={(e) => patch({ assigneeId: e.target.value ? Number(e.target.value) : null })}
@@ -358,11 +375,12 @@ export function TaskDrawer() {
                 </div>
                 <div className="ws-detail-row">
                   <label>截止日期</label>
-                  <input className="ws-select" type="date" value={task.dueOn ?? ""} onChange={(e) => patch({ dueOn: e.target.value || null })} />
+                  <input disabled={!!busy} className="ws-select" type="date" value={task.dueOn ?? ""} onChange={(e) => patch({ dueOn: e.target.value || null })} />
                 </div>
                 <div className="ws-detail-row">
                   <label>迭代</label>
                   <select
+                    disabled={!!busy}
                     className="ws-select"
                     value={task.sprintId ?? ""}
                     onChange={(e) => patch({ sprintId: e.target.value ? Number(e.target.value) : null })}
@@ -380,6 +398,7 @@ export function TaskDrawer() {
                       const on = task.labels.some((tl) => tl.id === l.id);
                       return (
                         <button
+                          disabled={!!busy}
                           key={l.id}
                           className={`ws-chip ${on ? "on" : ""}`}
                           style={on ? { background: l.color } : {}}
@@ -429,11 +448,12 @@ export function TaskDrawer() {
                 <input
                   className="ws-input"
                   placeholder="发表评论… @成员名 可提醒对方"
+                  disabled={!!busy}
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && submitComment()}
                 />
-                <button className="ws-btn primary" onClick={submitComment}>发送</button>
+                <button className="ws-btn primary" disabled={!!busy || !comment.trim()} onClick={submitComment}>{busy === "发表评论" ? "发送中…" : "发送"}</button>
               </div>
 
               {task.activities.length > 0 && (
@@ -454,17 +474,10 @@ export function TaskDrawer() {
                 </span>
                 <button
                   className="ws-btn"
-                  onClick={async () => {
-                    if (!confirm(`删除任务 ${task.code}？此操作不可恢复。`)) return;
-                    try {
-                      await api(`/api/tasks/${id}`, { method: "DELETE" });
-                      ws.closeTask();
-                      await ws.refreshTasks();
-                      await ws.refreshProjects();
-                      await ws.refreshActivities();
-                    } catch (e) {
-                      setError((e as Error).message);
-                    }
+                  disabled={!!busy}
+                  onClick={() => {
+                    if (busy || !confirm(`删除任务 ${task.code}？此操作不可恢复。`)) return;
+                    void runAction("删除任务", () => ws.deleteTask(id!), async () => { if (alive.current) ws.closeTask(); });
                   }}
                 >
                   删除任务
@@ -475,23 +488,19 @@ export function TaskDrawer() {
         </div>
 
         <div style={{ padding: "10px 20px", borderTop: "1px solid #22242f", display: "flex", gap: 8 }}>
-          <button className="ws-btn" style={{ flex: 1 }} onClick={() => fileRef.current?.click()}>
+          <button className="ws-btn" disabled={!!busy} style={{ flex: 1 }} onClick={() => fileRef.current?.click()}>
             <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}><Icon name="paperclip" size={13} /> 上传附件</span>
           </button>
           <input
             ref={fileRef} type="file" hidden
-            onChange={async (e) => {
+            disabled={!!busy}
+            onChange={(e) => {
               const file = e.target.files?.[0];
-              if (!file) return;
-              try {
-                await apiUpload(`/api/projects/${ws.selectedId}/files`, file, id);
-                await load();
-                await ws.refreshTasks();
-                await ws.refreshFiles();
-              } catch (err) {
-                setError((err as Error).message);
-              }
               e.target.value = "";
+              if (!file || busy) return;
+              void runAction("上传附件", async () => {
+                await apiUpload(`/api/projects/${ws.selectedId}/files`, file, id!);
+              }, async () => { await Promise.all([load(), ws.refreshTasks(), ws.refreshFiles(), ws.refreshActivities()]); });
             }}
           />
         </div>
