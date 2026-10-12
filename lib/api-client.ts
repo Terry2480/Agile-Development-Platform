@@ -7,9 +7,26 @@ export class ApiError extends Error {
   }
 }
 
+async function requestJson<T>(path: string, init: RequestInit): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(path, init);
+  } catch (e) {
+    if (init.signal?.aborted) throw e;
+    throw new Error("无法连接服务器，请检查网络后重试");
+  }
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    const fallback = res.status === 401 ? "登录已过期，请重新登录" : res.status === 403 ? "你没有执行此操作的权限" : res.status >= 500 ? "服务器暂时无法处理请求，请稍后重试" : "请求失败，请重试";
+    throw new ApiError(res.status, data?.error ?? fallback);
+  }
+  if (data === null) throw new Error("服务器返回的数据异常，请重试");
+  return data as T;
+}
+
 export async function api<T>(path: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
   const { json, ...rest } = init;
-  const res = await fetch(path, {
+  return requestJson<T>(path, {
     ...rest,
     headers: {
       ...(json !== undefined ? { "Content-Type": "application/json" } : {}),
@@ -17,19 +34,13 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
     },
     body: json !== undefined ? JSON.stringify(json) : rest.body,
   });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new ApiError(res.status, (data as { error?: string }).error ?? "请求失败");
-  return data as T;
 }
 
 export async function uploadFile<T>(path: string, file: File, taskId?: number): Promise<T> {
   const form = new FormData();
   form.append("file", file);
   if (taskId) form.append("taskId", String(taskId));
-  const res = await fetch(path, { method: "POST", body: form });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new ApiError(res.status, (data as { error?: string }).error ?? "上传失败");
-  return data as T;
+  return requestJson<T>(path, { method: "POST", body: form });
 }
 
 /* ---------- 类型 ---------- */

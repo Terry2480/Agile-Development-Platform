@@ -13,6 +13,20 @@ export function SpacePanel() {
   const ws = useWorkspace();
   const project = ws.projects.find((p) => p.id === ws.selectedId);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const [failedFile, setFailedFile] = useState<File | null>(null);
+  const [uploadMessage, setUploadMessage] = useState("");
+
+  async function upload(file: File) {
+    setUploading(true); setUploadError(""); setUploadMessage("");
+    try {
+      await ws.uploadProjectFile(file);
+      setFailedFile(null); setUploadMessage(`${file.name} 已上传`);
+    } catch (e) {
+      setFailedFile(file); setUploadError((e as Error).message);
+    } finally { setUploading(false); }
+  }
 
   if (!project) {
     return (
@@ -30,10 +44,13 @@ export function SpacePanel() {
       <section className="ws-space-section">
         <div className="ws-space-title">
           项目文件库（{ws.files.length}）
-          <button className="ws-icon-btn" title="上传文件" onClick={() => fileRef.current?.click()}>
+          <button className="ws-icon-btn" disabled={uploading} title="上传文件" onClick={() => fileRef.current?.click()}>
             <Icon name="plus" size={13} />
           </button>
         </div>
+        {uploading && <div role="status">文件上传中…</div>}
+        {uploadMessage && <div role="status">{uploadMessage}</div>}
+        {uploadError && <div className="ws-error" role="alert">上传失败：{uploadError} {failedFile && <button className="ws-btn" disabled={uploading} onClick={() => void upload(failedFile)}>重试上传</button>}</div>}
         {ws.files.length === 0 && <div className="ws-empty" style={{ padding: "16px 12px" }}>暂无文件</div>}
         {ws.files.map((f) => (
           <a key={f.id} className="ws-file-item" href={`/api/files/${f.id}`}>
@@ -46,15 +63,11 @@ export function SpacePanel() {
         ))}
         <input
           ref={fileRef} type="file" hidden
-          onChange={async (e) => {
+          onChange={(e) => {
             const file = e.target.files?.[0];
-            if (!file) return;
-            try {
-              await ws.uploadProjectFile(file);
-            } catch {
-              /* 错误已在 store 提示 */
-            }
             e.target.value = "";
+            if (!file) return;
+            void upload(file);
           }}
         />
       </section>

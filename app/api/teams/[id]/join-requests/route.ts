@@ -25,6 +25,9 @@ export async function PUT(request: Request, context: Context) {
     await db.transaction(async (tx) => {
       // 锁定团队，避免审批与项目创建交错后遗漏项目成员同步。
       await tx.select().from(teams).where(eq(teams.id, id)).for("update");
+      const user = await requireUser(request);
+      const { membership } = await requireTeamAccess(user.id, id, "member", tx);
+      if (!canManageInvites(membership)) throw new ApiError(403, "只有负责人或管理员可以审核申请");
       const [row] = await tx.select().from(teamJoinRequests).where(and(eq(teamJoinRequests.id, body.requestId), eq(teamJoinRequests.teamId, id))).for("update");
       if (!row || row.status !== "pending") throw new ApiError(409, "申请已处理或不存在，请刷新");
       if (body.approve) {

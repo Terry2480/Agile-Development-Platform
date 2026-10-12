@@ -68,8 +68,8 @@ const ROLE_RANK: Record<string, number> = { owner: 3, admin: 2, member: 1 };
 
 // 团队访问校验：必须是团队成员；minRole 提权到 admin / owner
 // 返回 { team, membership }（membership.role 为我在该团队的角色）
-export async function requireTeamAccess(userId: number, teamId: number, minRole: "member" | "admin" | "owner" = "member") {
-  const rows = await db
+export async function requireTeamAccess(userId: number, teamId: number, minRole: "member" | "admin" | "owner" = "member", executor: Pick<typeof db, "select"> = db) {
+  const rows = await executor
     .select({ team: teams, membership: teamMembers })
     .from(teamMembers)
     .innerJoin(teams, eq(teams.id, teamMembers.teamId))
@@ -85,8 +85,8 @@ export async function requireTeamAccess(userId: number, teamId: number, minRole:
 
 // 项目访问校验：项目必须存在，且当前用户是其所属团队的成员
 // 返回 { project, team, membership }
-export async function requireProjectAccess(userId: number, projectId: number, minRole: "member" | "admin" | "owner" = "member") {
-  const rows = await db
+export async function requireProjectAccess(userId: number, projectId: number, minRole: "member" | "admin" | "owner" = "member", executor: Pick<typeof db, "select"> = db) {
+  const rows = await executor
     .select({ project: projects, team: teams, membership: teamMembers })
     .from(projects)
     .innerJoin(teams, eq(teams.id, projects.teamId))

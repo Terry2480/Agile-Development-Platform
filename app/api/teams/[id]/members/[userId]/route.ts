@@ -20,15 +20,19 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       z.object({ role: z.enum(["admin", "member"], { message: "角色不合法" }) }),
     );
 
-    const [membership] = await db
-      .select({ id: teamMembers.id, role: teamMembers.role })
-      .from(teamMembers)
-      .where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, targetUserId)))
-      .limit(1);
-    if (!membership) throw new ApiError(404, "该用户不是团队成员");
-    if (membership.role === "owner") throw new ApiError(400, "不能修改团队创建者的角色");
+    await db.transaction(async (tx) => {
+      await tx.select({ id: teams.id }).from(teams).where(eq(teams.id, teamId)).for("update");
+      await requireTeamAccess(user.id, teamId, "owner", tx);
+      const [membership] = await tx
+        .select({ id: teamMembers.id, role: teamMembers.role })
+        .from(teamMembers)
+        .where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, targetUserId)))
+        .limit(1);
+      if (!membership) throw new ApiError(404, "该用户不是团队成员");
+      if (membership.role === "owner") throw new ApiError(400, "不能修改团队创建者的角色");
 
-    await db.update(teamMembers).set({ role: body.role }).where(eq(teamMembers.id, membership.id));
+      await tx.update(teamMembers).set({ role: body.role }).where(eq(teamMembers.id, membership.id));
+    });
     return Response.json({ ok: true });
   } catch (error) {
     return handleApiError(error);
@@ -41,34 +45,37 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     const { id, userId: target } = await params;
     const teamId = parseId(id, "团队 ID");
     const targetUserId = parseId(target, "用户 ID");
-    const { membership, team } = await requireTeamAccess(user.id, teamId);
+    await db.transaction(async (tx) => {
+      await tx.select({ id: teams.id }).from(teams).where(eq(teams.id, teamId)).for("update");
+      const { membership, team } = await requireTeamAccess(user.id, teamId, "member", tx);
 
-    const isSelf = targetUserId === user.id;
-    if (!isSelf && (membership.role !== "owner" && membership.role !== "admin")) {
-      throw new ApiError(403, "只有团队管理员可以移除成员");
-    }
-    if (targetUserId === team.ownerId) throw new ApiError(400, "团队创建者不能退出，如需解散请删除团队");
+      const isSelf = targetUserId === user.id;
+      if (!isSelf && (membership.role !== "owner" && membership.role !== "admin")) {
+        throw new ApiError(403, "只有团队管理员可以移除成员");
+      }
+      if (targetUserId === team.ownerId) throw new ApiError(400, "团队创建者不能退出，如需解散请删除团队");
 
-    const [targetMembership] = await db
-      .select({ id: teamMembers.id, role: teamMembers.role })
-      .from(teamMembers)
-      .where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, targetUserId)))
-      .limit(1);
-    if (!targetMembership) throw new ApiError(404, "该用户不是团队成员");
-    // admin 不能移除别的 admin / owner（仅 owner 可以）
-    if (!isSelf && membership.role === "admin" && targetMembership.role !== "member") {
-      throw new ApiError(403, "只有团队创建者可以移除管理员");
-    }
+      const [targetMembership] = await tx
+        .select({ id: teamMembers.id, role: teamMembers.role })
+        .from(teamMembers)
+        .where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, targetUserId)))
+        .limit(1);
+      if (!targetMembership) throw new ApiError(404, "该用户不是团队成员");
+      // admin 不能移除别的 admin / owner（仅 owner 可以）
+      if (!isSelf && membership.role === "admin" && targetMembership.role !== "member") {
+        throw new ApiError(403, "只有团队创建者可以移除管理员");
+      }
 
-    await db.delete(teamMembers).where(eq(teamMembers.id, targetMembership.id));
+      await tx.delete(teamMembers).where(eq(teamMembers.id, targetMembership.id));
 
-    // 同步移出该团队全部项目
-    const teamProjects = await db.select({ id: projects.id }).from(projects).where(eq(projects.teamId, teamId));
-    for (const p of teamProjects) {
-      await db
-        .delete(projectMembers)
-        .where(and(eq(projectMembers.projectId, p.id), eq(projectMembers.userId, targetUserId)));
-    }
+      // 同步移出该团队全部项目
+      const teamProjects = await tx.select({ id: projects.id }).from(projects).where(eq(projects.teamId, teamId));
+      for (const p of teamProjects) {
+        await tx
+          .delete(projectMembers)
+          .where(and(eq(projectMembers.projectId, p.id), eq(projectMembers.userId, targetUserId)));
+      }
+    });
 
     return Response.json({ ok: true });
   } catch (error) {

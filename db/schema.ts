@@ -32,6 +32,11 @@ export const sessions = pgTable("sessions", {
 });
 
 /* ============ 团队 ============ */
+export const authRateLimits = pgTable("auth_rate_limits", {
+  key: text("key").primaryKey(),
+  count: integer("count").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+});
 
 // 团队表：高校小组 / 实验室 / 课程团队
 export const teams = pgTable("teams", {
@@ -216,6 +221,12 @@ export const notifications = pgTable("notifications", {
 });
 
 /* ============ 附件 ============ */
+export const fileCleanup = pgTable("file_cleanup", {
+  storedName: text("stored_name").primaryKey(),
+  notBefore: timestamp("not_before", { withTimezone: true }).notNull().defaultNow(),
+  attempts: integer("attempts").notNull().default(0),
+  lastError: text("last_error"),
+});
 
 // 附件表：任务 / 项目文件元数据；文件本体存项目根 uploads/ 目录（不入库、不进 Git）
 export const attachments = pgTable("attachments", {

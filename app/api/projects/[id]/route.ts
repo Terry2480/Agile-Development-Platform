@@ -6,6 +6,7 @@ import {
 } from "@/db/schema";
 import { requireUser, parseBody, parseId, requireProjectAccess, handleApiError, displayName } from "@/lib/api";
 import { logActivity } from "@/lib/activity";
+import { tryFileCleanup } from "@/lib/file-cleanup";
 
 // 项目详情 / 更新 / 删除：GET / PUT / DELETE /api/projects/[id]
 // GET 返回项目 + 团队信息 + 成员 + Sprint 列表 + 团队标签 + 任务统计 + 是否星标
@@ -130,6 +131,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     const { project } = await requireProjectAccess(user.id, projectId, "admin");
 
     await db.delete(projects).where(eq(projects.id, projectId));
+    await tryFileCleanup();
     return Response.json({ ok: true, deleted: project.name });
   } catch (error) {
     return handleApiError(error);

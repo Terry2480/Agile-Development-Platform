@@ -10,8 +10,8 @@ export async function logActivity(input: {
   action: string;
   detail: string;
   taskId?: number | null;
-}) {
-  await db.insert(activities).values({
+}, executor: Pick<typeof db, "insert"> = db) {
+  await executor.insert(activities).values({
     projectId: input.projectId,
     actorId: input.actorId,
     action: input.action,

@@ -125,38 +125,44 @@ export async function POST(request: Request) {
     const body = await parseBody(request, createSchema);
     await requireTeamAccess(user.id, body.teamId);
 
-    const [project] = await db
-      .insert(projects)
-      .values({
-        teamId: body.teamId,
-        name: body.name,
-        key: body.key,
-        description: body.description || null,
-        createdById: user.id,
-      })
-      .returning()
-      .catch((error: any) => {
-        if (error?.cause?.code === "23505" || error?.code === "23505") {
-          throw new ApiError(409, `项目标识 ${body.key} 已被团队内其他项目使用`);
-        }
-        throw error;
-      });
+    const project = await db.transaction(async (tx) => {
+      await tx.select({ id: teams.id }).from(teams).where(eq(teams.id, body.teamId)).for("update");
+      await requireTeamAccess(user.id, body.teamId, "member", tx);
+      const [created] = await tx
+        .insert(projects)
+        .values({
+          teamId: body.teamId,
+          name: body.name,
+          key: body.key,
+          description: body.description || null,
+          createdById: user.id,
+        })
+        .returning()
+        .catch((caught: unknown) => {
+          const error = caught as { code?: string; cause?: { code?: string } };
+          if (error?.cause?.code === "23505" || error?.code === "23505") {
+            throw new ApiError(409, `项目标识 ${body.key} 已被团队内其他项目使用`);
+          }
+          throw error;
+        });
 
-    // 团队全员自动成为项目成员
-    const allMembers = await db
-      .select({ userId: teamMembers.userId })
-      .from(teamMembers)
-      .where(eq(teamMembers.teamId, body.teamId));
-    await db
-      .insert(projectMembers)
-      .values(allMembers.map((m) => ({ projectId: project.id, userId: m.userId })))
-      .onConflictDoNothing();
+      // 团队全员自动成为项目成员
+      const allMembers = await tx
+        .select({ userId: teamMembers.userId })
+        .from(teamMembers)
+        .where(eq(teamMembers.teamId, body.teamId));
+      if (allMembers.length) await tx
+        .insert(projectMembers)
+        .values(allMembers.map((m) => ({ projectId: created.id, userId: m.userId })))
+        .onConflictDoNothing();
 
-    await logActivity({
-      projectId: project.id,
-      actorId: user.id,
-      action: "project.created",
-      detail: `${displayName(user)} 创建了项目 ${project.name}（${project.key}）`,
+      await logActivity({
+        projectId: created.id,
+        actorId: user.id,
+        action: "project.created",
+        detail: `${displayName(user)} 创建了项目 ${created.name}（${created.key}）`,
+      }, tx);
+      return created;
     });
 
     return Response.json({ project }, { status: 201 });

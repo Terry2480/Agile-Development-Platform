@@ -3,6 +3,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { teams, teamMembers, users } from "@/db/schema";
 import { requireUser, parseBody, parseId, requireTeamAccess, handleApiError, displayName } from "@/lib/api";
+import { tryFileCleanup } from "@/lib/file-cleanup";
 
 // 团队详情：GET / PUT / DELETE /api/teams/[id]
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -69,6 +70,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     await requireTeamAccess(user.id, teamId, "owner");
 
     await db.delete(teams).where(and(eq(teams.id, teamId), eq(teams.ownerId, user.id)));
+    await tryFileCleanup();
     return Response.json({ ok: true });
   } catch (error) {
     return handleApiError(error);

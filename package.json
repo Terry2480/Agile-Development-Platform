@@ -11,6 +11,8 @@
     "db:add-member-duty": "tsx db/add-member-duty.ts",
     "db:add-milestones": "tsx db/add-milestones.ts",
     "db:add-team-invites": "tsx db/add-team-invites.ts",
+    "db:add-auth-protection": "tsx db/add-auth-protection.ts",
+    "db:add-file-cleanup": "tsx db/add-file-cleanup.ts",
     "db:seed": "tsx db/seed.ts",
     "db:studio": "drizzle-kit studio"
   },

@@ -3,9 +3,12 @@ import { db } from "@/db";
 import { teamInvites, teamJoinRequests, teamMembers, teams } from "@/db/schema";
 import { requireUser, parseBody, ApiError, handleApiError } from "@/lib/api";
 import { joinCodeSchema } from "@/lib/team-invites";
+import { consumeLimit } from "@/lib/rate-limit";
 export async function POST(request: Request) {
   try {
     const user = await requireUser(request);
+    const blocked = await consumeLimit(`team-join:user:${user.id}`, 10, 600);
+    if (blocked) return blocked;
     const { code } = await parseBody(request, joinCodeSchema);
     const result = await db.transaction(async (tx) => {
       const [invite] = await tx.select().from(teamInvites).where(eq(teamInvites.code, code)).for("share");

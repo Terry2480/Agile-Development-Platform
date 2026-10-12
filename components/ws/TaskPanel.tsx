@@ -1,7 +1,8 @@
 "use client";
 
 // 主内容区：项目任务面板（状态分组 / Tab / 筛选 / 新建）、我的待办视图、通知视图、任务详情抽屉
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { RequestGate } from "@/lib/request-gate";
 import {
   api, uploadFile as apiUpload, type TaskItem, type ProjectDetail,
   STATUS_TEXT, PRIORITY_TEXT, dueInfo, fmtSize, fmtDateShort, fmtTime,
@@ -262,23 +263,27 @@ export function TaskDrawer() {
   const [error, setError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const id = ws.drawerTaskId;
+  const [gate] = useState(() => new RequestGate());
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!id) return;
+    const request = gate.begin("task");
     try {
-      const data = await api<{ task: TaskFull }>(`/api/tasks/${id}`);
+      const data = await api<{ task: TaskFull }>(`/api/tasks/${id}`, { signal: request.signal });
+      if (!request.current()) return;
+      setError("");
       setTask(data.task);
     } catch (e) {
+      if (!request.current()) return;
       setError((e as Error).message);
     }
-  };
+  }, [id, gate]);
 
   useEffect(() => {
-    setTask(null);
-    setError("");
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+    let active = true;
+    void Promise.resolve().then(() => { if (active) return load(); });
+    return () => { active = false; gate.cancel(); };
+  }, [load, gate]);
 
   if (!id) return null;
 
@@ -287,11 +292,8 @@ export function TaskDrawer() {
 
   async function patch(fields: Record<string, unknown>) {
     try {
-      await api(`/api/tasks/${id}`, { method: "PUT", json: fields });
+      await ws.updateTask(id!, fields);
       await load();
-      await ws.refreshTasks();
-      await ws.refreshProjects();
-      await ws.refreshActivities();
     } catch (e) {
       setError((e as Error).message);
     }
@@ -321,9 +323,9 @@ export function TaskDrawer() {
         </div>
 
         <div className="ws-drawer-body">
-          {error && <div className="ws-error" style={{ marginTop: 0 }}>{error}</div>}
+          {error && <div className="ws-error" role="alert" style={{ marginTop: 0 }}>{error} <button className="ws-btn" onClick={() => void load()}>重试加载</button></div>}
           {!task ? (
-            <div style={{ padding: 40, textAlign: "center", color: "#5d6273", fontSize: 13 }}>加载中…</div>
+            <div style={{ padding: 40, textAlign: "center", color: "#5d6273", fontSize: 13 }}>{error ? "任务加载失败" : "加载中…"}</div>
           ) : (
             <>
               <h2>{task.title}</h2>

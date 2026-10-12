@@ -2,6 +2,7 @@ import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
 import { eq, and, gt } from "drizzle-orm";
 import { db } from "@/db";
 import { users, sessions } from "@/db/schema";
+import { sessionCookie } from "./request-security";
 
 // ── 登录会话 ──────────────────────────────────────────────
 // 方案：登录成功后生成随机令牌，一份存 sessions 表，一份放进 httpOnly Cookie；
@@ -31,13 +32,13 @@ export async function createSession(userId: number): Promise<string> {
   const token = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 86400_000);
   await db.insert(sessions).values({ token, userId, expiresAt });
-  return `${SESSION_COOKIE}=${token}; HttpOnly; Path=/; Max-Age=${SESSION_DAYS * 86400}; SameSite=Lax`;
+  return sessionCookie(token, SESSION_DAYS * 86400);
 }
 
 // 注销会话：删除表记录，返回清空 Cookie 的 Set-Cookie 字符串
 export async function destroySession(token: string): Promise<string> {
   await db.delete(sessions).where(eq(sessions.token, token));
-  return `${SESSION_COOKIE}=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax`;
+  return sessionCookie("", 0);
 }
 
 // 从请求头里解析出会话令牌
