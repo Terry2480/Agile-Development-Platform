@@ -16,6 +16,7 @@ const ICON_PATHS: Record<string, string> = {
   bell: "M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0",
   check: "M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11",
   sun: "M12 17a5 5 0 100-10 5 5 0 000 10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4",
+  moon: "M21 12.8A9 9 0 1111.2 3 7 7 0 0021 12.8z",
   plus: "M12 5v14M5 12h14",
   search: "M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.35-4.35",
   star: "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z",
@@ -125,7 +126,7 @@ export interface WorkspaceStore {
   refreshMyTasks(): Promise<void>;
   createTeam(name: string, description?: string): Promise<void>;
   deleteWorkspaceItem(kind: "project" | "team", id: number): Promise<void>;
-  createProject(teamId: number, name: string, key: string, description?: string): Promise<void>;
+  createProject(teamId: number, name: string, key: string, description?: string, courseName?: string): Promise<void>;
   createTask(input: Record<string, unknown>): Promise<void>;
   updateTask(id: number, patch: Record<string, unknown>): Promise<void>;
   deleteTask(id: number): Promise<void>;

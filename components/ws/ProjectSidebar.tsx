@@ -54,7 +54,7 @@ export function ProjectSidebar() {
         )}
         <div className="ws-group-label">我的工作空间</div>
         {mine.length === 0 && starred.length === 0 && (
-          <div style={{ padding: "18px 10px", fontSize: 12, color: "#5d6273", lineHeight: 1.8 }}>
+          <div style={{ padding: "18px 10px", fontSize: 12, color: "var(--ws-color-5d6273)", lineHeight: 1.8 }}>
             还没有项目，请前往最左侧「项目管理」创建项目。
           </div>
         )}

@@ -89,6 +89,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 const updateSchema = z.object({
   name: z.string().trim().min(1, "请填写项目名称").max(50, "项目名称过长").optional(),
   description: z.string().trim().max(500, "项目描述过长").optional().nullable(),
+  courseName: z.string().trim().max(100, "课程名称最多 100 个字").optional().nullable(),
   status: z.enum(["active", "archived"], { message: "状态不合法" }).optional(),
 });
 
@@ -104,6 +105,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       .set({
         ...(body.name !== undefined ? { name: body.name } : {}),
         ...(body.description !== undefined ? { description: body.description || null } : {}),
+        ...(body.courseName !== undefined ? { courseName: body.courseName || null } : {}),
         ...(body.status !== undefined ? { status: body.status } : {}),
       })
       .where(eq(projects.id, projectId))

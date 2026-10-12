@@ -1,0 +1,237 @@
+/* Workspace palette: original dark colors and warm day equivalents. */
+:root {
+  --ws-color-0003: #0003;
+  --ws-color-0006: #0006;
+  --ws-color-0a0b10: #0a0b10;
+  --ws-color-0d0e14: #0d0e14;
+  --ws-color-0f1017: #0f1017;
+  --ws-color-101119: #101119;
+  --ws-color-11141c: #11141c;
+  --ws-color-12131b: #12131b;
+  --ws-color-121722: #121722;
+  --ws-color-141620: #141620;
+  --ws-color-141722: #141722;
+  --ws-color-141c2c: #141c2c;
+  --ws-color-151d2e: #151d2e;
+  --ws-color-152238: #152238;
+  --ws-color-16181f: #16181f;
+  --ws-color-161927: #161927;
+  --ws-color-171927: #171927;
+  --ws-color-181b28: #181b28;
+  --ws-color-182034: #182034;
+  --ws-color-182338: #182338;
+  --ws-color-191b26: #191b26;
+  --ws-color-191c29: #191c29;
+  --ws-color-1a1c27: #1a1c27;
+  --ws-color-1a1d2b: #1a1d2b;
+  --ws-color-1b2030: #1b2030;
+  --ws-color-1b2942: #1b2942;
+  --ws-color-1c1e28: #1c1e28;
+  --ws-color-1c1e2a: #1c1e2a;
+  --ws-color-1c2233: #1c2233;
+  --ws-color-1c3154: #1c3154;
+  --ws-color-1d1f2a: #1d1f2a;
+  --ws-color-1d2030: #1d2030;
+  --ws-color-1d2436: #1d2436;
+  --ws-color-1f212c: #1f212c;
+  --ws-color-22242f: #22242f;
+  --ws-color-22243a: #22243a;
+  --ws-color-232636: #232636;
+  --ws-color-23273a: #23273a;
+  --ws-color-24273a: #24273a;
+  --ws-color-242838: #242838;
+  --ws-color-24407a: #24407a;
+  --ws-color-252938: #252938;
+  --ws-color-25406b: #25406b;
+  --ws-color-262a38: #262a38;
+  --ws-color-26334d: #26334d;
+  --ws-color-263450: #263450;
+  --ws-color-273349: #273349;
+  --ws-color-28324a: #28324a;
+  --ws-color-2a2d3d: #2a2d3d;
+  --ws-color-2a2f45: #2a2f45;
+  --ws-color-2a3040: #2a3040;
+  --ws-color-2a3a5e: #2a3a5e;
+  --ws-color-2b3f70: #2b3f70;
+  --ws-color-2f3347: #2f3347;
+  --ws-color-2f5cd8: #2f5cd8;
+  --ws-color-303a50: #303a50;
+  --ws-color-304467: #304467;
+  --ws-color-332916: #332916;
+  --ws-color-38232b: #38232b;
+  --ws-color-3a3f52: #3a3f52;
+  --ws-color-3b6ef5: #3b6ef5;
+  --ws-color-4a4f61: #4a4f61;
+  --ws-color-594728: #594728;
+  --ws-color-5b8cff: #5b8cff;
+  --ws-color-5d6273: #5d6273;
+  --ws-color-5d6a8c: #5d6a8c;
+  --ws-color-6b7280: #6b7280;
+  --ws-color-6b7284: #6b7284;
+  --ws-color-6f9bff: #6f9bff;
+  --ws-color-7286ad: #7286ad;
+  --ws-color-737a8e: #737a8e;
+  --ws-color-777e92: #777e92;
+  --ws-color-7c8194: #7c8194;
+  --ws-color-864b43: #864b43;
+  --ws-color-8693ae: #8693ae;
+  --ws-color-8a8fa3: #8a8fa3;
+  --ws-color-8a9cbd: #8a9cbd;
+  --ws-color-8ab4ff: #8ab4ff;
+  --ws-color-8fa9e6: #8fa9e6;
+  --ws-color-9aa1b5: #9aa1b5;
+  --ws-color-9cbcff: #9cbcff;
+  --ws-color-a8c4ff: #a8c4ff;
+  --ws-color-a9c2f2: #a9c2f2;
+  --ws-color-a9c3ff: #a9c3ff;
+  --ws-color-aeb4c6: #aeb4c6;
+  --ws-color-ba3848: #ba3848;
+  --ws-color-bbc1d2: #bbc1d2;
+  --ws-color-c6cbdb: #c6cbdb;
+  --ws-color-c88790: #c88790;
+  --ws-color-dfe3f0: #dfe3f0;
+  --ws-color-e7a4ac: #e7a4ac;
+  --ws-color-e8eaf2: #e8eaf2;
+  --ws-color-e9c47b: #e9c47b;
+  --ws-color-ef5b5b: #ef5b5b;
+  --ws-color-f08080: #f08080;
+  --ws-color-ff9aa7: #ff9aa7;
+  --ws-color-fff: #fff;
+}
+html[data-theme="day"] {
+  --ws-color-0003: #0003;
+  --ws-color-0006: #0006;
+  --ws-color-0a0b10: #eee4d4;
+  --ws-color-0d0e14: #f8f2e7;
+  --ws-color-0f1017: #fcf7ee;
+  --ws-color-101119: #f4ecdf;
+  --ws-color-11141c: #efe4d6;
+  --ws-color-12131b: #efe4d6;
+  --ws-color-121722: #efe3d6;
+  --ws-color-141620: #efe3d6;
+  --ws-color-141722: #fffaf2;
+  --ws-color-141c2c: #efe3d5;
+  --ws-color-151d2e: #eee3d4;
+  --ws-color-152238: #eee2d4;
+  --ws-color-16181f: #efe3d6;
+  --ws-color-161927: #efe3d5;
+  --ws-color-171927: #efe3d5;
+  --ws-color-181b28: #efe3d5;
+  --ws-color-182034: #eee2d4;
+  --ws-color-182338: #eee2d3;
+  --ws-color-191b26: #efe3d5;
+  --ws-color-191c29: #efe3d5;
+  --ws-color-1a1c27: #efe3d5;
+  --ws-color-1a1d2b: #eee2d4;
+  --ws-color-1b2030: #eee2d4;
+  --ws-color-1b2942: #eee1d2;
+  --ws-color-1c1e28: #eee2d4;
+  --ws-color-1c1e2a: #eee2d4;
+  --ws-color-1c2233: #eee2d3;
+  --ws-color-1c3154: #ede0d1;
+  --ws-color-1d1f2a: #eee2d4;
+  --ws-color-1d2030: #eee2d4;
+  --ws-color-1d2436: #eee2d3;
+  --ws-color-1f212c: #eee2d4;
+  --ws-color-22242f: #eee2d3;
+  --ws-color-22243a: #eee1d2;
+  --ws-color-232636: #eee1d3;
+  --ws-color-23273a: #eee1d2;
+  --ws-color-24273a: #eee1d2;
+  --ws-color-242838: #eee1d2;
+  --ws-color-24407a: #d9c6b0;
+  --ws-color-252938: #eee1d2;
+  --ws-color-25406b: #d9c6b0;
+  --ws-color-262a38: #eee1d2;
+  --ws-color-26334d: #ede0d0;
+  --ws-color-263450: #d9c6b0;
+  --ws-color-273349: #ede0d1;
+  --ws-color-28324a: #ede0d0;
+  --ws-color-2a2d3d: #ede0d1;
+  --ws-color-2a2f45: #ede0d1;
+  --ws-color-2a3040: #ede0d1;
+  --ws-color-2a3a5e: #d9c6b0;
+  --ws-color-2b3f70: #d9c6b0;
+  --ws-color-2f3347: #d9c6b0;
+  --ws-color-2f5cd8: #e97820;
+  --ws-color-303a50: #d9c6b0;
+  --ws-color-304467: #d9c6b0;
+  --ws-color-332916: #f4e6c7;
+  --ws-color-38232b: #fce8e5;
+  --ws-color-3a3f52: #d9c6b0;
+  --ws-color-3b6ef5: #ed8128;
+  --ws-color-4a4f61: #d9c6b0;
+  --ws-color-594728: #dfc28f;
+  --ws-color-5b8cff: #ffa447;
+  --ws-color-5d6273: #7b6d5c;
+  --ws-color-5d6a8c: #c56120;
+  --ws-color-6b7280: #c56120;
+  --ws-color-6b7284: #c56120;
+  --ws-color-6f9bff: #c96212;
+  --ws-color-7286ad: #c56120;
+  --ws-color-737a8e: #c56120;
+  --ws-color-777e92: #c56120;
+  --ws-color-7c8194: #796a57;
+  --ws-color-864b43: #864b43;
+  --ws-color-8693ae: #a24f1a;
+  --ws-color-8a8fa3: #c56120;
+  --ws-color-8a9cbd: #a24f1a;
+  --ws-color-8ab4ff: #a24f1a;
+  --ws-color-8fa9e6: #a24f1a;
+  --ws-color-9aa1b5: #74634f;
+  --ws-color-9cbcff: #a24f1a;
+  --ws-color-a8c4ff: #a24f1a;
+  --ws-color-a9c2f2: #a24f1a;
+  --ws-color-a9c3ff: #a24f1a;
+  --ws-color-aeb4c6: #a24f1a;
+  --ws-color-ba3848: #ba3848;
+  --ws-color-bbc1d2: #a24f1a;
+  --ws-color-c6cbdb: #a24f1a;
+  --ws-color-c88790: #93434e;
+  --ws-color-dfe3f0: #a24f1a;
+  --ws-color-e7a4ac: #a92d3c;
+  --ws-color-e8eaf2: #352a20;
+  --ws-color-e9c47b: #805919;
+  --ws-color-ef5b5b: #ef5b5b;
+  --ws-color-f08080: #c01717;
+  --ws-color-ff9aa7: #d6001c;
+  --ws-color-fff: #fff;
+}
+html[data-theme="day"] .ws-app, html[data-theme="day"] .ws-modal, html[data-theme="day"] .ws-drawer { color-scheme: light; }
+html:not([data-theme="day"]) .ws-app, html:not([data-theme="day"]) .ws-modal, html:not([data-theme="day"]) .ws-drawer { color-scheme: dark; }
+
+/* White text is reserved for filled accents; normal text follows the palette. */
+html[data-theme="day"] { --ws-color-fff: #352a20; }
+.ws-rail-logo, .ws-avatar, .ws-rail-badge, .ws-send { color:#fff; }
+.ws-app .ws-btn.primary, .ws-modal .ws-btn.primary, .ws-drawer .ws-btn.primary { background:var(--ws-color-3b6ef5)!important;color:#fff!important; }
+html[data-theme="day"] .ws-rail-btn.active, html[data-theme="day"] .ws-top-menu button.active, html[data-theme="day"] .ws-tab.active { color:#c35d12; }
+html[data-theme="day"] .ws-btn.primary, html[data-theme="day"] .ws-send { color:#35200c!important; }
+html[data-theme="day"] .ws-backdrop { background:rgba(60,42,22,.35); }
+html[data-theme="day"] .ws-modal, html[data-theme="day"] .ws-pop, html[data-theme="day"] .ws-user-menu { box-shadow:0 18px 55px rgba(80,55,25,.16); }
+html[data-theme="day"] .ws-drawer { box-shadow:-18px 0 55px rgba(80,55,25,.16); }
+
+/* Day controls have a separate surface and a visible boundary. */
+html[data-theme="day"] :is(.ws-input,.ws-select,.ws-textarea,.ws-chat-textarea,.ws-report-preview,.ws-search,.ws-searchbox) {
+  background:#fffdf8;
+  border-color:#a58e72;
+  color:#352a20;
+  box-shadow:inset 0 1px 2px rgba(70,48,24,.05);
+}
+html[data-theme="day"] :is(.ws-search,.ws-searchbox) input { color:#352a20; }
+html[data-theme="day"] :is(.ws-input,.ws-textarea,.ws-chat-textarea,.ws-search input,.ws-searchbox input,.ws-report-preview)::placeholder { color:#776853;opacity:1; }
+html[data-theme="day"] :is(.ws-input,.ws-select,.ws-textarea,.ws-chat-textarea,.ws-report-preview):hover,
+html[data-theme="day"] :is(.ws-search,.ws-searchbox):hover { border-color:#806c54; }
+html[data-theme="day"] :is(.ws-input,.ws-select,.ws-textarea,.ws-chat-textarea,.ws-report-preview):focus,
+html[data-theme="day"] :is(.ws-search,.ws-searchbox):focus-within {
+  background:#fff;
+  border-color:#bd6015;
+  outline:2px solid rgba(237,129,40,.28);
+  outline-offset:2px;
+  box-shadow:none;
+}
+html[data-theme="day"] .ws-select option { background:#fffdf8;color:#352a20; }
+html[data-theme="day"] .ws-btn:not(.primary) { background:#fff8ed;border-color:#ad967a;color:#51402c; }
+html[data-theme="day"] .ws-btn:not(.primary):hover:not(:disabled) { background:#f6e8d2;border-color:#876a48; }
+html[data-theme="day"] .ws-btn:focus-visible { outline:2px solid #bd6015;outline-offset:3px; }
+html[data-theme="day"] :is(.ws-app,.ws-modal,.ws-drawer) input[type="checkbox"] { accent-color:#c96619; }
+html[data-theme="day"] .ws-modal { background:#f8f0e4;color:#352a20; }

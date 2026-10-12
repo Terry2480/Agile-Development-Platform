@@ -94,6 +94,7 @@ export async function GET(request: Request) {
         name: p.name,
         key: p.key,
         description: p.description,
+        courseName: p.courseName,
         status: p.status,
         starred: starredSet.has(p.id),
         taskCounts: stats,
@@ -117,6 +118,7 @@ const createSchema = z.object({
     .trim()
     .regex(/^[A-Z][A-Z0-9]{1,5}$/, "项目标识需为 2-6 位大写字母/数字（如 WEB、AGI）"),
   description: z.string().trim().max(500, "项目描述过长").optional().nullable(),
+  courseName: z.string().trim().max(100, "课程名称最多 100 个字").optional().nullable(),
 });
 
 export async function POST(request: Request) {
@@ -135,6 +137,7 @@ export async function POST(request: Request) {
           name: body.name,
           key: body.key,
           description: body.description || null,
+          courseName: body.courseName || null,
           createdById: user.id,
         })
         .returning()

@@ -41,6 +41,7 @@ export function SpacePanel() {
 
   return (
     <aside className="ws-space">
+      {project.courseName && <p className="ws-team-note">所属课程：{project.courseName}</p>}
       <MilestonePanel key={project.id} projectId={project.id} />
       <ReportPanel key={`report-${project.id}`} projectId={project.id} />
       {/* 项目文件库 */}
@@ -57,7 +58,7 @@ export function SpacePanel() {
         {ws.files.length === 0 && <div className="ws-empty" style={{ padding: "16px 12px" }}>暂无文件</div>}
         {ws.files.map((f) => (
           <div key={f.id} className="ws-file-item">
-            <span className="ws-file-ic" style={{ color: "#6f9bff" }}><Icon name="file" size={13} /></span>
+            <span className="ws-file-ic" style={{ color: "var(--ws-color-6f9bff)" }}><Icon name="file" size={13} /></span>
             <span className="ws-file-meta">
               <a className="ws-file-name" title={f.originalName} href={`/api/files/${f.id}`}>{f.originalName}</a>
               <span className="ws-file-sub">{fmtSize(f.size)} · {f.uploaderName || f.uploaderStudentId}</span>
@@ -143,7 +144,7 @@ export function NewSprintModal({ onClose }: { onClose: () => void }) {
           <input className="ws-input" type="date" value={endsOn} onChange={(e) => setEndsOn(e.target.value)} />
         </div>
       </div>
-      <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, color: "#9aa1b5", cursor: "pointer" }}>
+      <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, color: "var(--ws-color-9aa1b5)", cursor: "pointer" }}>
         <input type="checkbox" checked={activate} onChange={(e) => setActivate(e.target.checked)} />
         立即启动（将自动停用其他进行中的迭代）
       </label>
@@ -184,7 +185,7 @@ export function InviteModal({ onClose, teamId, onInvited }: { onClose: () => voi
       <div className="ws-field">
         <label>对方注册邮箱</label>
         <input className="ws-input" autoFocus placeholder="teammate@stu.edu.cn" value={email} onChange={(e) => setEmail(e.target.value)} />
-        <p style={{ fontSize: 11, color: "#5d6273", margin: "6px 0 0", lineHeight: 1.7 }}>
+        <p style={{ fontSize: 11, color: "var(--ws-color-5d6273)", margin: "6px 0 0", lineHeight: 1.7 }}>
           对方需先用该邮箱注册 AgileCampus 账号；加入团队后自动进入团队的全部项目。
         </p>
       </div>

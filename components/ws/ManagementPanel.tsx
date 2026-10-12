@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useWorkspace } from "./shared";
+import { useWorkspace, Icon } from "./shared";
 import { DeleteWorkspaceModal, type DeleteTarget } from "./DeleteWorkspaceModal";
 import { TeamPanel } from "./TeamPanel";
 import { TeamInvitations } from "./TeamInvitations";
@@ -13,7 +13,7 @@ export function ManagementPanel({ kind }: { kind: "project" | "team" }) {
   const [teamId, setTeamId] = useState<number | null>(null);
   const [notice, setNotice] = useState("");
   const isTeam = kind === "team";
-  const items = (isTeam ? ws.teams : ws.projects).filter((item) => item.name.toLowerCase().includes(query.toLowerCase()));
+  const items = (isTeam ? ws.teams : ws.projects).filter((item) => `${item.name} ${"courseName" in item ? item.courseName ?? "" : ""}`.toLowerCase().includes(query.toLowerCase()));
   const selectedTeam = ws.teams.find((t) => t.id === teamId);
   return <section className="ws-management">
     <div className="ws-panel-head"><h2>{isTeam ? "团队管理" : "项目管理"}<span className="ws-count-pill">{isTeam ? ws.teams.length : ws.projects.length}</span></h2>
@@ -28,9 +28,11 @@ export function ManagementPanel({ kind }: { kind: "project" | "team" }) {
         const project = !isTeam ? ws.projects.find((p) => p.id === item.id) : null;
         const team = isTeam ? ws.teams.find((t) => t.id === item.id) : ws.teams.find((t) => t.id === project?.teamId);
         const canDelete = isTeam ? team?.role === "owner" : team?.role === "owner" || team?.role === "admin";
-        return <article className="ws-management-card" key={item.id}><div><h3>{item.name}</h3><p>{item.description || "暂无简介"}</p><small>{isTeam ? `${team?.memberCount ?? 0} 位成员 · ${team?.projectCount ?? 0} 个项目` : `${project?.teamName} · ${project?.taskCounts.total ?? 0} 个任务`}</small></div>
+        return <article className="ws-management-card" key={item.id}><div><h3>{item.name}</h3>{project?.courseName && <span className="ws-role-tag">{project.courseName}</span>}<p>{item.description || "暂无简介"}</p><small>{isTeam ? `${team?.memberCount ?? 0} 位成员 · ${team?.projectCount ?? 0} 个项目` : `${project?.teamName} · ${project?.taskCounts.total ?? 0} 个任务`}</small></div>
           <div className="ws-management-actions"><button className="ws-btn" onClick={() => { if (isTeam) setTeamId(item.id); else { ws.selectProject(item.id); ws.setFocusSection("tasks"); ws.setRailView("projects"); } }}>{isTeam ? "管理成员" : "进入项目"}</button>
-            {canDelete && <button className="ws-btn danger" onClick={() => setTarget({ kind, id: item.id, name: item.name })}>{isTeam ? "解散团队" : "删除项目"}</button>}</div></article>;
+          </div>
+          {canDelete && <button className="ws-management-delete" type="button" title={isTeam ? "解散团队" : "删除项目"} aria-label={`${isTeam ? "解散团队" : "删除项目"}：${item.name}`} onClick={() => setTarget({ kind, id: item.id, name: item.name })}><Icon name="trash" size={15} /></button>}
+        </article>;
       })}
     </div>
     {selectedTeam && <TeamPanel key={selectedTeam.id} teamId={selectedTeam.id} />}

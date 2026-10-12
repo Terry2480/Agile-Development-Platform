@@ -79,6 +79,7 @@ export type ProjectSummary = {
   name: string;
   key: string;
   description: string | null;
+  courseName: string | null;
   status: string;
   starred: boolean;
   taskCounts: TaskCounts;
@@ -111,7 +112,7 @@ export type ProjectMember = {
 };
 
 export type ProjectDetail = {
-  project: { id: number; teamId: number; name: string; key: string; description: string | null; status: string };
+  project: { id: number; teamId: number; name: string; key: string; description: string | null; courseName: string | null; status: string };
   team: { id: number; name: string; description: string | null };
   myRole: string;
   members: ProjectMember[];

@@ -71,7 +71,7 @@ export function TopBar() {
               </div>
               <div className="ws-pop-list">
                 {ws.notifications.length === 0 && (
-                  <div style={{ padding: "28px 14px", textAlign: "center", fontSize: 12, color: "#5d6273" }}>暂无通知</div>
+                  <div style={{ padding: "28px 14px", textAlign: "center", fontSize: 12, color: "var(--ws-color-5d6273)" }}>暂无通知</div>
                 )}
                 {ws.notifications.map((n) => (
                   <div key={n.id} className={`ws-notif ${n.read ? "" : "unread"}`} onClick={() => ws.markRead([n.id])}>
@@ -95,7 +95,7 @@ export function TopBar() {
           </button>
           {showUser && (
             <div className="ws-user-menu">
-              <div style={{ padding: "8px 11px 6px", fontSize: 11, color: "#5d6273", borderBottom: "1px solid #22242f", marginBottom: 4 }}>
+              <div style={{ padding: "8px 11px 6px", fontSize: 11, color: "var(--ws-color-5d6273)", borderBottom: "1px solid #22242f", marginBottom: 4 }}>
                 {displayNameOf(ws.me)}<br />{ws.me.email}
               </div>
               <button onClick={() => router.push("/settings")}>

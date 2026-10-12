@@ -79,6 +79,7 @@ export const projects = pgTable("projects", {
   name: text("name").notNull(),                      // 项目名称
   key: text("key").notNull(),                        // 短代码：大写字母开头，2-6 位，团队内唯一
   description: text("description"),                  // 项目描述
+  courseName: text("course_name"),                    // 所属课程
   status: text("status").notNull().default("active"),// active / archived
   createdById: integer("created_by_id").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow(),
@@ -106,6 +107,9 @@ export const milestones = pgTable("milestones", {
   projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   dueOn: date("due_on").notNull(),
+  semesterStartsOn: date("semester_starts_on"),
+  teachingWeek: integer("teaching_week"),
+  teachingWeekday: integer("teaching_weekday"),
   requirements: text("requirements").notNull().default(""),
   completed: boolean("completed").notNull().default(false),
 });

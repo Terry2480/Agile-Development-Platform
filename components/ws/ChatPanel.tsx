@@ -115,8 +115,8 @@ export function ChatPanel() {
                     </div>
                   )}
                   <div className="ws-msg-actions">
-                    <button className={m.likedByMe ? "liked" : ""} onClick={() => ws.toggleLike(m.id)}>
-                      赞同{m.likeCount > 0 ? ` ${m.likeCount}` : ""}
+                    <button className={m.likedByMe ? "liked" : ""} aria-label={m.likedByMe ? "取消赞同" : "赞同"} aria-pressed={m.likedByMe} title={m.likedByMe ? "取消赞同" : "赞同"} onClick={() => ws.toggleLike(m.id)}>
+                      <span aria-hidden="true">👍</span>{m.likeCount > 0 ? ` ${m.likeCount}` : ""}
                     </button>
                     <button onClick={() => { setReplyTo({ id: m.id, authorName: m.author.displayName, content: m.content.slice(0, 40) }); inputRef.current?.focus(); }}>
                       回复

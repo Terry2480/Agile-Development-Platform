@@ -4,10 +4,12 @@
 import { useRouter } from "next/navigation";
 import { useWorkspace, Icon, Avatar } from "./shared";
 import { displayNameOf } from "./helpers";
+import { useTheme } from "./ThemeProvider";
 
 export function IconRail() {
   const ws = useWorkspace();
   const router = useRouter();
+  const { theme, toggle } = useTheme();
   const myTodoCount = (ws.overview?.myTodo ?? 0) + (ws.overview?.myDoing ?? 0);
 
   return (
@@ -45,8 +47,8 @@ export function IconRail() {
 
       <div className="ws-rail-gap" />
 
-      <button className="ws-rail-btn" title="深色模式（当前仅深色）" disabled style={{ opacity: 0.4, cursor: "default" }}>
-        <Icon name="sun" size={16} />
+      <button className="ws-rail-btn" title={theme === "night" ? "切换日间模式" : "切换夜间模式"} aria-label={theme === "night" ? "切换日间模式" : "切换夜间模式"} onClick={toggle}>
+        <Icon name={theme === "night" ? "sun" : "moon"} size={18} />
       </button>
       <button className="ws-rail-btn" title={`${displayNameOf(ws.me)} · 个人设置`} onClick={() => router.push("/settings")}>
         <Avatar name={displayNameOf(ws.me)} colorKey={ws.me.id} />

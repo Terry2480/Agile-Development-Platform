@@ -174,7 +174,7 @@ export function TaskCard({ task: t, showProject }: { task: TaskItem; showProject
         {t.assignee ? (
           <Avatar name={t.assignee.displayName} colorKey={t.assignee.id ?? t.assignee.displayName} size="sm" title={t.assignee.displayName} />
         ) : (
-          <span className="ws-avatar sm" style={{ background: "#232636", color: "#5d6273" }} title="未分配">?</span>
+          <span className="ws-avatar sm" style={{ background: "var(--ws-color-232636)", color: "var(--ws-color-5d6273)" }} title="未分配">?</span>
         )}
       </span>
     </div>
@@ -221,7 +221,7 @@ export function NotificationsView() {
         )}
       </div>
       {ws.notifications.length === 0 && <div className="ws-empty">暂无通知</div>}
-      <div style={{ background: "#16181f", border: "1px solid #262a38", borderRadius: 12, overflow: "hidden" }}>
+      <div style={{ background: "var(--ws-color-16181f)", border: "1px solid #262a38", borderRadius: 12, overflow: "hidden" }}>
         {ws.notifications.map((n) => (
           <div
             key={n.id}
@@ -341,7 +341,7 @@ export function TaskDrawer() {
           {loadError && <div className="ws-error" role="alert">详情加载失败：{loadError}</div>}
           {(loadError || notice.includes("刷新失败")) && <button className="ws-btn" disabled={!!busy} onClick={() => void Promise.all([load(), ws.refreshTasks(), ws.refreshFiles(), ws.refreshNotifications()]).then(() => { setNotice(""); }).catch(() => {})}>重试加载</button>}
           {!task ? (
-            <div style={{ padding: 40, textAlign: "center", color: "#5d6273", fontSize: 13 }}>{loadError ? "任务加载失败" : "加载中…"}</div>
+            <div style={{ padding: 40, textAlign: "center", color: "var(--ws-color-5d6273)", fontSize: 13 }}>{loadError ? "任务加载失败" : "加载中…"}</div>
           ) : (
             <>
               <h2>{task.title}</h2>
@@ -411,7 +411,7 @@ export function TaskDrawer() {
                         </button>
                       );
                     })}
-                    {detail?.labels.length === 0 && <span style={{ fontSize: 12, color: "#5d6273" }}>团队暂无标签</span>}
+                    {detail?.labels.length === 0 && <span style={{ fontSize: 12, color: "var(--ws-color-5d6273)" }}>团队暂无标签</span>}
                   </span>
                 </div>
               </div>
@@ -469,7 +469,7 @@ export function TaskDrawer() {
               )}
 
               <div style={{ marginTop: 26, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 11, color: "#5d6273" }}>
+                <span style={{ fontSize: 11, color: "var(--ws-color-5d6273)" }}>
                   {task.creator ? `由 ${task.creator.displayName} 创建` : ""}
                 </span>
                 <button

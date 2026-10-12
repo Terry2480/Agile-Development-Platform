@@ -48,6 +48,7 @@ export function NewProjectModal({ onClose }: { onClose: () => void }) {
   const availableTeams = ws.teams.filter((t) => t.role === "owner" || t.role === "admin");
   const [teamId, setTeamId] = useState<string>(availableTeams[0] ? String(availableTeams[0].id) : "");
   const [name, setName] = useState("");
+  const [courseName, setCourseName] = useState("");
   const [key, setKey] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState("");
@@ -60,7 +61,7 @@ export function NewProjectModal({ onClose }: { onClose: () => void }) {
     if (!/^[A-Z][A-Z0-9]{1,5}$/.test(upperKey)) return setError("项目标识需 2-6 位大写字母/数字（如 WEB、AGI）");
     setBusy(true);
     try {
-      await ws.createProject(Number(teamId), name.trim(), upperKey, description.trim() || undefined);
+      await ws.createProject(Number(teamId), name.trim(), upperKey, description.trim() || undefined, courseName.trim() || undefined);
       onClose();
     } catch (e) {
       setError((e as Error).message);
@@ -84,14 +85,18 @@ export function NewProjectModal({ onClose }: { onClose: () => void }) {
           <input className="ws-input" autoFocus placeholder="如：交互设计课程网站" value={name} onChange={(e) => setName(e.target.value)} />
         </div>
         <div className="ws-field">
-          <label>标识</label>
+          <label>编号前缀</label>
           <input className="ws-input" placeholder="WEB" value={key} onChange={(e) => setKey(e.target.value.toUpperCase())} style={{ textTransform: "uppercase" }} />
         </div>
       </div>
       <div className="ws-field">
+        <label htmlFor="project-course">所属课程（可选）</label>
+        <input id="project-course" className="ws-input" maxLength={100} placeholder="例如：交互设计、软件工程" value={courseName} onChange={(e) => setCourseName(e.target.value)} />
+      </div>
+      <div className="ws-field">
         <label>描述（可选）</label>
         <textarea className="ws-textarea" placeholder="项目简介…" value={description} onChange={(e) => setDescription(e.target.value)} />
-        <p style={{ fontSize: 11, color: "#5d6273", margin: "6px 0 0" }}>
+        <p style={{ fontSize: 11, color: "var(--ws-color-5d6273)", margin: "6px 0 0" }}>
           标识用于生成任务编号（如 {key.trim().toUpperCase() || "WEB"}-001），团队内不可重复。团队全员将自动加入本项目。
         </p>
       </div>

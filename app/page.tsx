@@ -207,9 +207,9 @@ export default function WorkspacePage() {
         refreshProjects(), refreshTeams(), refreshOverview(), refreshMyTasks(), refreshNotifications(),
       ]);
     },
-    async createProject(teamId, name, key, description) {
+    async createProject(teamId, name, key, description, courseName) {
       const d = await api<{ project: { id: number } }>("/api/projects", {
-        method: "POST", json: { teamId, name, key, description: description ?? null },
+        method: "POST", json: { teamId, name, key, description: description ?? null, courseName: courseName ?? null },
       });
       await afterSaved([refreshProjects()]);
       selectProject(d.project.id);
