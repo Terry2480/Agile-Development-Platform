@@ -230,17 +230,16 @@ export function fmtSize(bytes: number): string {
 }
 
 export function fmtTime(iso: string): string {
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  return new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Hong_Kong", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(iso));
 }
 
 export function fmtDateShort(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getMonth() + 1}月${d.getDate()}日`;
+  const parts = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Hong_Kong", month: "numeric", day: "numeric" }).formatToParts(new Date(iso));
+  return `${parts.find((p) => p.type === "month")!.value}月${parts.find((p) => p.type === "day")!.value}日`;
 }
 
 export function dayKey(iso: string): string {
-  return new Date(iso).toDateString();
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Hong_Kong", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(iso));
 }
 
 // 截止日展示：今天 / 明天 / 后天 / M月D日；逾期标红

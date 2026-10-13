@@ -1,8 +1,9 @@
 import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
-import { eq, and, gt } from "drizzle-orm";
+import { eq, and, gt, lt, or, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { users, sessions } from "@/db/schema";
 import { sessionCookie } from "./request-security";
+import { sessionNow } from "./presence";
 
 // ── 登录会话 ──────────────────────────────────────────────
 // 方案：登录成功后生成随机令牌，一份存 sessions 表，一份放进 httpOnly Cookie；
@@ -30,8 +31,11 @@ export function verifyPassword(password: string, stored: string): boolean {
 // 创建会话：写入 sessions 表，返回可直接下发的 Set-Cookie 字符串
 export async function createSession(userId: number): Promise<string> {
   const token = randomBytes(32).toString("hex");
-  const expiresAt = new Date(Date.now() + SESSION_DAYS * 86400_000);
-  await db.insert(sessions).values({ token, userId, expiresAt });
+  await db.insert(sessions).values({
+    token, userId,
+    expiresAt: sql`${sessionNow()} + ${SESSION_DAYS} * interval '1 day'`,
+    lastActiveAt: sessionNow(),
+  });
   return sessionCookie(token, SESSION_DAYS * 86400);
 }
 
@@ -49,24 +53,23 @@ export function readToken(request: Request): string | null {
 }
 
 // 当前登录用户：会话有效则返回用户（不含密码），否则 null
-// 顺带滚动更新会话活跃时间（节流 5 分钟），供成员在线状态使用
+// 顺带滚动更新会话活跃时间（节流 1 分钟），供成员在线状态使用
 export async function getSessionUser(request: Request) {
   const token = readToken(request);
   if (!token) return null;
-  const now = new Date();
   const rows = await db
     .select({ id: users.id, email: users.email, name: users.name, studentId: users.studentId,
-      gender: users.gender, region: users.region, bio: users.bio, role: users.role,
-      lastActiveAt: sessions.lastActiveAt })
+      gender: users.gender, region: users.region, bio: users.bio, role: users.role })
     .from(sessions)
     .innerJoin(users, eq(sessions.userId, users.id))
-    .where(and(eq(sessions.token, token), gt(sessions.expiresAt, now)))
+    .where(and(eq(sessions.token, token), gt(sessions.expiresAt, sessionNow())))
     .limit(1);
   const row = rows[0];
   if (!row) return null;
-  const { lastActiveAt, ...user } = row;
-  if (!lastActiveAt || now.getTime() - new Date(lastActiveAt).getTime() > 5 * 60_000) {
-    await db.update(sessions).set({ lastActiveAt: now }).where(eq(sessions.token, token));
-  }
-  return user;
+  await db.update(sessions).set({ lastActiveAt: sessionNow() }).where(and(
+    eq(sessions.token, token),
+    gt(sessions.expiresAt, sessionNow()),
+    or(isNull(sessions.lastActiveAt), lt(sessions.lastActiveAt, sql`${sessionNow()} - interval '1 minute'`)),
+  ));
+  return row;
 }

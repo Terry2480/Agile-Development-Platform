@@ -1,12 +1,13 @@
 import { z } from "zod";
-import { and, eq, inArray, gt, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
-  projects, projectMembers, projectStars, sprints, tasks, teamMembers, sessions, labels, users,
+  projects, projectMembers, projectStars, sprints, tasks, teamMembers, labels, users,
 } from "@/db/schema";
 import { requireUser, parseBody, parseId, requireProjectAccess, handleApiError, displayName } from "@/lib/api";
 import { logActivity } from "@/lib/activity";
 import { tryFileCleanup } from "@/lib/file-cleanup";
+import { memberOnline } from "@/lib/presence";
 
 // 项目详情 / 更新 / 删除：GET / PUT / DELETE /api/projects/[id]
 // GET 返回项目 + 团队信息 + 成员 + Sprint 列表 + 团队标签 + 任务统计 + 是否星标
@@ -24,27 +25,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         email: users.email,
         role: teamMembers.role,
         duty: teamMembers.duty,
+        online: memberOnline(users.id),
       })
       .from(projectMembers)
       .innerJoin(users, eq(users.id, projectMembers.userId))
       .innerJoin(teamMembers, and(eq(teamMembers.teamId, project.teamId), eq(teamMembers.userId, users.id)))
       .where(eq(projectMembers.projectId, projectId))
       .orderBy(users.id);
-
-    // 成员在线状态：5 分钟内有活跃会话视为在线
-    const memberIds = members.map((m) => m.userId);
-    const onlineRows = memberIds.length
-      ? await db
-          .select({ userId: sessions.userId, lastActiveAt: sessions.lastActiveAt })
-          .from(sessions)
-          .where(and(inArray(sessions.userId, memberIds), gt(sessions.expiresAt, new Date())))
-      : [];
-    const fiveMinAgo = Date.now() - 5 * 60_000;
-    const onlineSet = new Set(
-      onlineRows
-        .filter((s) => s.lastActiveAt && new Date(s.lastActiveAt).getTime() > fiveMinAgo)
-        .map((s) => s.userId),
-    );
 
     const sprintRows = await db
       .select()
@@ -75,7 +62,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       project,
       team: { id: team.id, name: team.name, description: team.description },
       myRole: membership.role,
-      members: members.map((m) => ({ ...m, displayName: displayName(m), online: onlineSet.has(m.userId) })),
+      members: members.map((m) => ({ ...m, displayName: displayName(m) })),
       sprints: sprintRows,
       labels: labelRows,
       taskCounts,

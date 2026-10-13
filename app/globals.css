@@ -316,3 +316,26 @@
 .ws-management-delete{position:absolute;right:14px;bottom:12px;display:flex;align-items:center;justify-content:center;width:30px;height:30px;padding:0;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--ws-color-7c8194);cursor:pointer;transition:color .15s,background .15s,border-color .15s}
 .ws-management-delete:hover{color:var(--ws-color-f08080);background:rgba(240,128,128,.08);border-color:rgba(240,128,128,.2)}
 .ws-management-delete:focus-visible{outline:2px solid var(--ws-color-f08080);outline-offset:3px}
+
+/* Put task content before metadata, in both themes. */
+.ws-task-card{flex-wrap:wrap}
+.ws-task-code{display:block;margin-bottom:5px;color:var(--ws-color-7c8194)}
+.ws-task-title{display:block;font-size:16px;font-weight:650;line-height:1.5;color:var(--ws-color-e8eaf2)}
+.ws-task-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.ws-task-expand{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--ws-color-2a2d3d);border-radius:7px;background:transparent;color:var(--ws-color-6f9bff);padding:5px 8px;cursor:pointer;font:inherit;font-size:12px;white-space:nowrap}
+.ws-task-expand:hover{background:var(--ws-color-182034)}
+.ws-task-expand:focus-visible{outline:2px solid var(--ws-color-3b6ef5);outline-offset:3px}
+.ws-task-extra{flex-basis:100%;padding-top:14px;border-top:1px solid var(--ws-color-2a2d3d);cursor:default}
+.ws-task-description{background:var(--ws-color-191b26);border:1px solid var(--ws-color-303a50);border-left:3px solid var(--ws-color-3b6ef5);border-radius:9px;padding:14px 16px;color:var(--ws-color-e8eaf2)}
+.ws-task-content-label{display:block;font-size:12px;font-weight:600;color:var(--ws-color-6f9bff);margin-bottom:8px}
+.ws-task-description p{margin:0;font-size:15px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere}
+.ws-task-extra-meta{display:flex;gap:10px 20px;flex-wrap:wrap;margin:12px 0;color:var(--ws-color-9aa1b5);font-size:12px}
+.ws-drawer{color:var(--ws-color-e8eaf2);transition:width .2s}
+.ws-drawer.wide{width:min(820px,96vw)}
+.ws-drawer h2{color:var(--ws-color-e8eaf2);font-size:22px;font-weight:700;line-height:1.5;overflow-wrap:anywhere;margin:4px 0 18px}
+.ws-drawer-head-actions{display:flex;align-items:center;gap:12px}
+.ws-task-description-detail{margin-bottom:24px}
+.ws-task-description-detail .ws-desc{padding:0;background:transparent;color:var(--ws-color-e8eaf2);font-size:16px;line-height:1.85;overflow-wrap:anywhere}
+html[data-theme="day"] .ws-task-description{background:#fffaf2;border-color:#b6a084;border-left-color:#ed8128}
+@media(max-width:650px){.ws-task-right{flex-wrap:wrap;gap:6px}.ws-task-title{white-space:normal}.ws-task-main{flex-basis:55%}.ws-drawer h2{font-size:20px}}
+@media(prefers-reduced-motion:reduce){.ws-drawer{transition:none}}

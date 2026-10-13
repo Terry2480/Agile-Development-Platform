@@ -140,10 +140,11 @@ export function TaskPanel() {
 
 export function TaskCard({ task: t, showProject }: { task: TaskItem; showProject?: boolean }) {
   const ws = useWorkspace();
+  const [expanded, setExpanded] = useState(false);
   const due = t.dueOn ? dueInfo(t.dueOn) : null;
   const dueCls = due ? (due.overdue ? "due-over" : due.soon ? "due-soon" : "due-norm") : "";
   return (
-    <div className="ws-task-card" onClick={() => ws.openTask(t.id)}>
+    <div className={`ws-task-card ${expanded ? "expanded" : ""}`} onClick={() => ws.openTask(t.id)}>
       <button
         className={`ws-check ${t.status === "done" ? "done" : ""}`}
         title={t.status === "done" ? "标记为进行中" : "标记为已完成"}
@@ -166,6 +167,9 @@ export function TaskCard({ task: t, showProject }: { task: TaskItem; showProject
         </span>
       </span>
       <span className="ws-task-right">
+        <button className="ws-task-expand" aria-expanded={expanded} aria-controls={`task-extra-${t.id}`} onClick={(e) => { e.stopPropagation(); setExpanded((value) => !value); }}>
+          <Icon name={expanded ? "chevronDown" : "chevronRight"} size={14} />{expanded ? "收起" : "展开"}
+        </button>
         {due && <span className={`ws-pill ${dueCls}`}>{due.text}</span>}
         <span className="ws-task-nums">
           {t.commentCount > 0 && <span title={`${t.commentCount} 条评论`}><Icon name="message" size={12} /> {t.commentCount}</span>}
@@ -177,6 +181,16 @@ export function TaskCard({ task: t, showProject }: { task: TaskItem; showProject
           <span className="ws-avatar sm" style={{ background: "var(--ws-color-232636)", color: "var(--ws-color-5d6273)" }} title="未分配">?</span>
         )}
       </span>
+      {expanded && <div className="ws-task-extra" id={`task-extra-${t.id}`} onClick={(e) => e.stopPropagation()}>
+        <div className="ws-task-description"><span className="ws-task-content-label">任务描述</span><p>{t.description || "暂无任务描述"}</p></div>
+        <div className="ws-task-extra-meta">
+          <span>状态：{STATUS_TEXT[t.status]}</span>
+          <span>负责人：{t.assignee?.displayName || "未分配"}</span>
+          <span>截止日期：{t.dueOn || "未设置"}</span>
+          <span>评论 {t.commentCount} · 附件 {t.attachmentCount}</span>
+        </div>
+        <button className="ws-btn" onClick={(e) => { e.stopPropagation(); ws.openTask(t.id); }}>查看完整详情</button>
+      </div>}
     </div>
   );
 }
@@ -259,6 +273,7 @@ type TaskFull = {
 
 export function TaskDrawer() {
   const ws = useWorkspace();
+  const [wide, setWide] = useState(false);
   const [task, setTask] = useState<TaskFull | null>(null);
   const [comment, setComment] = useState("");
   const [error, setError] = useState("");
@@ -328,10 +343,13 @@ export function TaskDrawer() {
   return (
     <>
       <div className="ws-backdrop" style={{ zIndex: 55, background: "transparent" }} onClick={() => { if (!busy) ws.closeTask(); }} />
-      <aside className="ws-drawer">
+      <aside className={`ws-drawer ${wide ? "wide" : ""}`}>
         <div className="ws-drawer-head">
           <span className="d-code">{task?.code ?? "…"}</span>
-          <button className="ws-icon-btn" onClick={() => { if (!busy) ws.closeTask(); }}><Icon name="x" size={18} /></button>
+          <div className="ws-drawer-head-actions">
+            <button className="ws-task-expand" aria-expanded={wide} title={wide ? "恢复侧栏宽度" : "加宽查看任务"} onClick={() => setWide((value) => !value)}>{wide ? "收起面板" : "展开面板"}</button>
+            <button className="ws-icon-btn" aria-label="关闭任务详情" disabled={!!busy} onClick={() => { if (!busy) ws.closeTask(); }}><Icon name="x" size={18} /></button>
+          </div>
         </div>
 
         <div className="ws-drawer-body">
@@ -346,7 +364,10 @@ export function TaskDrawer() {
             <>
               <h2>{task.title}</h2>
 
-              {task.description && <div className="ws-desc">{task.description}</div>}
+              <section className="ws-task-description ws-task-description-detail">
+                <span className="ws-task-content-label">任务描述</span>
+                <div className="ws-desc">{task.description || "暂无任务描述"}</div>
+              </section>
 
               <div style={{ marginTop: 16 }}>
                 <div className="ws-detail-row">

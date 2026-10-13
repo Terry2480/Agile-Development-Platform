@@ -1,5 +1,7 @@
 # 第二版登录保护配置
 
+完整升级流程见 [服务器部署文档](deployment.md)，包括数据库更新、Nginx、进程管理及上线验收。无域名的服务器也必须先准备与 IP 匹配、浏览器信任的 HTTPS 证书，不能直接用 HTTP IP 地址登录本版生产服务。
+
 本地 `npm run dev` 默认允许 localhost 同源请求，Cookie 不加 Secure。
 生产环境必须使用 HTTPS；不要通过生产 HTTP 地址测试登录。
 

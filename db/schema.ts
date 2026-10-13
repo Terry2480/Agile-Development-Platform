@@ -22,7 +22,7 @@ export const users = pgTable("users", {
 });
 
 // 会话表：登录成功后签发一条会话记录，退出时删除
-// lastActiveAt 每次鉴权滚动更新（节流 5 分钟），用于成员在线状态判断
+// expiresAt / lastActiveAt 保存 UTC；每次鉴权更新活跃时间（节流 1 分钟）
 export const sessions = pgTable("sessions", {
   token: text("token").primaryKey(),                 // 随机令牌（放在 httpOnly Cookie 里）
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -188,7 +188,7 @@ export const chatMessages = pgTable("chat_messages", {
   replyToId: integer("reply_to_id").references((): AnyPgColumn => chatMessages.id, { onDelete: "cascade" }), // 回复的目标消息
   taskId: integer("task_id").references(() => tasks.id, { onDelete: "set null" }),   // 关联任务
   pinned: boolean("pinned").notNull().default(false), // 是否置顶（项目公告）
-  createdAt: timestamp("created_at").defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
 // 消息赞同表：一条消息可被多人赞同（同一用户同一条只能赞一次，再点取消）

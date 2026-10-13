@@ -1,9 +1,10 @@
 import { z } from "zod";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { teams, teamMembers, users } from "@/db/schema";
 import { requireUser, parseBody, parseId, requireTeamAccess, handleApiError, displayName } from "@/lib/api";
 import { tryFileCleanup } from "@/lib/file-cleanup";
+import { memberOnline } from "@/lib/presence";
 
 // 团队详情：GET / PUT / DELETE /api/teams/[id]
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -21,7 +22,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         gender: users.gender,
         role: teamMembers.role,
         duty: teamMembers.duty,
-        online: sql<boolean>`exists (select 1 from sessions where sessions.user_id = ${users.id} and sessions.expires_at > now() and sessions.last_active_at > now() - interval '5 minutes')`,
+        online: memberOnline(users.id),
         joinedAt: teamMembers.joinedAt,
       })
       .from(teamMembers)

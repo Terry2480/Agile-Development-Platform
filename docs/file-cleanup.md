@@ -1,5 +1,7 @@
 # 附件一致性与部署
 
+完整流程见 [服务器部署文档](deployment.md)。当前单文件上限为 100MB，Next.js 代理上限为 105MB，外部 Nginx 需同步设置 `client_max_body_size 105m`。
+
 第二版部署时先执行 `npm run db:add-file-cleanup`，再启动应用。
 更新新增清理队列表和附件删除触发器，不删除现有文件。
 触发器不是 Drizzle 自动推送的内容，服务器必须运行此更新脚本。
