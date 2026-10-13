@@ -199,11 +199,13 @@ html[data-theme="day"] {
 }
 html[data-theme="day"] .ws-app, html[data-theme="day"] .ws-modal, html[data-theme="day"] .ws-drawer { color-scheme: light; }
 html:not([data-theme="day"]) .ws-app, html:not([data-theme="day"]) .ws-modal, html:not([data-theme="day"]) .ws-drawer { color-scheme: dark; }
+html[data-theme="day"] .settings-page { color-scheme: light; }
+html:not([data-theme="day"]) .settings-page { color-scheme: dark; }
 
 /* White text is reserved for filled accents; normal text follows the palette. */
 html[data-theme="day"] { --ws-color-fff: #352a20; }
 .ws-rail-logo, .ws-avatar, .ws-rail-badge, .ws-send { color:#fff; }
-.ws-app .ws-btn.primary, .ws-modal .ws-btn.primary, .ws-drawer .ws-btn.primary { background:var(--ws-color-3b6ef5)!important;color:#fff!important; }
+.ws-app .ws-btn.primary, .ws-modal .ws-btn.primary, .ws-drawer .ws-btn.primary, .settings-page .ws-btn.primary { background:var(--ws-color-3b6ef5)!important;color:#fff!important; }
 html[data-theme="day"] .ws-rail-btn.active, html[data-theme="day"] .ws-top-menu button.active, html[data-theme="day"] .ws-tab.active { color:#c35d12; }
 html[data-theme="day"] .ws-btn.primary, html[data-theme="day"] .ws-send { color:#35200c!important; }
 html[data-theme="day"] .ws-backdrop { background:rgba(60,42,22,.35); }

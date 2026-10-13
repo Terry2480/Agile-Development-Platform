@@ -55,6 +55,7 @@ export const teamMembers = pgTable("team_members", {
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   role: text("role").notNull().default("member"),    // owner / admin / member
   duty: text("duty"),                                // 课程团队分工，与系统权限角色分开保存
+  duties: text("duties").array(),                     // 多分工标签；null 时兼容原单标签
   joinedAt: timestamp("joined_at").defaultNow(),
 }, (t) => [unique("team_members_team_user_uq").on(t.teamId, t.userId)]);
 

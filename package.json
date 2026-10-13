@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "db:add-member-duties": "tsx db/add-member-duties.ts",
     "db:fix-chat-timezone": "tsx db/fix-chat-timezone.ts",
     "dev": "next dev",
     "build": "next build",

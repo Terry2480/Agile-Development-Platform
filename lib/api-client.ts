@@ -102,6 +102,7 @@ export type Label = { id: number; name: string; color: string };
 
 export type ProjectMember = {
   duty: string | null;
+  duties: string[] | null;
   userId: number;
   name: string | null;
   studentId: string;

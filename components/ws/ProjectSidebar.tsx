@@ -3,6 +3,7 @@
 // 项目列表栏：搜索、我的工作空间/已收藏分组、选中项目子导航、底部 Sprint 卡
 import { useMemo, useState } from "react";
 import { avatarColor, daysUntil } from "@/lib/api-client";
+import { canCreateSprint } from "@/lib/sprint-permissions";
 import { useWorkspace, Icon, type FocusSection } from "./shared";
 
 
@@ -147,6 +148,7 @@ function ProjectItem({ id, expanded, onToggle }: {
 
 function SprintCard() {
   const ws = useWorkspace();
+  const canCreate = canCreateSprint(ws.detail, ws.selectedId, ws.me.id);
   const selected = ws.projects.find((p) => p.id === ws.selectedId);
   const sprint = selected?.activeSprint ?? null;
 
@@ -162,13 +164,13 @@ function SprintCard() {
     return (
       <div className="ws-sprint-card">
         <div className="ws-sprint-name">暂无进行中的迭代</div>
-        <button
+        {canCreate && <button
           className="ws-btn primary"
           style={{ marginTop: 10, padding: "7px 12px", fontSize: 12, width: "100%" }}
           onClick={() => ws.openModal({ type: "newSprint" })}
         >
           ＋ 创建迭代
-        </button>
+        </button>}
       </div>
     );
   }
@@ -177,9 +179,9 @@ function SprintCard() {
     <div className="ws-sprint-card">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
         <div className="ws-sprint-name">{sprint.name}</div>
-        <button className="ws-icon-btn" style={{ width: 22, height: 22 }} title="创建新迭代" onClick={() => ws.openModal({ type: "newSprint" })}>
+        {canCreate && <button className="ws-icon-btn" style={{ width: 22, height: 22 }} title="创建新迭代" onClick={() => ws.openModal({ type: "newSprint" })}>
           <Icon name="plus" size={13} />
-        </button>
+        </button>}
       </div>
       {sprint.goal && <div className="ws-sprint-goal">{sprint.goal}</div>}
       <div className="ws-sprint-days">

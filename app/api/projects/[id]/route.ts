@@ -25,6 +25,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         email: users.email,
         role: teamMembers.role,
         duty: teamMembers.duty,
+        duties: teamMembers.duties,
         online: memberOnline(users.id),
       })
       .from(projectMembers)

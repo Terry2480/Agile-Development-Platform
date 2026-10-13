@@ -6,6 +6,7 @@ import { api, fmtSize } from "@/lib/api-client";
 import { useWorkspace, Icon, Modal } from "./shared";
 import { MilestonePanel } from "./MilestonePanel";
 import { ReportPanel } from "./ReportPanel";
+import { canCreateSprint } from "@/lib/sprint-permissions";
 
 
 
@@ -96,6 +97,7 @@ export function SpacePanel() {
 /* ---------- 新建迭代弹窗 ---------- */
 export function NewSprintModal({ onClose }: { onClose: () => void }) {
   const ws = useWorkspace();
+  const canCreate = canCreateSprint(ws.detail, ws.selectedId, ws.me.id);
   const nextNo = (ws.detail?.sprints.length ?? 0) + 1;
   const [name, setName] = useState(`SPRINT ${String(nextNo).padStart(2, "0")}`);
   const [goal, setGoal] = useState("");
@@ -106,6 +108,7 @@ export function NewSprintModal({ onClose }: { onClose: () => void }) {
   const [busy, setBusy] = useState(false);
 
   async function submit() {
+    if (!canCreate) return setError("只有负责人可以创建迭代");
     if (!name.trim()) return setError("请填写迭代名称");
     setBusy(true);
     try {
@@ -151,7 +154,7 @@ export function NewSprintModal({ onClose }: { onClose: () => void }) {
       {error && <div className="ws-error">{error}</div>}
       <div className="ws-modal-actions">
         <button className="ws-btn" onClick={onClose}>取消</button>
-        <button className="ws-btn primary" disabled={busy} onClick={submit}>{busy ? "创建中…" : "创建迭代"}</button>
+        <button className="ws-btn primary" disabled={busy || !canCreate} onClick={submit}>{busy ? "创建中…" : "创建迭代"}</button>
       </div>
     </Modal>
   );

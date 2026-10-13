@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { api, daysUntil, type ActivityItem } from "@/lib/api-client";
 import { useWorkspace, Icon } from "./shared";
+import { canCreateSprint } from "@/lib/sprint-permissions";
 
 type SidebarMode = "compact" | "expanded" | "collapsed";
 
@@ -40,6 +41,7 @@ function ActivityContent({ compact }: { compact: boolean }) {
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState("");
   const detail = ws.detail;
+  const canCreate = canCreateSprint(detail, ws.selectedId, ws.me.id);
   const sprint = detail?.sprints.find((s) => s.status === "active") ?? null;
   // 本轮进度：优先统计当前活跃迭代内的任务，否则统计整个项目
   const scoped = sprint ? ws.tasks.filter((t) => t.sprintId === sprint.id) : ws.tasks;
@@ -116,9 +118,9 @@ function ActivityContent({ compact }: { compact: boolean }) {
             </div>
             <div className="ws-progress"><i style={{ width: `${pct}%` }} /></div>
             <div className="ws-sprint-meta"><span>{done} / {total} 项目任务已完成</span><b>{pct}%</b></div>
-            <button className="ws-btn primary" style={{ marginTop: 12, padding: "7px 12px", fontSize: 12, width: "100%" }} onClick={() => ws.openModal({ type: "newSprint" })}>
+            {canCreate && <button className="ws-btn primary" style={{ marginTop: 12, padding: "7px 12px", fontSize: 12, width: "100%" }} onClick={() => ws.openModal({ type: "newSprint" })}>
               ＋ 创建迭代
-            </button>
+            </button>}
           </>
         )}
       </section>

@@ -22,6 +22,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         gender: users.gender,
         role: teamMembers.role,
         duty: teamMembers.duty,
+        duties: teamMembers.duties,
         online: memberOnline(users.id),
         joinedAt: teamMembers.joinedAt,
       })
