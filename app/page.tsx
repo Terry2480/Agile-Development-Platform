@@ -157,14 +157,26 @@ export default function WorkspacePage() {
     refreshProjectData().catch(() => {});
   }, [me, selectedId, refreshProjectData]);
 
-  // 聊天 / 日志轮询（8 秒，保证赞同、置顶与新消息同步）
+  // 项目数据轮询；文件库同步其他成员的上传和撤回。
   useEffect(() => {
     if (!me || selectedId === null) return;
     const stopChat = startPolling(() => gate.isPending("chat") ? Promise.resolve() : refreshChat(), 8000);
     const stopActivities = startPolling(() => gate.isPending("activities") ? Promise.resolve() : refreshActivities(), 8000);
     const stopDetail = startPolling(() => gate.isPending("detail") ? Promise.resolve() : refreshDetail(), 20000);
-    return () => { stopChat(); stopActivities(); stopDetail(); };
-  }, [me, selectedId, gate, refreshChat, refreshActivities, refreshDetail]);
+    const syncFiles = () => {
+      if (document.visibilityState === "hidden" || gate.isPending("files")) return Promise.resolve();
+      return refreshFiles();
+    };
+    const stopFiles = startPolling(syncFiles, 20000);
+    const onFilesVisible = () => { void syncFiles().catch(() => {}); };
+    window.addEventListener("focus", onFilesVisible);
+    document.addEventListener("visibilitychange", onFilesVisible);
+    return () => {
+      stopChat(); stopActivities(); stopDetail(); stopFiles();
+      window.removeEventListener("focus", onFilesVisible);
+      document.removeEventListener("visibilitychange", onFilesVisible);
+    };
+  }, [me, selectedId, gate, refreshChat, refreshActivities, refreshDetail, refreshFiles]);
 
   /* ---------- 动作 ---------- */
   const afterProjectMutation = useCallback(async () => {
