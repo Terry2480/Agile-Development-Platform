@@ -8,6 +8,7 @@
 
 | 内容 | 部署操作 |
 | --- | --- |
+| 一次性截止提醒与删除已读通知 | 启动新版前运行 `npm run db:add-deadline-reminders`，截止前一天提醒，当天补发未发出的提醒 |
 | 任务协作成员与多人待办提醒 | 启动新版前运行 `npm run db:add-task-collaborators`；负责人自动参与，旧任务负责人保留 |
 | 任务轻量检查清单 | 启动新版前运行 `npm run db:add-task-checklist`；旧任务默认没有步骤 |
 | 成员多分工标签 | 启动新版前运行 `npm run db:add-member-duties`，原单标签会保留 |
@@ -66,6 +67,7 @@ npm run db:add-member-duty
 npm run db:add-member-duties
 npm run db:add-task-checklist
 npm run db:add-task-collaborators
+npm run db:add-deadline-reminders
 npm run db:add-milestones
 npm run db:add-team-invites
 npm run db:add-auth-protection
@@ -79,6 +81,7 @@ npm run db:add-project-course
 | db:add-member-duties | 成员多标签字段，保留原有分工；新版启动前必须执行 |
 | db:add-task-checklist | 清单步骤表与查询索引，删除任务时自动清理对应步骤 |
 | db:add-task-collaborators | 协作成员关联表及旧负责人回填；不会向历史任务补发通知 |
+| db:add-deadline-reminders | 独立截止提醒去重表；通知删除、服务重启后不重复提醒 |
 | db:add-milestones | 里程碑及关联任务表、开学日期、教学周和星期字段 |
 | db:add-team-invites | 团队邀请码与加入申请 |
 | db:add-auth-protection | 登录限流表 |
@@ -175,7 +178,8 @@ WorkingDirectory 决定 uploads 位置，应用用户需要读写和删除权限
 SELECT to_regclass('auth_rate_limits') IS NOT NULL AS auth_ready,
        to_regclass('file_cleanup') IS NOT NULL AS cleanup_ready,
        to_regclass('task_checklist_items') IS NOT NULL AS checklist_ready,
-       to_regclass('task_collaborators') IS NOT NULL AS collaborators_ready;
+       to_regclass('task_collaborators') IS NOT NULL AS collaborators_ready,
+       to_regclass('task_deadline_reminders') IS NOT NULL AS reminders_ready;
 
 SELECT tgname, tgenabled FROM pg_trigger
 WHERE tgrelid = to_regclass('attachments')
@@ -201,6 +205,16 @@ ready 均为 true；触发器有一行且 tgenabled 为 O 或 A；课程与教�
 使用实际 HTTPS 地址验证登录、刷新后保留登录、退出、创建课程项目、教学周里程碑、任务状态修改、评论、聊天、邀请码和日夜切换。
 
 本次重点验收：
+
+三列看板：项目任务中切换列表与看板，搜索和筛选条件应保持一致。看板按待开始、进行中、已完成排列，空列保留，数量和完成比例按当前筛选结果计算。点击卡片可进入详情；状态菜单移动后同步更新待办与项目进度，失败保留原列并显示错误。第一版通过菜单移动，不含拖拽；窄屏可横向查看三列。无需数据库迁移。
+
+任务筛选：项目任务与“我的待办”支持我负责、我协作、今天截止、逾期、当前迭代以及状态、优先级、负责人、标签等组合筛选；待办可额外按项目筛选。未分配负责人应能正确筛出，日期按 UTC+8 判断，已完成任务不算逾期。切换项目时重置项目任务筛选，一键清除后恢复全部结果。本项无需数据库迁移。
+
+任务界面：收起的卡片应显示负责人、协作成员头像和去重后的参与人数；较多成员显示剩余人数，悬停可查看姓名。详情按任务内容、参与成员、状态与安排、附件与讨论分区，参与成员显示完整姓名，“调整协作成员”展开后可维护分工；确认日间、夜间和窄屏下信息可读。这项界面调整不需要数据库迁移。
+
+通知跳转：在通知中心和顶部铃铛分别点击跨项目的分配、评论、截止提醒，应切换项目并打开正确任务，同时标记已读。聊天提及应进入对应项目聊天；任务删除或成员被移出团队后，旧通知应显示无法访问提示，不能跳到错误项目。此项不需要额外数据库迁移。
+
+截止提醒与通知清理：用未完成的测试任务设置明天截止，负责人和协作成员应各收到一次站内提醒。等待多次轮询、重启应用都不重复；标记已读后删除，继续检查也不重复。未读通知不能被清理。任务完成后不生成新提醒；修改截止日期后按新日期重新判断。详见 [通知机制](notifications.md)。本地修改后台定时逻辑后需重启开发服务验证常驻调度。
 
 协作成员：创建任务时选择负责人和多位协作成员，负责人即使未勾选也应自动参与。所有参与者都能在“我的待办”看到任务，并各收到一条分配提醒（含参与任务的创建者）。新增成员应收到提醒，重复保存不应重复通知；移除协作成员后任务不再出现在其待办中。不能分配其他团队用户，任务、成员关联和提醒应一起成功或回滚。
 

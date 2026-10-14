@@ -20,6 +20,7 @@ npm run dev
 - [聊天时间修复](docs/chat-timezone.md)：检查服务器旧消息时区，并迁移聊天时间字段。
 - [登录保护](docs/login-protection.md)：可信地址、Cookie 和限流。
 - [附件一致性](docs/file-cleanup.md)：文件持久化、撤回与后台清理。
+- [站内通知与截止提醒](docs/notifications.md)：提醒时机、去重和已读通知清理。
 
 生产采用常驻 Node.js 服务和 PostgreSQL；附件保存在工作目录的 `uploads/`。当前生产版要求 HTTPS，不能直接使用 `http://服务器IP` 进行生产登录。环境配置与附件不进入 Git，应在服务器单独保存。
 

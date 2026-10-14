@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
 import { useWorkspace, Icon, Avatar } from "./shared";
 import { displayNameOf } from "./helpers";
+import { ClearReadNotifications } from "./ClearReadNotifications";
+import { NotificationEntry } from "./NotificationEntry";
 
 export function TopBar() {
   const ws = useWorkspace();
@@ -65,6 +67,7 @@ export function TopBar() {
             <div className="ws-pop" onMouseDown={(e) => e.stopPropagation()}>
               <div className="ws-pop-head">
                 <b>通知</b>
+                <ClearReadNotifications />
                 {ws.unreadCount > 0 && (
                   <button onClick={() => ws.markRead()}>全部已读</button>
                 )}
@@ -74,15 +77,7 @@ export function TopBar() {
                   <div style={{ padding: "28px 14px", textAlign: "center", fontSize: 12, color: "var(--ws-color-5d6273)" }}>暂无通知</div>
                 )}
                 {ws.notifications.map((n) => (
-                  <div key={n.id} className={`ws-notif ${n.read ? "" : "unread"}`} onClick={() => ws.markRead([n.id])}>
-                    <span className="n-ic">
-                      <Icon name={n.type === "assigned" ? "flag" : n.type === "mention" ? "at" : "message"} size={14} />
-                    </span>
-                    <div>
-                      {n.title}
-                      <span className="n-time">{new Date(n.createdAt).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
-                    </div>
-                  </div>
+                  <NotificationEntry key={n.id} notification={n} onOpened={() => setShowNotif(false)} />
                 ))}
               </div>
             </div>

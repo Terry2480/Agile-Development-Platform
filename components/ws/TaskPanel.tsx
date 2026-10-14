@@ -1,10 +1,16 @@
 "use client";
 
 // 主内容区：项目任务面板（状态分组 / Tab / 筛选 / 新建）、我的待办视图、通知视图、任务详情抽屉
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { TaskAction } from "@/lib/task-action";
 import { TaskChecklist } from "./TaskChecklist";
 import { CollaboratorPicker } from "./CollaboratorPicker";
+import { ClearReadNotifications } from "./ClearReadNotifications";
+import { NotificationEntry } from "./NotificationEntry";
+import { TaskParticipants } from "./TaskParticipants";
+import { TaskFilterBar } from "./TaskFilterBar";
+import { TaskBoard } from "./TaskBoard";
+import { EMPTY_TASK_FILTERS, filterTasks } from "@/lib/task-filters";
 import { RequestGate } from "@/lib/request-gate";
 import {
   api, uploadFile as apiUpload, type TaskItem, type ProjectDetail,
@@ -23,28 +29,14 @@ const GROUPS: { status: TaskItem["status"]; label: string }[] = [
 
 export function TaskPanel() {
   const ws = useWorkspace();
-  const [tab, setTab] = useState<"all" | "mine">("all");
-  const [showFilter, setShowFilter] = useState(false);
-  const [fStatus, setFStatus] = useState("");
-  const [fPriority, setFPriority] = useState("");
-  const [fAssignee, setFAssignee] = useState("");
-  const [fLabel, setFLabel] = useState("");
+  const [filters, setFilters] = useState({ ...EMPTY_TASK_FILTERS });
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [view, setView] = useState<"list" | "board">("list");
 
   const project = ws.projects.find((p) => p.id === ws.selectedId);
 
-  const filtered = useMemo(() => {
-    const q = ws.taskSearch.trim().toLowerCase();
-    return ws.tasks.filter((t) => {
-      if (tab === "mine" && t.assigneeId !== ws.me.id && !t.collaborators?.some((c) => c.id === ws.me.id)) return false;
-      if (fStatus && t.status !== fStatus) return false;
-      if (fPriority && t.priority !== fPriority) return false;
-      if (fAssignee && String(t.assigneeId ?? "") !== fAssignee) return false;
-      if (fLabel && !t.labels.some((l) => String(l.id) === fLabel)) return false;
-      if (q && !(t.title.toLowerCase().includes(q) || t.code.toLowerCase().includes(q))) return false;
-      return true;
-    });
-  }, [ws.tasks, ws.taskSearch, tab, fStatus, fPriority, fAssignee, fLabel, ws.me.id]);
+  const activeSprintIds = ws.detail?.project.id === ws.selectedId ? ws.detail.sprints.filter((s) => s.status === "active").map((s) => s.id) : [];
+  const filtered = filterTasks(ws.tasks, filters, ws.me.id, ws.taskSearch, activeSprintIds);
 
   if (!project) {
     return (
@@ -64,51 +56,24 @@ export function TaskPanel() {
         <h2>
           项目任务 <span className="ws-count-pill">{project.taskCounts.total}</span>
           <span className="ws-tabs">
-            <button className={`ws-tab ${tab === "all" ? "active" : ""}`} onClick={() => setTab("all")}>全部</button>
-            <button className={`ws-tab ${tab === "mine" ? "active" : ""}`} onClick={() => setTab("mine")}>我的任务</button>
+            <button className={`ws-tab ${filters.relation === "all" ? "active" : ""}`} onClick={() => setFilters((current) => ({ ...current, relation: "all" }))}>全部</button>
+            <button className={`ws-tab ${filters.relation !== "all" ? "active" : ""}`} onClick={() => setFilters((current) => ({ ...current, relation: "mine" }))}>我的任务</button>
           </span>
         </h2>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <button className="ws-btn" style={{ padding: "7px 12px", fontSize: 12 }} onClick={() => setShowFilter((v) => !v)}>
-            <span style={{ display: "inline-flex", gap: 5, alignItems: "center" }}><Icon name="filter" size={12} /> 筛选</span>
-          </button>
+          <div className="ws-view-switch" role="group" aria-label="任务展示方式">
+            <button className={view === "list" ? "active" : ""} aria-pressed={view === "list"} onClick={() => setView("list")}><Icon name="list" size={13} />列表</button>
+            <button className={view === "board" ? "active" : ""} aria-pressed={view === "board"} onClick={() => setView("board")}><Icon name="grid" size={13} />看板</button>
+          </div>
           <button className="ws-btn primary" style={{ padding: "7px 13px", fontSize: 12 }} onClick={() => ws.openModal({ type: "newTask" })}>
             ＋ 新建任务
           </button>
         </div>
       </div>
 
-      {showFilter && (
-        <div className="ws-filter-row">
-          <select value={fStatus} onChange={(e) => setFStatus(e.target.value)}>
-            <option value="">全部状态</option>
-            <option value="todo">待开始</option>
-            <option value="doing">进行中</option>
-            <option value="done">已完成</option>
-          </select>
-          <select value={fPriority} onChange={(e) => setFPriority(e.target.value)}>
-            <option value="">全部优先级</option>
-            <option value="high">高</option>
-            <option value="medium">中</option>
-            <option value="low">低</option>
-          </select>
-          <select value={fAssignee} onChange={(e) => setFAssignee(e.target.value)}>
-            <option value="">全部负责人</option>
-            <option value="">未分配</option>
-            {ws.detail?.members.map((m) => (
-              <option key={m.userId} value={m.userId}>{m.displayName}</option>
-            ))}
-          </select>
-          {ws.detail && ws.detail.labels.length > 0 && (
-            <select value={fLabel} onChange={(e) => setFLabel(e.target.value)}>
-              <option value="">全部标签</option>
-              {ws.detail.labels.map((l) => (
-                <option key={l.id} value={l.id}>{l.name}</option>
-              ))}
-            </select>
-          )}
-        </div>
-      )}
+      <TaskFilterBar value={filters} onChange={setFilters} count={filtered.length} total={ws.tasks.length}
+        searchActive={!!ws.taskSearch.trim()} onClear={() => ws.setTaskSearch("")}
+        activeSprintAvailable={activeSprintIds.length > 0} members={ws.detail?.members ?? []} labels={ws.detail?.labels ?? []} />
 
       {filtered.length === 0 && (
         <div className="ws-empty" style={{ marginTop: 10 }}>
@@ -116,7 +81,7 @@ export function TaskPanel() {
         </div>
       )}
 
-      {GROUPS.map(({ status, label }) => {
+      {view === "board" ? <TaskBoard tasks={filtered} /> : GROUPS.map(({ status, label }) => {
         const items = filtered.filter((t) => t.status === status);
         if (items.length === 0) return null;
         const open = expanded[status] ?? status === "doing";
@@ -167,6 +132,7 @@ export function TaskCard({ task: t, showProject }: { task: TaskItem; showProject
             <span key={l.id} className="ws-pill" style={{ background: `${l.color}26`, color: l.color }}>{l.name}</span>
           ))}
         </span>
+        <TaskParticipants assignee={t.assignee ? { id: t.assignee.id ?? t.assigneeId!, displayName: t.assignee.displayName } : null} collaborators={t.collaborators ?? []} />
       </span>
       <span className="ws-task-right">
         <button className="ws-task-expand" aria-expanded={expanded} aria-controls={`task-extra-${t.id}`} onClick={(e) => { e.stopPropagation(); setExpanded((value) => !value); }}>
@@ -177,11 +143,6 @@ export function TaskCard({ task: t, showProject }: { task: TaskItem; showProject
           {t.commentCount > 0 && <span title={`${t.commentCount} 条评论`}><Icon name="message" size={12} /> {t.commentCount}</span>}
           {t.attachmentCount > 0 && <span title={`${t.attachmentCount} 个附件`}><Icon name="paperclip" size={12} /> {t.attachmentCount}</span>}
         </span>
-        {t.assignee ? (
-          <Avatar name={t.assignee.displayName} colorKey={t.assignee.id ?? t.assignee.displayName} size="sm" title={t.assignee.displayName} />
-        ) : (
-          <span className="ws-avatar sm" style={{ background: "var(--ws-color-232636)", color: "var(--ws-color-5d6273)" }} title="未分配">?</span>
-        )}
       </span>
       {expanded && <div className="ws-task-extra" id={`task-extra-${t.id}`} onClick={(e) => e.stopPropagation()}>
         <div className="ws-task-description"><span className="ws-task-content-label">任务描述</span><p>{t.description || "暂无任务描述"}</p></div>
@@ -202,6 +163,11 @@ export function TaskCard({ task: t, showProject }: { task: TaskItem; showProject
 /* ---------- 我的待办视图（图标栏「待办」） ---------- */
 export function TodosView() {
   const ws = useWorkspace();
+  const [filters, setFilters] = useState({ ...EMPTY_TASK_FILTERS });
+  const activeSprintIds = ws.projects.flatMap((project) => project.activeSprint ? [project.activeSprint.id] : []);
+  const filtered = filterTasks(ws.myTasks, filters, ws.me.id, ws.taskSearch, activeSprintIds);
+  const members = [...new Map(ws.myTasks.flatMap((task) => task.assignee?.id ? [[task.assignee.id, { userId: task.assignee.id, displayName: task.assignee.displayName }] as const] : [])).values()];
+  const labels = [...new Map(ws.myTasks.flatMap((task) => task.labels.map((label) => [label.id, label] as const))).values()];
   return (
     <div>
       <div className="ws-panel-head">
@@ -210,8 +176,12 @@ export function TodosView() {
         </h2>
       </div>
       {ws.myTasks.length === 0 && <div className="ws-empty">太棒了，当前没有指派给你的任务 🎉</div>}
+      <TaskFilterBar value={filters} onChange={setFilters} count={filtered.length} total={ws.myTasks.length}
+        searchActive={!!ws.taskSearch.trim()} onClear={() => ws.setTaskSearch("")}
+        activeSprintAvailable={activeSprintIds.length > 0} members={members} labels={labels} projects={ws.projects} />
+      {ws.myTasks.length > 0 && filtered.length === 0 && <div className="ws-empty">没有匹配的任务，请调整筛选条件或搜索内容。</div>}
       {GROUPS.map(({ status, label }) => {
-        const items = ws.myTasks.filter((t) => t.status === status && t.title.toLowerCase().includes(ws.taskSearch.trim().toLowerCase()));
+        const items = filtered.filter((t) => t.status === status);
         if (items.length === 0) return null;
         return (
           <section key={status}>
@@ -234,6 +204,7 @@ export function NotificationsView() {
     <div>
       <div className="ws-panel-head">
         <h2>通知中心 <span className="ws-count-pill">{ws.unreadCount} 未读</span></h2>
+        <ClearReadNotifications />
         {ws.unreadCount > 0 && (
           <button className="ws-btn" onClick={() => ws.markRead()}>全部已读</button>
         )}
@@ -241,20 +212,7 @@ export function NotificationsView() {
       {ws.notifications.length === 0 && <div className="ws-empty">暂无通知</div>}
       <div style={{ background: "var(--ws-color-16181f)", border: "1px solid #262a38", borderRadius: 12, overflow: "hidden" }}>
         {ws.notifications.map((n) => (
-          <div
-            key={n.id}
-            className={`ws-notif ${n.read ? "" : "unread"}`}
-            style={{ borderRight: 0, borderLeft: 0, borderTop: 0 }}
-            onClick={() => ws.markRead([n.id])}
-          >
-            <span className="n-ic" style={{ color: n.read ? "#5d6273" : "#6f9bff" }}>
-              <Icon name={n.type === "assigned" ? "flag" : n.type === "mention" ? "at" : "message"} size={15} />
-            </span>
-            <div style={{ flex: 1 }}>
-              {n.title}
-              <span className="n-time">{new Date(n.createdAt).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
-            </div>
-          </div>
+          <NotificationEntry key={n.id} notification={n} />
         ))}
       </div>
     </div>
@@ -370,15 +328,38 @@ export function TaskDrawer() {
             <>
               <h2>{task.title}</h2>
 
-              <section className="ws-task-description ws-task-description-detail">
-                <span className="ws-task-content-label">任务描述</span>
-                <div className="ws-desc">{task.description || "暂无任务描述"}</div>
+              <nav className="ws-task-detail-nav" aria-label="任务详情分区">
+                <a href={`#task-${task.id}-content`}>任务内容</a><a href={`#task-${task.id}-people`}>参与成员</a><a href={`#task-${task.id}-schedule`}>状态与安排</a><a href={`#task-${task.id}-discussion`}>附件与讨论</a>
+              </nav>
+              <section className="ws-task-detail-section" id={`task-${task.id}-content`}>
+                <h3>任务内容</h3>
+                <section className="ws-task-description ws-task-description-detail">
+                  <span className="ws-task-content-label">任务描述</span>
+                  <div className="ws-desc">{task.description || "暂无任务描述"}</div>
+                </section>
+                {task.id === id && <TaskChecklist key={task.id} taskId={task.id} />}
               </section>
-              {task.id === id && <TaskChecklist key={task.id} taskId={task.id} />}
-              {task.id === id && <CollaboratorPicker members={task.members ?? []}
+              <section className="ws-task-detail-section" id={`task-${task.id}-people`}>
+                <h3>参与成员</h3>
+                <TaskParticipants showNames assignee={task.assignee} collaborators={task.collaborators ?? []} />
+                <div className="ws-detail-row">
+                  <label>负责人</label>
+                  <select
+                    disabled={!!busy}
+                    className="ws-select"
+                    value={task.assignee?.id ?? ""}
+                    onChange={(e) => patch({ assigneeId: e.target.value ? Number(e.target.value) : null })}
+                  >
+                    <option value="">未分配</option>
+                    {task.members?.map((m) => <option key={m.userId} value={m.userId}>{m.displayName}</option>)}
+                  </select>
+                </div>
+              {task.id === id && <details className="ws-task-member-editor"><summary>调整协作成员</summary><CollaboratorPicker members={task.members ?? []}
                 selected={task.collaborators?.map((c) => c.id) ?? []} assigneeId={task.assignee?.id ?? null}
-                disabled={!!busy} onChange={(collaboratorIds) => void patch({ collaboratorIds })} />}
-
+                disabled={!!busy} onChange={(collaboratorIds) => void patch({ collaboratorIds })} /></details>}
+              </section>
+              <section className="ws-task-detail-section" id={`task-${task.id}-schedule`}>
+                <h3>状态与安排</h3>
               <div style={{ marginTop: 16 }}>
                 <div className="ws-detail-row">
                   <label>状态</label>
@@ -390,18 +371,6 @@ export function TaskDrawer() {
                   <label>优先级</label>
                   <select disabled={!!busy} className="ws-select" value={task.priority} onChange={(e) => patch({ priority: e.target.value })}>
                     {Object.entries(PRIORITY_TEXT).map(([v, t]) => <option key={v} value={v}>{t}</option>)}
-                  </select>
-                </div>
-                <div className="ws-detail-row">
-                  <label>负责人</label>
-                  <select
-                    disabled={!!busy}
-                    className="ws-select"
-                    value={task.assignee?.id ?? ""}
-                    onChange={(e) => patch({ assigneeId: e.target.value ? Number(e.target.value) : null })}
-                  >
-                    <option value="">未分配</option>
-                    {detail?.members.map((m) => <option key={m.userId} value={m.userId}>{m.displayName}</option>)}
                   </select>
                 </div>
                 <div className="ws-detail-row">
@@ -447,6 +416,9 @@ export function TaskDrawer() {
                 </div>
               </div>
 
+              </section>
+              <section className="ws-task-detail-section" id={`task-${task.id}-discussion`}>
+                <h3>附件与讨论</h3>
               {task.files.length > 0 && (
                 <>
                   <div className="ws-sub-title">附件（{task.files.length}）</div>
@@ -499,6 +471,7 @@ export function TaskDrawer() {
                 </>
               )}
 
+              </section>
               <div style={{ marginTop: 26, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontSize: 11, color: "var(--ws-color-5d6273)" }}>
                   {task.creator ? `由 ${task.creator.displayName} 创建` : ""}

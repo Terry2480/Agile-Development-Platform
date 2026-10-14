@@ -227,6 +227,12 @@ export const activities = pgTable("activities", {
 });
 
 // 站内通知表：被指派 / 被@ / 我的任务有新评论
+export const taskDeadlineReminders = pgTable("task_deadline_reminders", {
+  taskId: integer("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  dueOn: date("due_on").notNull(),
+}, (table) => [unique("task_deadline_reminders_task_user_due_uq").on(table.taskId, table.userId, table.dueOn)]);
+
 export const notifications = pgTable("notifications", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),

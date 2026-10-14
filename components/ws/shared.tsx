@@ -13,6 +13,7 @@ const ICON_PATHS: Record<string, string> = {
   chevronDown: "M5 9l7 7 7-7",
   collapse: "M8 3h11a2 2 0 012 2v11M5 7h10a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V9a2 2 0 012-2zM7 14h6",
   grid: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z",
+  list: "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01",
   bell: "M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0",
   check: "M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11",
   sun: "M12 17a5 5 0 100-10 5 5 0 000 10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4",
@@ -141,6 +142,7 @@ export interface WorkspaceStore {
   withdrawFile(id: number): Promise<void>;
   uploadTaskFile(taskId: number, file: File): Promise<void>;
   markRead(ids?: number[]): Promise<void>;
+  openNotification(notification: NotificationItem): Promise<boolean>;
 }
 
 export const WorkspaceContext = createContext<WorkspaceStore | null>(null);

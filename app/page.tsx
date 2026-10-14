@@ -1,4 +1,5 @@
 "use client";
+import { resolveNotificationTarget } from "@/lib/notification-navigation";
 
 // AgileCampus 工作空间（深色 · 按「同频」设计图）：状态中心 + 布局组装
 // 数据全部来自后端 API（无演示数据）；登录守卫与 v1 一致
@@ -68,6 +69,7 @@ export default function WorkspacePage() {
   const [notice, setNotice] = useState("");
   useEffect(() => () => gate.cancel(), [gate]);
   const selectProject = useCallback((id: number | null) => {
+    gate.cancel(["notificationNavigation"]);
     if (selectedIdRef.current === id) return;
     gate.cancel(projectResources);
     selectedIdRef.current = id;
@@ -175,15 +177,15 @@ export default function WorkspacePage() {
 
   const store: WorkspaceStore = useMemo(() => ({
     me: me!,
-    railView, setRailView,
-    focusSection, setFocusSection,
+    railView, setRailView: (view) => { gate.cancel(["notificationNavigation"]); setRailView(view); },
+    focusSection, setFocusSection: (section) => { gate.cancel(["notificationNavigation"]); setFocusSection(section); },
     teams, projects, selectedId, detail, tasks, myTasks, chat, activities, files,
     notifications, unreadCount, overview,
     taskSearch, setTaskSearch,
     selectProject,
     modal, openModal: setModal, closeModal: () => setModal(null),
     drawerTaskId,
-    openTask: (id) => setDrawerTaskId(id),
+    openTask: (id) => { gate.cancel(["notificationNavigation"]); setDrawerTaskId(id); },
     closeTask: () => setDrawerTaskId(null),
     refreshTeams, refreshProjects, refreshProjectData, refreshTasks, refreshChat, refreshActivities, refreshFiles, refreshNotifications, refreshMyTasks,
 
@@ -286,12 +288,44 @@ export default function WorkspacePage() {
       await api("/api/notifications", { method: "PUT", json: ids?.length ? { ids } : { all: true } });
       await afterSaved([refreshNotifications()]);
     },
+    async openNotification(notification) {
+      const request = gate.begin("notificationNavigation");
+      try {
+        const target = await resolveNotificationTarget(notification, request.signal);
+        if (!request.current()) return false;
+        if (target && !projects.some((project) => project.id === target.projectId)) {
+          await loadResource<{ projects: ProjectSummary[] }>("projects", "/api/projects", (data) => setProjects(data.projects));
+          if (!request.current()) return false;
+        }
+        let readFailed = false;
+        if (!notification.read) {
+          try { await api("/api/notifications", { method: "PUT", json: { ids: [notification.id] } }); }
+          catch { readFailed = true; }
+        }
+        if (!request.current()) return false;
+        if (!target) {
+          void refreshNotifications().catch(() => {});
+          throw new Error("这条通知没有可打开的关联内容。");
+        }
+        selectProject(target.projectId);
+        setRailView("projects"); setFocusSection(target.section); setTaskSearch("");
+        setDrawerTaskId(target.taskId ?? null);
+        if (readFailed) setNotice("内容已打开，但未能标记已读，请稍后重试。");
+        void refreshNotifications().catch(() => {});
+        return true;
+      } catch (error) {
+        if (!request.current()) return false;
+        throw error;
+      } finally { request.finish(); }
+    },
   }), [
     me, railView, focusSection, teams, projects, selectedId, detail, tasks, myTasks, chat,
     activities, files, notifications, unreadCount, overview, taskSearch, modal, drawerTaskId,
     selectProject, refreshProjects, refreshProjectData, refreshTasks, refreshChat,
     refreshActivities, refreshFiles, refreshNotifications, refreshMyTasks, refreshDetail, refreshTeams, refreshOverview,
     afterProjectMutation, afterTaskMutation, afterSaved,
+    gate,
+    loadResource,
   ]);
 
   /* ---------- 渲染 ---------- */

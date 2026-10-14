@@ -193,7 +193,7 @@ export type FileItem = {
 
 export type NotificationItem = {
   id: number;
-  type: "assigned" | "mention" | "comment";
+  type: "assigned" | "mention" | "comment" | "deadline";
   title: string;
   entityType: string | null;
   entityId: number | null;
