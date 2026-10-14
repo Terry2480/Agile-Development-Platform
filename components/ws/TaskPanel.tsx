@@ -3,13 +3,15 @@
 // 主内容区：项目任务面板（状态分组 / Tab / 筛选 / 新建）、我的待办视图、通知视图、任务详情抽屉
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TaskAction } from "@/lib/task-action";
+import { TaskChecklist } from "./TaskChecklist";
+import { CollaboratorPicker } from "./CollaboratorPicker";
 import { RequestGate } from "@/lib/request-gate";
 import {
   api, uploadFile as apiUpload, type TaskItem, type ProjectDetail,
   STATUS_TEXT, PRIORITY_TEXT, dueInfo, fmtSize, fmtDateShort, fmtTime,
 } from "@/lib/api-client";
 import { useWorkspace, Icon, Avatar, Modal } from "./shared";
-import { displayNameOf, renderMentions } from "./helpers";
+import { renderMentions } from "./helpers";
 
 // 优先级竖条：蓝白黑三色系统（高=亮蓝 / 中=品牌蓝 / 低=灰蓝）
 const PRIO_COLOR: Record<string, string> = { high: "#9cc0ff", medium: "#3b6ef5", low: "#46506b" };
@@ -34,7 +36,7 @@ export function TaskPanel() {
   const filtered = useMemo(() => {
     const q = ws.taskSearch.trim().toLowerCase();
     return ws.tasks.filter((t) => {
-      if (tab === "mine" && t.assigneeId !== ws.me.id) return false;
+      if (tab === "mine" && t.assigneeId !== ws.me.id && !t.collaborators?.some((c) => c.id === ws.me.id)) return false;
       if (fStatus && t.status !== fStatus) return false;
       if (fPriority && t.priority !== fPriority) return false;
       if (fAssignee && String(t.assigneeId ?? "") !== fAssignee) return false;
@@ -183,9 +185,11 @@ export function TaskCard({ task: t, showProject }: { task: TaskItem; showProject
       </span>
       {expanded && <div className="ws-task-extra" id={`task-extra-${t.id}`} onClick={(e) => e.stopPropagation()}>
         <div className="ws-task-description"><span className="ws-task-content-label">任务描述</span><p>{t.description || "暂无任务描述"}</p></div>
+        <TaskChecklist key={t.id} taskId={t.id} />
         <div className="ws-task-extra-meta">
           <span>状态：{STATUS_TEXT[t.status]}</span>
           <span>负责人：{t.assignee?.displayName || "未分配"}</span>
+          <span>协作成员：{t.collaborators?.map((c) => c.displayName).join("、") || "未设置"}</span>
           <span>截止日期：{t.dueOn || "未设置"}</span>
           <span>评论 {t.commentCount} · 附件 {t.attachmentCount}</span>
         </div>
@@ -259,6 +263,8 @@ export function NotificationsView() {
 
 /* ---------- 任务详情抽屉 ---------- */
 type TaskFull = {
+  members: { userId: number; displayName: string }[];
+  collaborators: { id: number; displayName: string }[];
   id: number; code: string; title: string; description: string | null;
   status: string; priority: string; dueOn: string | null; sprintId: number | null;
   assignee: { id: number; displayName: string } | null;
@@ -311,7 +317,7 @@ export function TaskDrawer() {
   if (!id) return null;
 
   const detail: ProjectDetail | null = ws.detail;
-  const memberNames = detail?.members.map((m) => m.displayName) ?? [];
+  const memberNames = task?.members?.map((m) => m.displayName) ?? [];
 
   async function runAction(label: string, write: () => Promise<void>, refresh: () => Promise<void>) {
     let started = false;
@@ -368,6 +374,10 @@ export function TaskDrawer() {
                 <span className="ws-task-content-label">任务描述</span>
                 <div className="ws-desc">{task.description || "暂无任务描述"}</div>
               </section>
+              {task.id === id && <TaskChecklist key={task.id} taskId={task.id} />}
+              {task.id === id && <CollaboratorPicker members={task.members ?? []}
+                selected={task.collaborators?.map((c) => c.id) ?? []} assigneeId={task.assignee?.id ?? null}
+                disabled={!!busy} onChange={(collaboratorIds) => void patch({ collaboratorIds })} />}
 
               <div style={{ marginTop: 16 }}>
                 <div className="ws-detail-row">
@@ -537,6 +547,7 @@ export function NewTaskModal({ onClose }: { onClose: () => void }) {
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("medium");
   const [assigneeId, setAssigneeId] = useState("");
+  const [collaboratorIds, setCollaboratorIds] = useState<number[]>([]);
   const [dueOn, setDueOn] = useState("");
   const [sprintId, setSprintId] = useState("");
   const [labelIds, setLabelIds] = useState<number[]>([]);
@@ -553,6 +564,7 @@ export function NewTaskModal({ onClose }: { onClose: () => void }) {
         description: description.trim() || null,
         priority,
         assigneeId: assigneeId ? Number(assigneeId) : null,
+        collaboratorIds,
         dueOn: dueOn || null,
         sprintId: sprintId ? Number(sprintId) : null,
         labelIds: labelIds.length ? labelIds : undefined,
@@ -594,6 +606,8 @@ export function NewTaskModal({ onClose }: { onClose: () => void }) {
           {ws.detail?.members.map((m) => <option key={m.userId} value={m.userId}>{m.displayName}</option>)}
         </select>
       </div>
+      <CollaboratorPicker members={ws.detail?.members ?? []} selected={collaboratorIds}
+        assigneeId={assigneeId ? Number(assigneeId) : null} disabled={busy} onChange={setCollaboratorIds} />
       <div className="ws-field">
         <label>迭代</label>
         <select className="ws-select" value={sprintId} onChange={(e) => setSprintId(e.target.value)}>

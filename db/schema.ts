@@ -1,5 +1,5 @@
 import {
-  pgTable, serial, text, timestamp, integer, boolean, date, unique,
+  pgTable, serial, text, timestamp, integer, boolean, date, unique, index,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
@@ -168,6 +168,19 @@ export const taskLabels = pgTable("task_labels", {
   taskId: integer("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
   labelId: integer("label_id").notNull().references(() => labels.id, { onDelete: "cascade" }),
 }, (t) => [unique("task_labels_task_label_uq").on(t.taskId, t.labelId)]);
+
+export const taskCollaborators = pgTable("task_collaborators", {
+  taskId: integer("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+}, (table) => [unique("task_collaborators_task_user_uq").on(table.taskId, table.userId)]);
+
+// 任务内轻量步骤，与独立子任务分开保存。
+export const taskChecklistItems = pgTable("task_checklist_items", {
+  id: serial("id").primaryKey(),
+  taskId: integer("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  completed: boolean("completed").notNull().default(false),
+}, (table) => [index("task_checklist_task_idx").on(table.taskId)]);
 
 // 评论表：任务下的讨论（支持 @提及）
 export const comments = pgTable("comments", {

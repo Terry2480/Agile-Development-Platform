@@ -3,7 +3,7 @@ import { notifications } from "@/db/schema";
 
 /* 站内通知：被指派 / 被@提及 / 我的任务有新评论 */
 
-// 发一条通知（不通知操作者本人）
+// 发一条通知；默认不通知操作者，任务协作分配可显式包含本人。
 export async function notify(input: {
   userId: number;
   actorId: number;
@@ -11,8 +11,9 @@ export async function notify(input: {
   title: string;
   entityType?: "task" | "project";
   entityId?: number;
+  includeActor?: boolean;
 }, executor: Pick<typeof db, "insert"> = db) {
-  if (input.userId === input.actorId) return; // 自己操作不给自己发通知
+  if (input.userId === input.actorId && !input.includeActor) return;
   await executor.insert(notifications).values({
     userId: input.userId,
     type: input.type,

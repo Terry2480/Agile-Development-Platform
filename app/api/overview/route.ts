@@ -2,6 +2,7 @@ import { eq, inArray, and, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { teamMembers, teams, projects, tasks } from "@/db/schema";
 import { requireUser, handleApiError } from "@/lib/api";
+import { participatesInTask } from "@/lib/task-collaborators";
 
 // 工作台聚合统计：GET /api/overview
 // 返回我加入的团队数、可见项目数、任务总量/已完成、我的任务（待办/进行中）——侧栏徽标与概览卡片用
@@ -42,7 +43,7 @@ export async function GET(request: Request) {
       const mineRows = await db
         .select({ status: tasks.status, count: sql<number>`count(*)::int` })
         .from(tasks)
-        .where(and(inArray(tasks.projectId, projectIds), eq(tasks.assigneeId, user.id)))
+        .where(and(inArray(tasks.projectId, projectIds), participatesInTask(user.id)))
         .groupBy(tasks.status);
       for (const row of mineRows) {
         if (row.status === "todo") myTodo += row.count;

@@ -2,14 +2,14 @@ import { z } from "zod";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import {
-  tasks, users, projects, sprints, labels, taskLabels, comments, attachments, activities, teamMembers, teams,
+  tasks, users, projects, sprints, labels, taskLabels, comments, attachments, activities, teamMembers, teams, taskCollaborators,
 } from "@/db/schema";
 import {
   requireUser, parseBody, parseId, requireProjectAccess, ApiError, handleApiError,
   displayName, taskCode, STATUS_LABEL, PRIORITY_LABEL,
 } from "@/lib/api";
 import { logActivity } from "@/lib/activity";
-import { notify } from "@/lib/notify";
+import { syncCollaborators } from "@/lib/task-collaborators";
 
 // 通过任务 id 取任务并校验访问；返回 { task, project }
 async function requireTask(userId: number, taskId: number) {
@@ -53,6 +53,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       .orderBy(comments.createdAt);
 
     const subtaskRows = await db.select().from(tasks).where(eq(tasks.parentTaskId, taskId)).orderBy(tasks.number);
+    const collaborators = await db.select({ id: users.id, name: users.name, studentId: users.studentId })
+      .from(taskCollaborators).innerJoin(users, eq(users.id, taskCollaborators.userId))
+      .where(eq(taskCollaborators.taskId, taskId)).orderBy(users.id);
+    const members = await db.select({ userId: users.id, name: users.name, studentId: users.studentId })
+      .from(teamMembers).innerJoin(users, eq(users.id, teamMembers.userId))
+      .where(eq(teamMembers.teamId, project.teamId)).orderBy(users.id);
 
     const fileRows = await db
       .select({
@@ -84,6 +90,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         creator: creator ? { ...creator, displayName: displayName(creator) } : null,
         sprint: sprint ?? null,
         labels: labelRows,
+        collaborators: collaborators.map((c) => ({ id: c.id, displayName: displayName(c) })),
+        members: members.map((m) => ({ userId: m.userId, displayName: displayName(m) })),
         comments: commentRows.map((c) => ({ ...c, authorDisplayName: displayName({ name: c.authorName, studentId: c.authorStudentId }) })),
         subtasks: subtaskRows.map((s) => ({ ...s, code: taskCode(project.key, s.number) })),
         files: fileRows,
@@ -101,6 +109,7 @@ const updateSchema = z.object({
   status: z.enum(["todo", "doing", "done"]).optional(),
   priority: z.enum(["low", "medium", "high"]).optional(),
   assigneeId: z.number().int().positive().optional().nullable(),
+  collaboratorIds: z.array(z.number().int().positive()).max(100).optional(),
   dueOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "截止日期格式应为 YYYY-MM-DD").optional().nullable(),
   sprintId: z.number().int().positive().optional().nullable(),
   parentTaskId: z.number().int().positive().optional().nullable(),
@@ -175,6 +184,13 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
     // 变更对比 → 项目日志 + 通知
     const code = taskCode(project.key, after.number);
+    if (body.collaboratorIds !== undefined || body.assigneeId !== undefined) {
+      const existing = await tx.select({ id: taskCollaborators.userId }).from(taskCollaborators).where(eq(taskCollaborators.taskId, taskId));
+      await syncCollaborators(tx, { taskId, teamId: project.teamId, assigneeId: after.assigneeId,
+        collaboratorIds: body.collaboratorIds ?? existing.map((c) => c.id), actorId: user.id, code });
+      if (body.collaboratorIds !== undefined) await logActivity({ projectId: project.id, taskId, actorId: user.id,
+        action: "task.collaborators_changed", detail: `${displayName(user)} 更新了 ${code} 的协作成员` }, tx);
+    }
     const actor = displayName(user);
     const changes: string[] = [];
     if (body.status !== undefined && before.status !== after.status) {
@@ -189,12 +205,6 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       }
       changes.push(`${actor} 将 ${code} 指派给 ${target}`);
       await logActivity({ projectId: project.id, taskId, actorId: user.id, action: "task.assigned", detail: changes[changes.length - 1] }, tx);
-      if (after.assigneeId) {
-        await notify({
-          userId: after.assigneeId, actorId: user.id, type: "assigned",
-          title: `${actor} 将任务 ${code} 指派给你`, entityType: "task", entityId: taskId,
-        }, tx);
-      }
     }
     if (body.priority !== undefined && before.priority !== after.priority) {
       changes.push(`${actor} 将 ${code} 优先级调整为「${PRIORITY_LABEL[after.priority]}」`);

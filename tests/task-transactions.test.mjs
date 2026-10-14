@@ -41,6 +41,7 @@ test("task writes roll back on activity or notification failure", async () => {
    common["@/lib/api"]=moduleAt("../lib/api.ts",common);
    common["@/lib/activity"]=moduleAt("../lib/activity.ts",common);
    common["@/lib/notify"]=moduleAt("../lib/notify.ts",common);
+   common["@/lib/task-collaborators"]=moduleAt("../lib/task-collaborators.ts", {...common, "./api": common["@/lib/api"], "./notify": common["@/lib/notify"]});
    return {create:moduleAt("../app/api/tasks/route.ts",common).POST,
     ...moduleAt("../app/api/tasks/[id]/route.ts",common),
     comment:moduleAt("../app/api/tasks/[id]/comments/route.ts",common).POST};
@@ -54,9 +55,10 @@ test("task writes roll back on activity or notification failure", async () => {
   const response=await routes().create(create());assert.equal(response.status,201);
   const task=(await response.json()).task;const ctx={params:Promise.resolve({id:String(task.id)})};
   for(const failure of [activities,notifications]) {
-   assert.equal((await routes(failure).PUT(req("PUT",{title:"失败改名",status:"done",assigneeId:actor.id,labelIds:[]}),ctx)).status, failure===notifications?200:500);
+   assert.equal((await routes(failure).PUT(req("PUT",{title:"失败改名",status:"done",assigneeId:actor.id,labelIds:[]}),ctx)).status,500);
   }
   // Force assignment to another user so notification insertion is exercised.
+  assert.equal((await routes().PUT(req("PUT",{assigneeId:actor.id,collaboratorIds:[]}),ctx)).status,200);
   assert.equal((await routes(notifications).PUT(req("PUT",{title:"通知失败",assigneeId:recipient.id}),ctx)).status,500);
   assert.notEqual((await outer.select().from(tasks).where(eq(tasks.id,task.id)))[0].title,"通知失败");
   assert.equal((await routes(notifications).comment(req("POST",{content:`@${recipient.name} 评论测试`}),ctx)).status,500);

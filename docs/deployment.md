@@ -8,6 +8,8 @@
 
 | 内容 | 部署操作 |
 | --- | --- |
+| 任务协作成员与多人待办提醒 | 启动新版前运行 `npm run db:add-task-collaborators`；负责人自动参与，旧任务负责人保留 |
+| 任务轻量检查清单 | 启动新版前运行 `npm run db:add-task-checklist`；旧任务默认没有步骤 |
 | 成员多分工标签 | 启动新版前运行 `npm run db:add-member-duties`，原单标签会保留 |
 | 仅负责人可创建迭代 | 更新代码、构建并重启；支持多标签中的“负责人（组长）”，创建者默认拥有权限 |
 | 个人设置页与主界面主题统一 | 更新代码、构建并重启，浏览器刷新后验证日间和夜间模式 |
@@ -62,6 +64,8 @@ npm ci --include=dev
 ```bash
 npm run db:add-member-duty
 npm run db:add-member-duties
+npm run db:add-task-checklist
+npm run db:add-task-collaborators
 npm run db:add-milestones
 npm run db:add-team-invites
 npm run db:add-auth-protection
@@ -73,6 +77,8 @@ npm run db:add-project-course
 | --- | --- |
 | db:add-member-duty | 成员分工字段 |
 | db:add-member-duties | 成员多标签字段，保留原有分工；新版启动前必须执行 |
+| db:add-task-checklist | 清单步骤表与查询索引，删除任务时自动清理对应步骤 |
+| db:add-task-collaborators | 协作成员关联表及旧负责人回填；不会向历史任务补发通知 |
 | db:add-milestones | 里程碑及关联任务表、开学日期、教学周和星期字段 |
 | db:add-team-invites | 团队邀请码与加入申请 |
 | db:add-auth-protection | 登录限流表 |
@@ -167,7 +173,9 @@ WorkingDirectory 决定 uploads 位置，应用用户需要读写和删除权限
 
 ```sql
 SELECT to_regclass('auth_rate_limits') IS NOT NULL AS auth_ready,
-       to_regclass('file_cleanup') IS NOT NULL AS cleanup_ready;
+       to_regclass('file_cleanup') IS NOT NULL AS cleanup_ready,
+       to_regclass('task_checklist_items') IS NOT NULL AS checklist_ready,
+       to_regclass('task_collaborators') IS NOT NULL AS collaborators_ready;
 
 SELECT tgname, tgenabled FROM pg_trigger
 WHERE tgrelid = to_regclass('attachments')
@@ -194,6 +202,12 @@ ready 均为 true；触发器有一行且 tgenabled 为 O 或 A；课程与教�
 
 本次重点验收：
 
+协作成员：创建任务时选择负责人和多位协作成员，负责人即使未勾选也应自动参与。所有参与者都能在“我的待办”看到任务，并各收到一条分配提醒（含参与任务的创建者）。新增成员应收到提醒，重复保存不应重复通知；移除协作成员后任务不再出现在其待办中。不能分配其他团队用户，任务、成员关联和提醒应一起成功或回滚。
+
+检查清单：在任务详情添加多个步骤、勾选、修改和删除；关闭重开及刷新后内容应保留。全部勾选不应自动改变任务状态。其他团队成员可以协作，非团队成员不能读取或修改；删除测试任务后应清理其清单步骤。
+
+展开任务速览卡片后也能维护检查清单；同时打开完整详情时，在任意一处添加、勾选、修改或删除，另一处应同步显示，清单操作不应触发卡片打开详情。
+
 1. 团队创建者给成员同时分配“开发者”“展示人”和一个自定义标签，保存、刷新、重新登录后标签仍完整；升级前的原分工仍保留。
 2. 普通成员和仅有管理员角色的账号看不到创建迭代入口，直接提交创建请求应返回 403；创建者和拥有负责人标签的成员可以创建，负责人标签不必位于标签列表第一项。
 3. 创建者移除另一个成员的负责人标签后，该成员再次创建迭代应被拒绝。被拒绝的请求不应创建记录或停用原迭代。
@@ -215,6 +229,7 @@ ready 均为 true；触发器有一行且 tgenabled 为 O 或 A；课程与教�
 | 表单解析失败 | 请求被截断；新版配置是否已构建、重启 |
 | 缺少表或字段 | 更新脚本是否在正确数据库执行 |
 | 报错缺少 team_members.duties | 在服务器执行 db:add-member-duties，随后重启新版 |
+| 检查清单返回 500 | 查看应用日志；缺表时执行 db:add-task-checklist。若本地日志提示 undefined 或 drizzle:Columns，新表定义可能未热更新，停止并重新运行 npm run dev |
 | 负责人创建迭代被拒绝 | 是否有完整的“负责人（组长）”标签；仅管理员角色不授予创建权限 |
 | 所有成员仍能创建迭代 | 提交号是否匹配，服务是否仍运行旧构建，是否有重复应用进程 |
 | 聊天时间或日期仍错误 | 聊天字段类型、迁移选择的历史时区、已知消息原始时间 |

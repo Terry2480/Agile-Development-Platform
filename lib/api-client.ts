@@ -126,6 +126,7 @@ export type ProjectDetail = {
 export type TaskAssignee = { id: number | null; name: string | null; studentId: string | null; displayName: string } | null;
 
 export type TaskItem = {
+  collaborators: { id: number; displayName: string }[];
   id: number;
   projectId: number;
   projectName?: string;

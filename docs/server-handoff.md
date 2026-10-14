@@ -240,6 +240,9 @@ npm ci --include=dev
 
 ```bash
 npm run db:add-member-duty
+npm run db:add-member-duties
+npm run db:add-task-checklist
+npm run db:add-task-collaborators
 npm run db:add-milestones
 npm run db:add-team-invites
 npm run db:add-auth-protection

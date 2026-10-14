@@ -2,11 +2,11 @@ import { z } from "zod";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
-  tasks, users, teams, teamMembers, projects, sprints, labels, taskLabels, comments, attachments,
+  tasks, users, teams, teamMembers, projects, sprints, labels, taskLabels, comments, attachments, taskCollaborators,
 } from "@/db/schema";
 import { requireUser, parseBody, requireProjectAccess, ApiError, handleApiError, displayName, taskCode } from "@/lib/api";
 import { logActivity } from "@/lib/activity";
-import { notify } from "@/lib/notify";
+import { participatesInTask, syncCollaborators } from "@/lib/task-collaborators";
 
 // 任务接口：GET /api/tasks?projectId=&status=&priority=&assigneeId=&sprintId=&mine=1&q=&labelId=&limit=
 //           POST /api/tasks  新建（编号在事务内按项目递增分配，如 AGI-001）
@@ -49,7 +49,7 @@ export async function GET(request: Request) {
     if (priority) conditions.push(eq(tasks.priority, priority));
     if (assigneeId) conditions.push(eq(tasks.assigneeId, Number(assigneeId)));
     if (sprintId) conditions.push(eq(tasks.sprintId, Number(sprintId)));
-    if (mine) conditions.push(eq(tasks.assigneeId, user.id));
+    if (mine) conditions.push(participatesInTask(user.id));
     if (q) conditions.push(sql`${tasks.title} ILIKE ${"%" + q + "%"}`);
 
     if (labelId) {
@@ -78,6 +78,9 @@ export async function GET(request: Request) {
       .limit(limit);
 
     const taskIds = rows.map((r) => r.task.id);
+    const collaboratorRows = taskIds.length ? await db.select({ taskId: taskCollaborators.taskId, userId: users.id, name: users.name, studentId: users.studentId })
+      .from(taskCollaborators).innerJoin(users, eq(users.id, taskCollaborators.userId))
+      .where(inArray(taskCollaborators.taskId, taskIds)).orderBy(users.id) : [];
 
     // 标签 / 评论数 / 附件数批量补齐
     const labelRows = taskIds.length
@@ -106,7 +109,8 @@ export async function GET(request: Request) {
       ...r.task,
       code: taskCode(r.projectKey, r.task.number),
       projectName: r.projectName,
-      assignee: r.assigneeName === null ? null : {
+      collaborators: collaboratorRows.filter((c) => c.taskId === r.task.id).map((c) => ({ id: c.userId, displayName: displayName(c) })),
+      assignee: r.task.assigneeId === null || r.assigneeStudentId === null ? null : {
         id: r.task.assigneeId,
         name: r.assigneeName,
         studentId: r.assigneeStudentId,
@@ -129,6 +133,7 @@ const createSchema = z.object({
   status: z.enum(["todo", "doing", "done"]).default("todo"),
   priority: z.enum(["low", "medium", "high"]).default("medium"),
   assigneeId: z.number().int().positive().optional().nullable(),
+  collaboratorIds: z.array(z.number().int().positive()).max(100).optional(),
   dueOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "截止日期格式应为 YYYY-MM-DD").optional().nullable(),
   sprintId: z.number().int().positive().optional().nullable(),
   parentTaskId: z.number().int().positive().optional().nullable(),
@@ -206,16 +211,8 @@ export async function POST(request: Request) {
       action: "task.created",
       detail: `${displayName(user)} 创建了任务 ${code} ${created.title}`,
     }, tx);
-    if (created.assigneeId) {
-      await notify({
-        userId: created.assigneeId,
-        actorId: user.id,
-        type: "assigned",
-        title: `${displayName(user)} 将任务 ${code} 指派给你`,
-        entityType: "task",
-        entityId: created.id,
-      }, tx);
-    }
+    await syncCollaborators(tx, { taskId: created.id, teamId: project.teamId,
+      assigneeId: created.assigneeId, collaboratorIds: body.collaboratorIds ?? [], actorId: user.id, code });
 
       return { ...created, code };
     });

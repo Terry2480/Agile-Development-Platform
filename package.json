@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "db:add-task-collaborators": "tsx db/add-task-collaborators.ts",
+    "db:add-task-checklist": "tsx db/add-task-checklist.ts",
     "db:add-member-duties": "tsx db/add-member-duties.ts",
     "db:fix-chat-timezone": "tsx db/fix-chat-timezone.ts",
     "dev": "next dev",

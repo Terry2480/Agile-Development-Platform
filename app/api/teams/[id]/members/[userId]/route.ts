@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { teams, teamMembers, projects, projectMembers } from "@/db/schema";
+import { teams, teamMembers, projects, projectMembers, tasks, taskCollaborators } from "@/db/schema";
 import { requireUser, parseBody, parseId, requireTeamAccess, ApiError, handleApiError } from "@/lib/api";
 
 // 成员角色调整与移除：PUT / DELETE /api/teams/[id]/members/[userId]
@@ -71,6 +71,9 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       // 同步移出该团队全部项目
       const teamProjects = await tx.select({ id: projects.id }).from(projects).where(eq(projects.teamId, teamId));
       for (const p of teamProjects) {
+        const assignedTasks = await tx.select({ id: tasks.id }).from(tasks).where(eq(tasks.projectId, p.id));
+        if (assignedTasks.length) await tx.delete(taskCollaborators)
+          .where(and(inArray(taskCollaborators.taskId, assignedTasks.map((task) => task.id)), eq(taskCollaborators.userId, targetUserId)));
         await tx
           .delete(projectMembers)
           .where(and(eq(projectMembers.projectId, p.id), eq(projectMembers.userId, targetUserId)));
