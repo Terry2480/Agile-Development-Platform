@@ -1,6 +1,6 @@
 # 实际服务器部署交接与发布手册
 
-本文记录本项目实际使用的部署方式，供新会话或维护者在没有聊天上下文时接手。记录日期：2026-10-13（Asia/Hong_Kong）。这是历史已确认状态，不是实时监控；操作前必须在服务器重新检查。
+本文记录本项目实际使用的部署方式，供新会话或维护者在没有聊天上下文时接手。更新日期：2026-10-14（Asia/Hong_Kong）。这是历史已确认状态，不是实时监控；操作前必须在服务器重新检查。本次更新使用 [第四版发布清单](release-v4.md)。
 
 ## 1. 接手者先读
 
@@ -240,10 +240,6 @@ npm ci --include=dev
 
 ```bash
 npm run db:add-member-duty
-npm run db:add-member-duties
-npm run db:add-task-checklist
-npm run db:add-task-collaborators
-npm run db:add-deadline-reminders
 npm run db:add-milestones
 npm run db:add-team-invites
 npm run db:add-auth-protection
@@ -251,7 +247,7 @@ npm run db:add-file-cleanup
 npm run db:add-project-course
 ```
 
-它们增加成员分工、里程碑字段、邀请码、登录限流、文件清理触发器和课程字段。后续发布根据实际改动选择迁移，并检查脚本是否可以重复执行。已有数据库不常规运行 db:push 或 db:seed；触发器不能仅靠 db:push 创建。
+它们增加成员分工、里程碑字段、邀请码、登录限流、文件清理触发器和课程字段。这是第二版历史记录，不代表第四版迁移已执行。本次成员多标签、检查清单、协作成员、截止提醒和成果区等迁移按 [第四版发布清单](release-v4.md) 执行。已有数据库不常规运行 db:push 或 db:seed；触发器不能仅靠 db:push 创建。
 
 迁移成功、结构确认后：
 

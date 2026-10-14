@@ -1,7 +1,8 @@
 import {
-  pgTable, serial, text, timestamp, integer, boolean, date, unique, index,
+  pgTable, serial, text, timestamp, integer, boolean, date, unique, index, check,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 /* ============ 用户与会话（v1 已有，保持不变） ============ */
 
@@ -264,3 +265,15 @@ export const attachments = pgTable("attachments", {
   size: integer("size").notNull().default(0),        // 字节数
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+export const milestoneResources = pgTable("milestone_resources", {
+  id: serial("id").primaryKey(),
+  milestoneId: integer("milestone_id").notNull().references(() => milestones.id, { onDelete: "cascade" }),
+  attachmentId: integer("attachment_id").references(() => attachments.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  url: text("url"),
+  createdById: integer("created_by_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [unique("milestone_resources_file_uq").on(table.milestoneId, table.attachmentId),
+  unique("milestone_resources_url_uq").on(table.milestoneId, table.url),
+  check("milestone_resources_kind_check", sql`(${table.attachmentId} is not null and ${table.url} is null) or (${table.attachmentId} is null and ${table.url} is not null)`)]);

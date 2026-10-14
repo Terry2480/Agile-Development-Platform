@@ -73,6 +73,7 @@ test("upload log failure rolls back attachment metadata and cleans the written f
       const files = new Set();
       const common = { "@/db": { db }, "@/db/schema": schema, "@/lib/auth": { getSessionUser: async () => user } };
       common["@/lib/api"] = load("../lib/api.ts", common);
+      common["@/lib/upload-limits"] = load("../lib/upload-limits.ts", common);
       common["@/lib/file-cleanup"] = { uploadPath: (name) => name, tryFileCleanup: async () => { const jobs = await db.select().from(fileCleanup); for (const job of jobs) if (files.has(job.storedName)) { files.delete(job.storedName); await db.delete(fileCleanup).where(eq(fileCleanup.storedName, job.storedName)); } } };
       common["node:fs/promises"] = { mkdir: async () => {}, writeFile: async (name) => { files.add(name); } };
       let logFails = true;

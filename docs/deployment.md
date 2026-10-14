@@ -2,12 +2,15 @@
 
 > 接手当前阿里云服务器时，先读 [实际服务器部署交接](server-handoff.md)。实际项目目录为 `/var/www/agile-platform`，服务名为 `agile-platform`，项目 PostgreSQL 16 端口为 **5433**；下文通用示例不能原样照搬。
 
+2026-10-14 本次第四版更新请按 [第四版发布清单](release-v4.md) 操作，其中包含实际服务器命令、迁移顺序和重点验收。服务器当前提交与迁移状态须现场确认。
+
 本文适用于 Linux、PostgreSQL、常驻 Node.js 服务和 Nginx。示例路径 `/srv/agilecampus`、服务名 `agilecampus` 按服务器实际值替换。已有 PM2 服务可沿用，不需再创建 systemd 服务。
 
 ## 本次版本更新
 
 | 内容 | 部署操作 |
 | --- | --- |
+| 里程碑成果区 | 启动新版前运行 `npm run db:add-milestone-resources`；文件复用原项目存储，成果链接只保存地址 |
 | 一次性截止提醒与删除已读通知 | 启动新版前运行 `npm run db:add-deadline-reminders`，截止前一天提醒，当天补发未发出的提醒 |
 | 任务协作成员与多人待办提醒 | 启动新版前运行 `npm run db:add-task-collaborators`；负责人自动参与，旧任务负责人保留 |
 | 任务轻量检查清单 | 启动新版前运行 `npm run db:add-task-checklist`；旧任务默认没有步骤 |
@@ -65,10 +68,11 @@ npm ci --include=dev
 ```bash
 npm run db:add-member-duty
 npm run db:add-member-duties
+npm run db:add-milestones
 npm run db:add-task-checklist
 npm run db:add-task-collaborators
 npm run db:add-deadline-reminders
-npm run db:add-milestones
+npm run db:add-milestone-resources
 npm run db:add-team-invites
 npm run db:add-auth-protection
 npm run db:add-file-cleanup
@@ -82,6 +86,7 @@ npm run db:add-project-course
 | db:add-task-checklist | 清单步骤表与查询索引，删除任务时自动清理对应步骤 |
 | db:add-task-collaborators | 协作成员关联表及旧负责人回填；不会向历史任务补发通知 |
 | db:add-deadline-reminders | 独立截止提醒去重表；通知删除、服务重启后不重复提醒 |
+| db:add-milestone-resources | 里程碑成果关联表，关联文件及 http/https 链接 |
 | db:add-milestones | 里程碑及关联任务表、开学日期、教学周和星期字段 |
 | db:add-team-invites | 团队邀请码与加入申请 |
 | db:add-auth-protection | 登录限流表 |
@@ -179,7 +184,8 @@ SELECT to_regclass('auth_rate_limits') IS NOT NULL AS auth_ready,
        to_regclass('file_cleanup') IS NOT NULL AS cleanup_ready,
        to_regclass('task_checklist_items') IS NOT NULL AS checklist_ready,
        to_regclass('task_collaborators') IS NOT NULL AS collaborators_ready,
-       to_regclass('task_deadline_reminders') IS NOT NULL AS reminders_ready;
+       to_regclass('task_deadline_reminders') IS NOT NULL AS reminders_ready,
+       to_regclass('milestone_resources') IS NOT NULL AS resources_ready;
 
 SELECT tgname, tgenabled FROM pg_trigger
 WHERE tgrelid = to_regclass('attachments')
@@ -205,6 +211,8 @@ ready 均为 true；触发器有一行且 tgenabled 为 O 或 A；课程与教�
 使用实际 HTTPS 地址验证登录、刷新后保留登录、退出、创建课程项目、教学周里程碑、任务状态修改、评论、聊天、邀请码和日夜切换。
 
 本次重点验收：
+
+里程碑成果区：上传文件后同时出现在成果区和项目文件库；同一项目已有文件可关联到多个里程碑。普通成员可提交、移除自己的成果，创建者/管理员可管理全部成果。不能关联其他项目的文件。移除成果或删除里程碑后，项目文件仍保留；从项目文件库撤回文件时，成果关联应一并移除。外部成果链接仅允许 http/https，刷新后仍可查看。
 
 三列看板：项目任务中切换列表与看板，搜索和筛选条件应保持一致。看板按待开始、进行中、已完成排列，空列保留，数量和完成比例按当前筛选结果计算。点击卡片可进入详情；状态菜单移动后同步更新待办与项目进度，失败保留原列并显示错误。第一版通过菜单移动，不含拖拽；窄屏可横向查看三列。无需数据库迁移。
 

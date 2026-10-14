@@ -3,7 +3,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { attachments, tasks, users, projects, teams, fileCleanup } from "@/db/schema";
+import { attachments, tasks, users, projects, teams, fileCleanup, milestones, milestoneResources } from "@/db/schema";
 import { uploadPath, tryFileCleanup } from "@/lib/file-cleanup";
 import { requireUser, parseId, requireProjectAccess, ApiError, handleApiError, displayName } from "@/lib/api";
 import { logActivity } from "@/lib/activity";
@@ -76,6 +76,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       if (!task || task.projectId !== projectId) throw new ApiError(400, "关联任务不存在");
     }
 
+    const milestoneIdRaw = form.get("milestoneId");
+    const milestoneId = milestoneIdRaw === null ? null : parseId(typeof milestoneIdRaw === "string" ? milestoneIdRaw : undefined, "里程碑 ID");
+    if (milestoneId !== null) {
+      const [milestone] = await db.select({ id: milestones.id }).from(milestones)
+        .where(and(eq(milestones.id, milestoneId), eq(milestones.projectId, projectId))).limit(1);
+      if (!milestone) throw new ApiError(400, "里程碑必须属于当前项目");
+    }
     // 存储名用随机 UUID + 受控后缀，避免路径穿越与重名
     const ext = path.extname(file.name).slice(0, 10).replace(/[^a-zA-Z0-9.]/g, "");
     const storedName = `${randomUUID()}${ext}`;
@@ -89,6 +96,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       await tx.select({ id: teams.id }).from(teams).where(eq(teams.id, project.teamId)).for("share");
       await tx.select({ id: projects.id }).from(projects).where(eq(projects.id, projectId)).for("share");
       await requireProjectAccess(user.id, projectId, "member", tx);
+      if (milestoneId !== null) {
+        const [milestone] = await tx.select({ id: milestones.id }).from(milestones)
+          .where(and(eq(milestones.id, milestoneId), eq(milestones.projectId, projectId))).for("update");
+        if (!milestone) throw new ApiError(404, "里程碑已删除");
+      }
       const [created] = await tx
         .insert(attachments)
         .values({
@@ -102,6 +114,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         })
         .returning();
 
+      if (milestoneId !== null) await tx.insert(milestoneResources).values({
+        milestoneId, attachmentId: created.id, title: created.originalName, createdById: user.id,
+      });
       await logActivity({
         projectId,
         taskId,

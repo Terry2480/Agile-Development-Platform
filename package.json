@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "db:add-milestone-resources": "tsx db/add-milestone-resources.ts",
     "db:add-deadline-reminders": "tsx db/add-deadline-reminders.ts",
     "db:add-task-collaborators": "tsx db/add-task-collaborators.ts",
     "db:add-task-checklist": "tsx db/add-task-checklist.ts",

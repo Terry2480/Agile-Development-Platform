@@ -37,12 +37,13 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
   });
 }
 
-export async function uploadFile<T>(path: string, file: File, taskId?: number): Promise<T> {
+export async function uploadFile<T>(path: string, file: File, taskId?: number, milestoneId?: number): Promise<T> {
   if (file.size > MAX_UPLOAD_BYTES) throw new Error(UPLOAD_LIMIT_MESSAGE);
   if (file.size === 0) throw new Error("文件为空");
   const form = new FormData();
   form.append("file", file);
   if (taskId) form.append("taskId", String(taskId));
+  if (milestoneId) form.append("milestoneId", String(milestoneId));
   return requestJson<T>(path, { method: "POST", body: form });
 }
 
