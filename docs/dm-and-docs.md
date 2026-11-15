@@ -1,6 +1,6 @@
 # 私聊与云文档（v5 增量）功能与迁移说明
 
-准备日期：2026-10-21。基于 `terry/workplace`（v4，`e62a935`）开发，分支 `feature/dm-and-cloud-docs`。本文描述两块新增能力、数据库迁移步骤与浏览器验收清单；未推送、未部署。
+准备日期：2026-10-21（2026-11-15 更新）。基于 `terry/workplace`（v4，`e62a935`）开发，分支 `feature/dm-and-cloud-docs`。本文描述两块新增能力、数据库迁移步骤与浏览器验收清单。后续迭代：v5_1 私聊文件与表情、v5.2 图标栏昼夜主题、v5.4 搜索与导航、v5.5 私信通知合并、v6 消息体验（引用回复/表情回应/撤回/搜索/公告/摘要）、v6.1 文档协作（评论/任务引用/目录/分组），均已推送至该分支。
 
 ## 功能一：私聊（飞书式一对一消息）
 
@@ -39,10 +39,14 @@ npm run db:add-docs              # 建 docs / doc_versions
 npx tsc --noEmit
 npm run lint
 npm run build
-node --test tests/dm.test.mjs tests/docs.test.mjs tests/markdown.test.mjs tests/notification-navigation.test.ts
+npm test
 ```
 
-（`.mjs` 纯逻辑测试不依赖数据库；DB 相关回归沿用 v4 的测试集。）
+注意：
+
+- `.ts` 测试文件需要 tsx 加载器，直接 `node --test tests/xxx.test.ts` 会因无法解析无扩展名导入而报错，请统一使用 `npm test`（已配置 `node --import tsx --test tests/*.test.*`）。
+- `npx tsc --noEmit` 依赖 `next build` 生成的 `LayoutProps` 全局路由类型；在未执行过 build 的全新克隆上单独跑 tsc 会误报一个 `LayoutProps` 错误，先 build 或直接以 `npm run build` 的类型检查为准。
+- 纯逻辑测试（不依赖数据库）可直接运行；DB 相关回归测试需要 `.env.local` 中的 `DATABASE_URL` 指向可用的 PostgreSQL（可用仓库自带 `docker-compose.yml` 起本地库），无数据库时这些用例会因连接失败而报错，属预期现象。
 
 ## 浏览器验收清单（两个测试账号）
 

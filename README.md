@@ -13,6 +13,29 @@ npm run dev
 
 数据库初始化及服务器部署请按照下方文档执行，不要在已有数据库运行演示数据初始化脚本。
 
+## 测试
+
+测试基于 Node 内置测试运行器（`node:test`），统一用 `npm test` 运行（内部为 `node --import tsx --test tests/*.test.*`，tsx 负责加载 `.ts` 测试与无扩展名导入）。
+
+测试分两类：
+
+- **纯逻辑测试**：不依赖数据库，任何环境可直接运行。
+- **数据库回归测试**：需要 `.env.local` 中的 `DATABASE_URL` 指向可用的 PostgreSQL。没有数据库时这些用例会因连接失败而报错，属预期现象，不代表代码问题。可用仓库自带的 `docker-compose.yml` 起本地库：
+
+```bash
+docker compose up -d   # postgres:16，端口 5432，库/用户/密码均为 agilecampus / agilecampus_dev
+```
+
+首次对新库运行测试前需建表：`npm run db:push`。
+
+提交前请确保全部通过：
+
+```bash
+npm run lint
+npm run build
+npm test
+```
+
 ## 部署与维护
 
 - [实际服务器部署交接](docs/server-handoff.md)：本项目服务器的真实路径、端口、systemd、IP HTTPS、备份与发布步骤；新会话接手先读。
