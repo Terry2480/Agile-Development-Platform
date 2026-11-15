@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgileCampus 分支审查报告 · Step-5-Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif; background: #f7f6f3; color: #2c2c2a; line-height: 1.75; font-size: 14px; }
+  .page { max-width: 880px; margin: 0 auto; padding: 48px 40px 64px; }
+  header { border-bottom: 2px solid #2c2c2a; padding-bottom: 20px; margin-bottom: 28px; }
+  h1 { font-size: 24px; font-weight: 600; letter-spacing: 0.5px; }
+  .subtitle { color: #5f5e5a; margin-top: 6px; font-size: 14px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 16px; font-size: 12.5px; color: #5f5e5a; }
+  .meta b { color: #2c2c2a; font-weight: 500; }
+  .badge { display: inline-block; background: #3c3489; color: #fff; border-radius: 4px; padding: 1px 8px; font-size: 12px; font-weight: 500; }
+  h2 { font-size: 17px; font-weight: 600; margin: 36px 0 14px; padding-left: 10px; border-left: 4px solid #d85a30; }
+  h3 { font-size: 14.5px; font-weight: 600; margin: 18px 0 8px; }
+  p { margin-bottom: 10px; }
+  .verdict { background: #fff; border: 1px solid #e3e1da; border-left: 4px solid #d85a30; border-radius: 8px; padding: 16px 20px; margin: 20px 0; }
+  .verdict b { color: #993c1d; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 0 0 1px #e3e1da; margin: 14px 0 20px; font-size: 13px; }
+  th { background: #f1efe8; text-align: left; padding: 9px 12px; font-weight: 500; border-bottom: 1px solid #e3e1da; white-space: nowrap; }
+  td { padding: 9px 12px; border-bottom: 1px solid #f0eee7; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  .ok { color: #3b6d11; font-weight: 500; }
+  .warn { color: #854f0b; font-weight: 500; }
+  .bad { color: #a32d2d; font-weight: 500; }
+  ul, ol { padding-left: 22px; margin-bottom: 12px; }
+  li { margin-bottom: 7px; }
+  .figure { background: #fff; border: 1px solid #e3e1da; border-radius: 8px; padding: 18px; margin: 16px 0 24px; }
+  .figure .cap { font-size: 12px; color: #5f5e5a; text-align: center; margin-top: 10px; }
+  .note { background: #fdf6ec; border: 1px solid #f0d9b5; border-radius: 8px; padding: 12px 16px; font-size: 12.5px; color: #633806; margin: 16px 0; }
+  code { font-family: Consolas, "Courier New", monospace; background: #f1efe8; border-radius: 3px; padding: 1px 5px; font-size: 12.5px; }
+  footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid #d3d1c7; font-size: 12px; color: #5f5e5a; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <h1>AgileCampus 敏捷校园 · 分支代码审查报告</h1>
+  <div class="subtitle">交互设计课程项目 —— 对 14 小时前上传分支的问题排查</div>
+  <div class="meta">
+    <span>审查分支：<b>feature/dm-and-cloud-docs</b></span>
+    <span>最后推送：<b>2026-11-14（14 小时前）</b></span>
+    <span>作者：<b>xiaolongxu4399</b></span>
+    <span>审查日期：<b>2026-11-15</b></span>
+    <span>生成方式：<span class="badge">Step-5-Preview</span> 模型（WorkBuddy）</span>
+  </div>
+</header>
+
+<div class="verdict">
+  <b>总体结论：</b>这份代码本身是健康的——构建、类型检查、测试（除数据库依赖项外）全部通过，无密钥泄露，文档和无障碍规范到位，可以合并。
+  但项目层面有三个大问题需要团队决策：① 该分支与 main 已完全分叉、从未合并；② 需求文档中声称"已实现"的 AI 助手、Agent API、飞书登录、三级角色在该分支中全都不存在（它们在另一套架构的分支上）；③ 该分支改版登录页，移除了"飞书登录"入口。
+</div>
+
+<h2>一、审查对象</h2>
+<table>
+  <tr><th style="width:130px">项目</th><th>内容</th></tr>
+  <tr><td>仓库</td><td>Terry2480/Agile-Development-Platform（团队以 GitLab 为主，GitHub 为镜像）</td></tr>
+  <tr><td>技术栈</td><td>Next.js 16.3.6 · React 19 · Drizzle ORM · PostgreSQL · Tailwind 4 · TypeScript</td></tr>
+  <tr><td>分支增量</td><td>领先 main <b>33 个提交</b>，179 个文件，<b>+14,739 / −105 行</b></td></tr>
+  <tr><td>主要功能</td><td>v5 工作台优化（P0 全项 + 全局命令面板）→ v5.x 私聊（飞书式一对一消息、文件、表情）→ v6 消息体验（引用回复、表情回应、撤回、搜索、公告、摘要）→ v6.1 文档协作（评论、任务引用、目录、分组）</td></tr>
+</table>
+
+<h2>二、技术检查结果</h2>
+<p>将分支代码拉取至本地，安装依赖后逐项执行验证：</p>
+<table>
+  <tr><th style="width:150px">检查项</th><th style="width:110px">结果</th><th>说明</th></tr>
+  <tr><td>生产构建</td><td class="ok">通过</td><td><code>next build</code> 30 秒完成，全部路由与 API 正常产出</td></tr>
+  <tr><td>类型检查</td><td class="ok">通过</td><td><code>tsc --noEmit</code> 零错误。注意：须先执行一次 build 生成 Next 16 的 <code>LayoutProps</code> 全局类型，单独跑 tsc 会误报 1 个错误，属预期行为而非代码问题</td></tr>
+  <tr><td>单元测试</td><td class="ok">48 / 60 通过</td><td>12 个失败全部是数据库连接失败（<code>AggregateError</code>）——本机 PostgreSQL 服务未启动且启动需管理员权限。均为环境问题，非代码逻辑问题；服务器有库环境下应可通过</td></tr>
+  <tr><td>代码规范</td><td class="warn">2 错误 + 2 警告</td><td><code>app/api/auth/me/route.ts:41</code> 与 <code>app/api/teams/[id]/labels/route.ts:42</code> 的 <code>catch (error: any)</code>；<code>tests/task-transactions.test.mjs</code> 有 2 个未使用变量。若团队引入 CI 卡 lint 会失败</td></tr>
+  <tr><td>安全卫生</td><td class="ok">无问题</td><td>无硬编码密钥/密码；<code>.env*</code> 已正确忽略；无 TODO/FIXME 残留</td></tr>
+  <tr><td>文档与无障碍</td><td class="ok">良好</td><td><code>docs/dm-and-docs.md</code> 含数据库迁移步骤与浏览器验收清单；组件广泛使用 <code>aria-label</code> / <code>role</code> 等无障碍属性</td></tr>
+</table>
+
+<h2>三、代码层面的小问题</h2>
+<ol>
+  <li><b>lint 未通过</b>：上述 2 个 <code>any</code> 错误 + 2 个未使用变量警告，建议合并前修掉。</li>
+  <li><b>没有 test script</b>：<code>package.json</code> 未定义测试命令，README 也未说明如何跑测试（实际需要 <code>node --import tsx --test tests/...</code>）；且 <code>docs/dm-and-docs.md</code> 中给出的 <code>node --test tests/xxx.test.ts</code> 命令直接执行会因缺少 tsx loader 而报错，文档命令有误。</li>
+  <li><b>提交信息粗糙</b>：存在「文件系统bug」「修复一些问题」「一些小优化」等提交名，不利于代码 review 和课程评审。</li>
+  <li><b>文档滞后</b>：<code>docs/dm-and-docs.md</code> 仍写着"未推送、未部署"（实际 v5–v6.1 早已推送）；v5/v6 的新功能没有对应文档更新。</li>
+</ol>
+
+<h2>四、项目层面的重大问题</h2>
+
+<h3>4.1 与 main 完全分叉，从未合并</h3>
+<p>main 停留在 9 月 30 日的一个早期登录系统提交，已 6 周未更新；该分支领先 33 个提交却从未合回。所有实际开发都躺在未合并的特性分支上，且 main 独有的登录提交与该分支的登录实现已各自演进——将来合并将是一场大冲突（登录相关文件两边都改过）。</p>
+
+<div class="figure">
+  <svg viewBox="0 0 680 430" width="100%" role="img" xmlns="http://www.w3.org/2000/svg">
+    <title>仓库分支现状</title>
+    <defs>
+      <marker id="arrow2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </marker>
+    </defs>
+    <g font-family="sans-serif">
+      <rect x="60" y="24" width="560" height="56" rx="8" fill="#F1EFE8" stroke="#888780" stroke-width="0.5"/>
+      <text x="80" y="44" fill="#444441" font-size="14" font-weight="500" dominant-baseline="central">main</text>
+      <text x="80" y="64" fill="#5F5E5A" font-size="12" dominant-baseline="central">9 月 30 日 · 仅存一个早期登录系统提交，已 6 周未更新</text>
+    </g>
+    <g font-family="sans-serif">
+      <rect x="60" y="124" width="560" height="56" rx="8" fill="#E6F1FB" stroke="#378ADD" stroke-width="0.5"/>
+      <text x="80" y="144" fill="#0C447C" font-size="14" font-weight="500" dominant-baseline="central">terry/workplace</text>
+      <text x="80" y="164" fill="#185FA5" font-size="12" dominant-baseline="central">10 月 14 日 · v4 工作台，下方分支的开发基座</text>
+    </g>
+    <path d="M340 180 L340 212" fill="none" stroke="#378ADD" stroke-width="1.5" marker-end="url(#arrow2)"/>
+    <text x="352" y="198" fill="#185FA5" font-size="12" font-family="sans-serif" dominant-baseline="central">基于 v4 增量开发</text>
+    <g font-family="sans-serif">
+      <rect x="60" y="224" width="560" height="56" rx="8" fill="#FAECE7" stroke="#D85A30" stroke-width="0.5"/>
+      <text x="80" y="244" fill="#993C1D" font-size="14" font-weight="500" dominant-baseline="central">feature/dm-and-cloud-docs</text>
+      <text x="80" y="264" fill="#993C1D" font-size="12" dominant-baseline="central">11 月 14 日（14 小时前）· 33 个提交 / +1.47 万行，私聊 + 云文档 + 消息体验 v6.1</text>
+    </g>
+    <g font-family="sans-serif">
+      <rect x="60" y="330" width="560" height="56" rx="8" fill="#EEEDFE" stroke="#7F77DD" stroke-width="0.5"/>
+      <text x="80" y="350" fill="#3C3489" font-size="14" font-weight="500" dominant-baseline="central">student/y123456-wq-workspace</text>
+      <text x="80" y="370" fill="#534AB7" font-size="12" dominant-baseline="central">另一套架构（src/ + NextAuth）：飞书登录、AI 助手、Agent API、甘特、燃尽都在这里</text>
+    </g>
+    <line x1="40" y1="308" x2="640" y2="308" stroke="#B4B2A9" stroke-width="0.5" stroke-dasharray="4 4"/>
+    <text x="340" y="300" fill="#5F5E5A" font-size="12" font-family="sans-serif" text-anchor="middle" dominant-baseline="central">两条产品线并行，架构互不兼容</text>
+    <text x="340" y="410" fill="#5F5E5A" font-size="12" font-family="sans-serif" text-anchor="middle" dominant-baseline="central">main 与 feature 分支已完全分叉：main 独有的登录提交从未合入该分支</text>
+  </svg>
+  <div class="cap">图 1 · 仓库分支现状（基于 GitHub 镜像与 GitLab 分支页截图核对）</div>
+</div>
+
+<h3>4.2 与需求文档声称"已实现"的能力不符</h3>
+<p>11 月版《核心框架与需求分析》第 5 页将 AI 项目助手、Personal API Token · Agent 写入 API、飞书登录/卡片/提醒、教师/学生三级角色列为"已实现"——经全库检索，<b>这些在该分支中均不存在</b>（零命中）。它们实际位于另一分支 <code>student/y123456-wq-workspace</code>，且该分支是另一套架构（<code>src/</code> 目录 + NextAuth），与本分支（<code>app/</code> 目录 + 自研会话认证）互不兼容。团队实质上在维护两套并行产品线。</p>
+
+<table>
+  <tr><th>能力</th><th>11 月需求文档声称</th><th>feature/dm-and-cloud-docs 实际</th></tr>
+  <tr><td>团队 · 项目 · 里程碑 · 任务 CRUD</td><td>已实现</td><td class="ok">有，全套 API</td></tr>
+  <tr><td>看板拖拽 · 分组 · 标签 · 任务字段</td><td>已实现</td><td class="ok">有，TaskPanel + 团队级标签</td></tr>
+  <tr><td>三级角色（教师/学生）</td><td>已实现</td><td class="warn">仅 owner/admin/member，无 teacher/student 区分</td></tr>
+  <tr><td>跨项目总览</td><td>已实现</td><td class="ok">有，overview 接口 + 项目管理面板</td></tr>
+  <tr><td>AI 项目助手（草案-确认两段式）</td><td>已实现</td><td class="bad">没有，全库无 AI 相关代码</td></tr>
+  <tr><td>Personal API Token · Agent 写入 API</td><td>已实现</td><td class="bad">没有，无 token / agent 任何痕迹</td></tr>
+  <tr><td>飞书登录 / 卡片 / 提醒 · 双认证</td><td>已实现</td><td class="bad">没有，登录页无飞书入口，仅"飞书式"UI 注释</td></tr>
+  <tr><td>资源占用登记</td><td>已实现</td><td class="warn">部分，有里程碑资源，形态与文档不同</td></tr>
+  <tr><td>甘特时间线 · Sprint 燃尽</td><td>文档列为未实现/暂缓</td><td class="bad">没有</td></tr>
+  <tr><td>评论 · 活动记录 · 通知中心 · 附件 · 命令面板</td><td>文档 11 月前列为差距</td><td class="ok">已补齐，v4–v6.1 全部落地且有测试</td></tr>
+  <tr><td>私聊 · 云文档 · 消息体验（分支新增）</td><td>文档未提及</td><td class="ok">v5–v6.1 新增，迁移脚本 + 验收清单齐全</td></tr>
+</table>
+
+<h3>4.3 登录页改版导致"飞书登录"入口消失</h3>
+<p>该分支将登录页重写为 tab 切换式（登录/注册），<b>不再有"飞书登录"按钮</b>——而当前本机运行的版本（localhost:3000 截图）是有该入口的。若合入此分支，第三方登录入口将丢失，从交互设计角度属于功能性退化。合并前需确认团队以哪条分支的登录方案为准。</p>
+
+<h2>五、建议</h2>
+<ol>
+  <li><b>先对齐主干</b>：与团队确认以哪条分支为主线（terry 线强在 IM/云文档体验，student 线有 AI/飞书/Agent），再决定本分支的合并目标；两套架构需要有人做取舍或融合方案。</li>
+  <li><b>合并前清理</b>：请 xiaolongxu4399 修掉 2 个 lint 错误、补充 <code>test</code> script、将 <code>docs/dm-and-docs.md</code> 更新至 v6.1，并规范提交信息。</li>
+  <li><b>修正需求文档</b>：若课程汇报仍以需求文档为准，将"已实现"清单按实际主干分支改写，避免汇报现场对不上。</li>
+</ol>
+
+<div class="note">
+  <b>环境说明：</b>本次审查中，12 个依赖数据库的测试因本机 PostgreSQL 服务未启动（启动需管理员权限）且 Docker 引擎未运行而未能执行，失败原因均为连接错误而非断言失败；未对本机环境做任何更改，分支代码仅拉取至系统临时目录进行检查。
+</div>
+
+<footer>
+  本报告由 <b>Step-5-Preview</b> 模型（WorkBuddy 助手）生成于 2026-11-15 · 数据来源：GitHub 仓库 Terry2480/Agile-Development-Platform、GitLab 分支页截图、本地克隆实测（构建 / 类型检查 / 测试 / lint）、《敏捷项目管理工具-核心框架与需求分析》与《敏捷项目管理工具-科技风需求分析》PPT。
+</footer>
+
+</div>
+</body>
+</html>
