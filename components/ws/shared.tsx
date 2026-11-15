@@ -30,6 +30,7 @@ const ICON_PATHS: Record<string, string> = {
   pin: "M12 17v5M9 10.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V16a1 1 0 001 1h12a1 1 0 001-1v-.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V7a1 1 0 011-1 2 2 0 002-2v-.58a.42.42 0 00-.42-.42H6.42a.42.42 0 00-.42.42V4a2 2 0 002 2 1 1 0 011 1z",
   message: "M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z",
   file: "M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9zM13 2v7h7",
+  folder: "M3 7V5a2 2 0 012-2h5l2 3h7a2 2 0 012 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V7z",
   filter: "M22 3H2l8 9.46V19l4 2v-8.54L22 3z",
   logout: "M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9",
   settings: "M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 008 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 8a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z",
@@ -80,8 +81,8 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
 }
 
 /* ---------- 工作空间状态（page.tsx 提供实现） ---------- */
-export type RailView = "projects" | "todos" | "notifications" | "projectManagement" | "teamManagement";
-export type FocusSection = "tasks" | "chat" | "space";
+export type RailView = "projects" | "todos" | "notifications" | "projectManagement" | "teamManagement" | "teamDocuments";
+export type FocusSection = "tasks" | "chat" | "space" | "documents";
 export type ModalState =
   | { type: "newTeam" }
   | { type: "newProject" }
@@ -96,6 +97,8 @@ export interface WorkspaceStore {
   setRailView(v: RailView): void;
   focusSection: FocusSection;
   setFocusSection(s: FocusSection): void;
+  documentTeamId: number | null;
+  showTeamDocuments(teamId: number): void;
   teams: Team[];
   projects: ProjectSummary[];
   selectedId: number | null;
@@ -127,8 +130,8 @@ export interface WorkspaceStore {
   refreshNotifications(): Promise<void>;
   refreshMyTasks(): Promise<void>;
   createTeam(name: string, description?: string): Promise<void>;
-  deleteWorkspaceItem(kind: "project" | "team", id: number): Promise<void>;
-  createProject(teamId: number, name: string, key: string, description?: string, courseName?: string): Promise<void>;
+  deleteWorkspaceItem(kind: "project" | "team", id: number, confirmation?: {confirmPermanent:true;expectedActive:number;expectedTrashed:number}): Promise<void>;
+  createProject(teamId: number, name: string, key: string, description?: string, courseName?: string, templateSet?: "none"|"general"|"software"): Promise<void>;
   createTask(input: Record<string, unknown>): Promise<void>;
   updateTask(id: number, patch: Record<string, unknown>): Promise<void>;
   deleteTask(id: number): Promise<void>;

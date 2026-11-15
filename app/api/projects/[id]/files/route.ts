@@ -11,12 +11,13 @@ import { MAX_UPLOAD_BYTES, UPLOAD_LIMIT_MESSAGE } from "@/lib/upload-limits";
 
 // 项目文件：GET /api/projects/[id]/files?taskId=  文件列表（可不带 taskId 查项目全部）
 //             POST multipart/form-data { file, taskId? }  上传（≤100MB，存本地 uploads/ 目录）
-const UPLOAD_DIR = path.join(process.cwd(), "uploads");
+const UPLOAD_DIR = path.resolve(/* turbopackIgnore: true */ process.env.UPLOAD_DIR || path.join(process.cwd(), "uploads"));
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await requireUser(request);
     const projectId = parseId((await params).id, "项目 ID");
+    if(typeof db.execute==="function" && await (await import("@/lib/documents/lifecycle")).documentsEnabled(db)){const {legacyProjectFiles}=await import("@/lib/documents/legacy");const response=await legacyProjectFiles(request,user.id,projectId);if(response)return response;}
     await requireProjectAccess(user.id, projectId);
 
     const taskIdParam = new URL(request.url).searchParams.get("taskId");
@@ -55,6 +56,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   try {
     const user = await requireUser(request);
     const projectId = parseId((await params).id, "项目 ID");
+    if(typeof db.execute==="function" && await (await import("@/lib/documents/lifecycle")).documentsEnabled(db)){const {legacyProjectFiles}=await import("@/lib/documents/legacy");const response=await legacyProjectFiles(request,user.id,projectId);if(response)return response;}
     const { project } = await requireProjectAccess(user.id, projectId);
 
     const form = await request.formData().catch((error: unknown) => {

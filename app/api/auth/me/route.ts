@@ -38,8 +38,9 @@ export async function PUT(request: Request) {
       .returning({ id: users.id, email: users.email, name: users.name, studentId: users.studentId,
         gender: users.gender, region: users.region, bio: users.bio, role: users.role });
     return Response.json({ user: updated });
-  } catch (error: any) {
-    if (error?.cause?.code === "23505" || error?.code === "23505") return Response.json({ error: "该学工号已被其他成员使用" }, { status: 409 });
+  } catch (error: unknown) {
+    const dbError = error as { cause?: { code?: string }; code?: string } | null;
+    if (dbError?.cause?.code === "23505" || dbError?.code === "23505") return Response.json({ error: "该学工号已被其他成员使用" }, { status: 409 });
     return Response.json({ error: "服务器异常，请稍后重试" }, { status: 500 });
   }
 }

@@ -31,6 +31,7 @@ export function TopBar() {
   const project = ws.projects.find((p) => p.id === ws.selectedId);
 
   async function logout() {
+    try{for(const key of Object.keys(localStorage))if(key.startsWith("agile-doc-draft:"))localStorage.removeItem(key);}catch{}
     await api("/api/auth/logout", { method: "POST", json: {} }).catch(() => {});
     router.replace("/login");
     router.refresh();
@@ -44,10 +45,11 @@ export function TopBar() {
         <button className={ws.railView === "projects" && ws.focusSection === "tasks" ? "active" : ""} onClick={() => { ws.setRailView("projects"); ws.setFocusSection("tasks"); }}>项目任务</button>
         <button className={ws.railView === "projects" && ws.focusSection === "chat" ? "active" : ""} onClick={() => { ws.setRailView("projects"); ws.setFocusSection("chat"); }}>团队聊天</button>
         <button className={ws.railView === "projects" && ws.focusSection === "space" ? "active" : ""} onClick={() => { ws.setRailView("projects"); ws.setFocusSection("space"); }}>项目概览</button>
+        <button className={ws.railView === "projects" && ws.focusSection === "documents" ? "active" : ""} onClick={() => { ws.setRailView("projects"); ws.setFocusSection("documents"); }}>项目文档</button>
       </nav>
 
       <div className="ws-top-right">
-        <div className="ws-searchbox">
+        {!(ws.railView === "teamDocuments" || (ws.railView === "projects" && ws.focusSection === "documents")) && <div className="ws-searchbox">
           <Icon name="search" size={13} />
           <input
             ref={searchRef}
@@ -56,7 +58,7 @@ export function TopBar() {
             onChange={(e) => ws.setTaskSearch(e.target.value)}
           />
           <kbd>Ctrl K</kbd>
-        </div>
+        </div>}
 
         <div className="ws-bell-wrap">
           <button className="ws-rail-btn" style={{ width: 34, height: 34 }} title="通知" onClick={() => setShowNotif((v) => !v)}>

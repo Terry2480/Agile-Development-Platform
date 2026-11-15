@@ -1,4 +1,4 @@
-// 前端统一请求封装 + 业务类型定义（与后端 docs/API.md 一一对应）
+// 前端统一请求封装与业务类型；模块及接口概览见 docs/v1-technical-overview.md
 // 用法：api<T>(path, { json: {...} }) 自动带 JSON 头；失败抛 Error(中文提示)
 import { MAX_UPLOAD_BYTES, UPLOAD_LIMIT_MESSAGE } from "./upload-limits";
 
@@ -218,6 +218,7 @@ export const PRIORITY_TEXT: Record<string, string> = { high: "高", medium: "中
 
 // 头像底色：全员统一品牌蓝，同一深浅（用户要求每个人的头像底色一致，靠首字母区分人）
 export function avatarColor(_key?: number | string): string {
+  void _key; // 保留调用参数兼容性，颜色不再随用户变化。
   return "#3b6ef5";
 }
 

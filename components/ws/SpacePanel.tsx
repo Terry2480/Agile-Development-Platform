@@ -1,9 +1,9 @@
 "use client";
 
 // 项目概览：项目文件；进度与日志在右侧栏显示
-import { useRef, useState } from "react";
-import { api, fmtSize } from "@/lib/api-client";
-import { useWorkspace, Icon, Modal } from "./shared";
+import { useState } from "react";
+import { api } from "@/lib/api-client";
+import { useWorkspace, Modal } from "./shared";
 import { MilestonePanel } from "./MilestonePanel";
 import { ReportPanel } from "./ReportPanel";
 import { canCreateSprint } from "@/lib/sprint-permissions";
@@ -13,25 +13,6 @@ import { canCreateSprint } from "@/lib/sprint-permissions";
 export function SpacePanel() {
   const ws = useWorkspace();
   const project = ws.projects.find((p) => p.id === ws.selectedId);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState("");
-  const [failedFile, setFailedFile] = useState<File | null>(null);
-  const [uploadMessage, setUploadMessage] = useState("");
-  const [withdrawId, setWithdrawId] = useState<number | null>(null);
-  const [withdrawing, setWithdrawing] = useState(false);
-  const [withdrawError, setWithdrawError] = useState("");
-
-  async function upload(file: File) {
-    setUploading(true); setUploadError(""); setUploadMessage("");
-    try {
-      await ws.uploadProjectFile(file);
-      setFailedFile(null); setUploadMessage(`${file.name} 已上传`);
-    } catch (e) {
-      setFailedFile(file); setUploadError((e as Error).message);
-    } finally { setUploading(false); }
-  }
-
   if (!project) {
     return (
       <aside className="ws-space">
@@ -45,50 +26,10 @@ export function SpacePanel() {
       {project.courseName && <p className="ws-team-note">所属课程：{project.courseName}</p>}
       <MilestonePanel key={project.id} projectId={project.id} />
       <ReportPanel key={`report-${project.id}`} projectId={project.id} />
-      {/* 项目文件库 */}
       <section className="ws-space-section">
-        <div className="ws-space-title">
-          项目文件库（{ws.files.length}） · 单文件最大 100MB
-          <button className="ws-icon-btn" disabled={uploading} title="上传文件" onClick={() => fileRef.current?.click()}>
-            <Icon name="plus" size={13} />
-          </button>
-        </div>
-        {uploading && <div role="status">文件上传中…</div>}
-        {uploadMessage && <div role="status">{uploadMessage}</div>}
-        {uploadError && <div className="ws-error" role="alert">上传失败：{uploadError} {failedFile && <button className="ws-btn" disabled={uploading} onClick={() => void upload(failedFile)}>重试上传</button>}</div>}
-        {ws.files.length === 0 && <div className="ws-empty" style={{ padding: "16px 12px" }}>暂无文件</div>}
-        {ws.files.map((f) => (
-          <div key={f.id} className="ws-file-item">
-            <span className="ws-file-ic" style={{ color: "var(--ws-color-6f9bff)" }}><Icon name="file" size={13} /></span>
-            <span className="ws-file-meta">
-              <a className="ws-file-name" title={f.originalName} href={`/api/files/${f.id}`}>{f.originalName}</a>
-              <span className="ws-file-sub">{fmtSize(f.size)} · {f.uploaderName || f.uploaderStudentId}</span>
-            </span>
-            {(f.uploaderId === ws.me.id || ["owner", "admin"].includes(ws.detail?.myRole ?? "")) && <button className="ws-btn" onClick={() => { setWithdrawId(f.id); setWithdrawError(""); }}>撤回</button>}
-          </div>
-        ))}
-        {withdrawId !== null && <Modal title="撤回文件" onClose={() => { if (!withdrawing) setWithdrawId(null); }}>
-          <p>确认撤回“{ws.files.find((f) => f.id === withdrawId)?.originalName}”？撤回后所有成员都无法下载，无法恢复。</p>
-          {withdrawError && <div className="ws-error" role="alert">{withdrawError}</div>}
-          <div className="ws-modal-actions">
-            <button className="ws-btn" disabled={withdrawing} onClick={() => setWithdrawId(null)}>取消</button>
-            <button className="ws-btn primary" disabled={withdrawing} onClick={async () => {
-              setWithdrawing(true); setWithdrawError("");
-              try { await ws.withdrawFile(withdrawId); setWithdrawId(null); setUploadMessage("文件已撤回"); }
-              catch (e) { setWithdrawError((e as Error).message); }
-              finally { setWithdrawing(false); }
-            }}>{withdrawing ? "撤回中…" : "确认撤回"}</button>
-          </div>
-        </Modal>}
-        <input
-          ref={fileRef} type="file" hidden
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            e.target.value = "";
-            if (!file) return;
-            void upload(file);
-          }}
-        />
+        <div className="ws-space-title">项目文档</div>
+        <p className="ws-team-note">按目录整理项目资料、在线文档和外部链接。</p>
+        <button className="ws-btn" onClick={() => ws.setFocusSection("documents")}>打开项目文档</button>
       </section>
     </aside>
   );

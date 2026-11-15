@@ -10,6 +10,12 @@ const EMOJIS = ["👍", "🎉", "😂", "🙏", "💪", "👀", "❤️", "🔥"
 
 export function ChatPanel() {
   const ws = useWorkspace();
+  return <ProjectChatPanel key={ws.selectedId ?? "no-project"} />;
+}
+
+// 切换项目时重建局部状态，避免新项目短暂显示旧项目的输入和回复。
+function ProjectChatPanel() {
+  const ws = useWorkspace();
   const project = ws.projects.find((p) => p.id === ws.selectedId);
   const [text, setText] = useState("");
   const [replyTo, setReplyTo] = useState<{ id: number; authorName: string; content: string } | null>(null);
@@ -30,12 +36,6 @@ export function ChatPanel() {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages.length, project?.id]);
-
-  useEffect(() => {
-    setText("");
-    setReplyTo(null);
-    setHint("");
-  }, [project?.id]);
 
   if (!project) {
     return (
@@ -67,8 +67,6 @@ export function ChatPanel() {
     inputRef.current?.focus();
   }
 
-  let lastDay = "";
-
   return (
     <aside className="ws-chat">
       <div className="ws-chat-head">
@@ -90,10 +88,9 @@ export function ChatPanel() {
         {messages.length === 0 && (
           <div className="ws-empty" style={{ margin: "20px 4px" }}>还没有消息，打个招呼吧 👋</div>
         )}
-        {messages.map((m) => {
+        {messages.map((m, index) => {
           const day = dayKey(m.createdAt);
-          const showSep = day !== lastDay;
-          lastDay = day;
+          const showSep = index === 0 || day !== dayKey(messages[index - 1].createdAt);
           return (
             <div key={m.id}>
               {showSep && (

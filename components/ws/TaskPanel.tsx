@@ -3,6 +3,8 @@
 // 主内容区：项目任务面板（状态分组 / Tab / 筛选 / 新建）、我的待办视图、通知视图、任务详情抽屉
 import { useCallback, useEffect, useRef, useState } from "react";
 import { TaskAction } from "@/lib/task-action";
+import {useDocumentResource} from "./documents/useDocumentResource";
+import { DocumentAssociations } from "./documents/DocumentAssociations";
 import { TaskChecklist } from "./TaskChecklist";
 import { CollaboratorPicker } from "./CollaboratorPicker";
 import { ClearReadNotifications } from "./ClearReadNotifications";
@@ -237,6 +239,7 @@ type TaskFull = {
 
 export function TaskDrawer() {
   const ws = useWorkspace();
+  const documentStatus=useDocumentResource<{enabled:boolean}>("/api/document-status");
   const [wide, setWide] = useState(false);
   const [task, setTask] = useState<TaskFull | null>(null);
   const [comment, setComment] = useState("");
@@ -338,6 +341,7 @@ export function TaskDrawer() {
                   <div className="ws-desc">{task.description || "暂无任务描述"}</div>
                 </section>
                 {task.id === id && <TaskChecklist key={task.id} taskId={task.id} />}
+                {ws.selectedId !== null && <DocumentAssociations key={`documents-${task.id}`} kind="task" targetId={task.id} projectId={ws.selectedId} />}
               </section>
               <section className="ws-task-detail-section" id={`task-${task.id}-people`}>
                 <h3>参与成员</h3>
@@ -419,7 +423,7 @@ export function TaskDrawer() {
               </section>
               <section className="ws-task-detail-section" id={`task-${task.id}-discussion`}>
                 <h3>附件与讨论</h3>
-              {task.files.length > 0 && (
+              {documentStatus.data&&!documentStatus.data.enabled&&task.files.length > 0 && (
                 <>
                   <div className="ws-sub-title">附件（{task.files.length}）</div>
                   {task.files.map((f) => (
@@ -491,7 +495,7 @@ export function TaskDrawer() {
           )}
         </div>
 
-        <div style={{ padding: "10px 20px", borderTop: "1px solid #22242f", display: "flex", gap: 8 }}>
+        {documentStatus.data&&!documentStatus.data.enabled&&<div style={{ padding: "10px 20px", borderTop: "1px solid #22242f", display: "flex", gap: 8 }}>
           <button className="ws-btn" disabled={!!busy} style={{ flex: 1 }} onClick={() => fileRef.current?.click()}>
             <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}><Icon name="paperclip" size={13} /> 上传附件</span>
           </button>
@@ -507,7 +511,7 @@ export function TaskDrawer() {
               }, async () => { await Promise.all([load(), ws.refreshTasks(), ws.refreshFiles(), ws.refreshActivities()]); });
             }}
           />
-        </div>
+        </div>}
       </aside>
     </>
   );

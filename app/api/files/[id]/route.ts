@@ -8,12 +8,13 @@ import { logActivity } from "@/lib/activity";
 import { requireUser, parseId, requireProjectAccess, ApiError, handleApiError } from "@/lib/api";
 
 // 文件下载：GET /api/files/[id]  校验团队成员身份后回传文件流（原始文件名展示）
-const UPLOAD_DIR = path.join(process.cwd(), "uploads");
+const UPLOAD_DIR = path.resolve(/* turbopackIgnore: true */ process.env.UPLOAD_DIR || path.join(process.cwd(), "uploads"));
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await requireUser(request);
     const fileId = parseId((await params).id, "文件 ID");
+    if(typeof db.execute==="function" && await (await import("@/lib/documents/lifecycle")).documentsEnabled(db)){const {legacyFile}=await import("@/lib/documents/legacy");const response=await legacyFile(request,user.id,fileId);if(response)return response;}
     const [record] = await db.select().from(attachments).where(eq(attachments.id, fileId)).limit(1);
     if (!record) throw new ApiError(404, "文件不存在或已撤回");
     const { project } = await requireProjectAccess(user.id, record.projectId);
@@ -40,12 +41,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   try {
     const user = await requireUser(request);
     const fileId = parseId((await params).id, "文件 ID");
+    if(typeof db.execute==="function" && await (await import("@/lib/documents/lifecycle")).documentsEnabled(db)){const {legacyFile}=await import("@/lib/documents/legacy");const response=await legacyFile(request,user.id,fileId);if(response)return response;}
 
     const [record] = await db.select().from(attachments).where(eq(attachments.id, fileId)).limit(1);
     if (!record) throw new ApiError(404, "文件不存在");
     await requireProjectAccess(user.id, record.projectId);
 
-    const buffer = await readFile(path.join(UPLOAD_DIR, record.storedName)).catch(() => {
+    const buffer = await readFile(/* turbopackIgnore: true */ path.join(/* turbopackIgnore: true */ UPLOAD_DIR, record.storedName)).catch(() => {
       throw new ApiError(404, "文件已丢失");
     });
 

@@ -24,7 +24,7 @@ export async function notify(input: {
 }
 
 // 从文本中解析 @提及：匹配团队成员的「名称或学工号」，返回被提到的用户 id（去重）
-// 语法：@ + 连续的非空白非标点串，如 "@徐小龙 看下这个"（文档见 docs/API.md）
+// 语法：@ + 连续的非空白非标点串，如 "@徐小龙 看下这个"（文档见 docs/notifications.md）
 const MENTION_PATTERN = /@([^\s@，。,.:;、！？!?()（）【】\[\]]+)/g;
 
 export function extractMentionIds(

@@ -48,6 +48,7 @@ export function NewProjectModal({ onClose }: { onClose: () => void }) {
   const availableTeams = ws.teams.filter((t) => t.role === "owner" || t.role === "admin");
   const [teamId, setTeamId] = useState<string>(availableTeams[0] ? String(availableTeams[0].id) : "");
   const [name, setName] = useState("");
+  const [templateSet,setTemplateSet]=useState<"none"|"general"|"software">("none");
   const [courseName, setCourseName] = useState("");
   const [key, setKey] = useState("");
   const [description, setDescription] = useState("");
@@ -61,7 +62,7 @@ export function NewProjectModal({ onClose }: { onClose: () => void }) {
     if (!/^[A-Z][A-Z0-9]{1,5}$/.test(upperKey)) return setError("项目标识需 2-6 位大写字母/数字（如 WEB、AGI）");
     setBusy(true);
     try {
-      await ws.createProject(Number(teamId), name.trim(), upperKey, description.trim() || undefined, courseName.trim() || undefined);
+      await ws.createProject(Number(teamId), name.trim(), upperKey, description.trim() || undefined, courseName.trim() || undefined,templateSet);
       onClose();
     } catch (e) {
       setError((e as Error).message);
@@ -100,6 +101,7 @@ export function NewProjectModal({ onClose }: { onClose: () => void }) {
           标识用于生成任务编号（如 {key.trim().toUpperCase() || "WEB"}-001），团队内不可重复。团队全员将自动加入本项目。
         </p>
       </div>
+      <div className="ws-field"><label>文档模板推荐（可选）</label><select className="ws-select" value={templateSet} onChange={e=>setTemplateSet(e.target.value as "none"|"general"|"software")}><option value="none">不设推荐</option><option value="general">通用课程项目</option><option value="software">软件开发项目</option></select><p className="ws-team-note">只设置推荐顺序，不自动创建文档；创建文档时仍可选择任意模板。</p></div>
       {error && <div className="ws-error">{error}</div>}
       <div className="ws-modal-actions">
         <button className="ws-btn" onClick={onClose}>取消</button>

@@ -1,11 +1,11 @@
 # 实际服务器部署交接与发布手册
 
-本文记录本项目实际使用的部署方式，供新会话或维护者在没有聊天上下文时接手。更新日期：2026-10-14（Asia/Hong_Kong）。这是历史已确认状态，不是实时监控；操作前必须在服务器重新检查。本次更新使用 [第四版发布清单](release-v4.md)。
+本文记录本项目实际使用的部署方式，供新会话或维护者在没有聊天上下文时接手。更新日期：2026-10-14（Asia/Hong_Kong）。这是历史已确认状态，不是实时监控；操作前必须在服务器重新检查。第二阶段沿用本文的实际环境信息，数据库升级与验收要求见 [部署指南](deployment.md)。
 
 ## 1. 接手者先读
 
 - **生产使用 systemd + Node.js + Nginx + PostgreSQL，未使用 PM2，也未用 Docker 运行服务器网站或数据库。** Docker Desktop 只用于电脑上的开发数据库。不要另外启动 PM2、Docker 或第二个 Next.js 实例。
-- 用户已确认第二版部署成功。后续本地改动不代表线上已更新，必须检查服务器提交号。
+- 本地改动不代表线上已更新，发布前必须检查服务器提交号与数据库迁移状态。
 - 先阅读本文，再阅读 `docs/deployment.md` 中当前版本的迁移要求；后者的 `/srv/agilecampus`、服务名 `agilecampus`、端口 `5432` 是通用示例，不能照搬到本服务器。
 - 不读取或展示密码、私钥、Cookie。`.env.local`、数据库和附件不通过 Git 同步。
 - 不强制重置服务器工作区，不删除现有数据库或附件，不把旧的本地备份重新覆盖到线上。
@@ -36,24 +36,9 @@
 
 使用 IP 并不免除大陆网站的备案要求。本文未确认备案已办理；HTTPS 配置也不代表备案完成。实例续费情况未实时核实。
 
-## 3. 首次部署历史（不要重复初始化）
+## 3. 数据与环境边界
 
-1. 使用 WindTerm SSH 登录 root，检查系统、内存、磁盘。
-2. apt 安装基础工具、Nginx 和 PostgreSQL；添加 NodeSource 源安装 Node.js 24。
-3. 创建普通用户与项目目录：
-
-```bash
-adduser --disabled-password --gecos "" agile
-install -d -o agile -g agile -m 750 /var/www/agile-platform
-```
-
-4. 以 agile 克隆 terry/workplace，安装项目依赖。
-5. 本地数据来源已明确为 localhost:3000 的开发网站，Docker 容器为 `agilecampus-db`，PostgreSQL 16；不是 localhost:3090 的另一个 Docker 网站。
-6. 本地通过 pg_dump 导出后上传。服务器安装 PostgreSQL 16 并创建 `16/main`，因 14 占用 5432，16 使用 5433。创建 `agile_app` 和 `agilecampus`，使用 pg_restore 恢复。
-7. 首次恢复核对为 2 用户、2 项目、0 任务、0 附件；这是首次迁移时的数量，**不是现在数据应有的固定数量**。
-8. 配置服务器 `.env.local`，构建，使用 systemd 管理，Nginx 反向代理。
-9. 申请公网 IP 的 HTTPS 证书，配置跳转、443 和自动续期加载，用户确认无证书警告，模拟续期成功。
-10. 第二版停机备份后执行六个增量迁移、构建、启动，用户确认部署成功。
+现有服务器已有业务数据库，不重复执行首次初始化或演示数据 seed。代码、数据库、环境文件和 uploads 分别维护；发布时分别核对和备份。历史发布成功不代表当前分支的后续迁移已经在线执行。
 
 ## 4. 环境与后台服务
 
@@ -222,7 +207,6 @@ ls -lh "$BACKUP_DIR"
 
 逐条确认成功。通过 root SFTP 下载整套到电脑，保存在受限目录，不放入 Git 或 public。变量只在当前 shell 有效，换窗口后要重新设为已经打印的实际路径，不能使用空变量继续操作。
 
-历史第二版备份：`/var/backups/agile-platform/release-20261013-093412`，包含 database.dump、env.local、previous-commit.txt、目录清单及 no-uploads.txt；当时无 uploads 目录。历史旧提交：`1bd30f379c605ce032cbbd9c81345d52b109ad72`。**今后发布应重新备份并记录当前提交，不能沿用这个旧恢复点。**
 
 ## 8. 更新、迁移与构建（agile）
 
@@ -236,18 +220,7 @@ npm ci --include=dev
 
 每条成功才继续。保留 `.env.local` 和 uploads；配置变更使用 `nano .env.local`，不输出密码。
 
-第二版已经成功执行的历史增量脚本：
-
-```bash
-npm run db:add-member-duty
-npm run db:add-milestones
-npm run db:add-team-invites
-npm run db:add-auth-protection
-npm run db:add-file-cleanup
-npm run db:add-project-course
-```
-
-它们增加成员分工、里程碑字段、邀请码、登录限流、文件清理触发器和课程字段。这是第二版历史记录，不代表第四版迁移已执行。本次成员多标签、检查清单、协作成员、截止提醒和成果区等迁移按 [第四版发布清单](release-v4.md) 执行。已有数据库不常规运行 db:push 或 db:seed；触发器不能仅靠 db:push 创建。
+已有数据库按 [部署指南](deployment.md#升级已有版本) 核对并执行缺失的增量迁移，逐条确认成功。不要将历史发布记录当作当前迁移状态；聊天时间转换须先确认历史时区。已有业务库不常规运行 db:push 或 db:seed，文件清理触发器须由对应脚本创建。
 
 迁移成功、结构确认后：
 

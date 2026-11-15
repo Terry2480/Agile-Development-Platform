@@ -71,6 +71,14 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     const teamId = parseId((await params).id, "团队 ID");
     await requireTeamAccess(user.id, teamId, "owner");
 
+    if(typeof db.execute==="function"){
+      const {documentsEnabled,createDocumentLifecycle}=await import("@/lib/documents/lifecycle");
+      if(await documentsEnabled(db)){
+        try{const {deletionInput}=await import("@/lib/documents/validation");const input=deletionInput.parse(await request.json());
+          const result=await createDocumentLifecycle().remove(user.id,"team",teamId,input);await tryFileCleanup();return Response.json(result);
+        }catch(error){const {documentErrorResponse}=await import("@/lib/documents/errors");return documentErrorResponse(error);}
+      }
+    }
     await db.delete(teams).where(and(eq(teams.id, teamId), eq(teams.ownerId, user.id)));
     await tryFileCleanup();
     return Response.json({ ok: true });

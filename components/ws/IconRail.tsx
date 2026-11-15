@@ -15,21 +15,24 @@ export function IconRail() {
   return (
     <aside className="ws-rail">
       <div className="ws-rail-logo" title="AgileCampus">AC</div>
-      <button className={`ws-rail-btn ws-rail-management ${ws.railView === "projectManagement" ? "active" : ""}`} title="项目管理" aria-label="项目管理" onClick={() => ws.setRailView("projectManagement")}><Icon name="file" size={17} /><small>项目管理</small></button>
+      <button className={`ws-rail-btn ws-rail-management ${ws.railView === "projectManagement" ? "active" : ""}`} title="项目管理：创建、归档和管理项目" aria-label="项目管理" onClick={() => ws.setRailView("projectManagement")}><Icon name="file" size={17} /><small>项目管理</small></button>
       <button className={`ws-rail-btn ws-rail-management ${ws.railView === "teamManagement" ? "active" : ""}`} title="团队管理" aria-label="团队管理" onClick={() => ws.setRailView("teamManagement")}><Icon name="users" size={17} /><small>团队管理</small></button>
+      <button className={`ws-rail-btn ws-rail-management ${ws.railView === "teamDocuments" ? "active" : ""}`} title="团队资料" aria-label="团队资料" onClick={() => ws.setRailView("teamDocuments")}><Icon name="folder" size={17} /><small>团队资料</small></button>
       <button
-        className={`ws-rail-btn ${ws.railView === "projects" ? "active" : ""}`}
-        title="项目"
+        className={`ws-rail-btn ws-rail-management ${ws.railView === "projects" ? "active" : ""}`}
+        title="项目工作台：处理当前项目的任务、聊天和资料"
+        aria-label="项目工作台"
         onClick={() => ws.setRailView("projects")}
       >
-        <Icon name="grid" size={17} />
+        <Icon name="grid" size={17} /><small>项目工作台</small>
       </button>
       <button
-        className={`ws-rail-btn ${ws.railView === "notifications" ? "active" : ""}`}
-        title="通知"
+        className={`ws-rail-btn ws-rail-management ${ws.railView === "notifications" ? "active" : ""}`}
+        title="通知中心：查看消息和提醒"
+        aria-label="通知中心"
         onClick={() => ws.setRailView("notifications")}
       >
-        <Icon name="bell" size={17} />
+        <Icon name="bell" size={17} /><small>通知中心</small>
         {ws.unreadCount > 0 && (
           ws.unreadCount > 9
             ? <span className="ws-rail-badge">9+</span>
@@ -37,11 +40,12 @@ export function IconRail() {
         )}
       </button>
       <button
-        className={`ws-rail-btn ${ws.railView === "todos" ? "active" : ""}`}
-        title="待办"
+        className={`ws-rail-btn ws-rail-management ${ws.railView === "todos" ? "active" : ""}`}
+        title="我的待办：查看我负责或参与的任务"
+        aria-label="我的待办"
         onClick={() => ws.setRailView("todos")}
       >
-        <Icon name="check" size={17} />
+        <Icon name="check" size={17} /><small>我的待办</small>
         {myTodoCount > 0 && <span className="ws-rail-dot blue" />}
       </button>
 

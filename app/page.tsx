@@ -14,6 +14,7 @@ import { WorkspaceContext, type WorkspaceStore, type RailView, type FocusSection
 import { IconRail } from "@/components/ws/IconRail";
 import { ProjectSidebar } from "@/components/ws/ProjectSidebar";
 import { TopBar } from "@/components/ws/TopBar";
+import { DocumentsPanel } from "@/components/ws/documents/DocumentsPanel";
 import { TaskPanel, TodosView, NotificationsView, TaskDrawer, NewTaskModal } from "@/components/ws/TaskPanel";
 import { ChatPanel } from "@/components/ws/ChatPanel";
 import { ManagementPanel } from "@/components/ws/ManagementPanel";
@@ -48,6 +49,7 @@ export default function WorkspacePage() {
   /* ---------- 状态 ---------- */
   const [railView, setRailView] = useState<RailView>("projects");
   const [focusSection, setFocusSection] = useState<FocusSection>("tasks");
+  const [documentTeamId, setDocumentTeamId] = useState<number | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -104,7 +106,7 @@ export default function WorkspacePage() {
 
   /* ---------- 数据加载 ---------- */
   const refreshProjects = useCallback(async () => {
-    await loadResource<{ projects: ProjectSummary[] }>("projects", "/api/projects", (d) => {
+    await loadResource<{ projects: ProjectSummary[] }>("projects", "/api/projects?includeArchived=1", (d) => {
       setProjects(d.projects);
       const cur = selectedIdRef.current;
       if (cur === null || !d.projects.some((p) => p.id === cur)) selectProject(d.projects[0]?.id ?? null);
@@ -191,6 +193,8 @@ export default function WorkspacePage() {
     me: me!,
     railView, setRailView: (view) => { gate.cancel(["notificationNavigation"]); setRailView(view); },
     focusSection, setFocusSection: (section) => { gate.cancel(["notificationNavigation"]); setFocusSection(section); },
+    documentTeamId,
+    showTeamDocuments: (teamId) => { gate.cancel(["notificationNavigation"]); setDocumentTeamId(teamId); setRailView("teamDocuments"); },
     teams, projects, selectedId, detail, tasks, myTasks, chat, activities, files,
     notifications, unreadCount, overview,
     taskSearch, setTaskSearch,
@@ -205,8 +209,8 @@ export default function WorkspacePage() {
       await api("/api/teams", { method: "POST", json: { name, description: description ?? null } });
       await afterProjectMutation();
     },
-    async deleteWorkspaceItem(kind, id) {
-      await api(`/api/${kind === "project" ? "projects" : "teams"}/${id}`, { method: "DELETE" });
+    async deleteWorkspaceItem(kind, id, confirmation) {
+      await api(`/api/${kind === "project" ? "projects" : "teams"}/${id}`, { method: "DELETE", ...(confirmation?{json:confirmation}:{}) });
       const removesSelection = kind === "project"
         ? selectedIdRef.current === id
         : projects.some((p) => p.id === selectedIdRef.current && p.teamId === id);
@@ -221,9 +225,9 @@ export default function WorkspacePage() {
         refreshProjects(), refreshTeams(), refreshOverview(), refreshMyTasks(), refreshNotifications(),
       ]);
     },
-    async createProject(teamId, name, key, description, courseName) {
+    async createProject(teamId, name, key, description, courseName, templateSet) {
       const d = await api<{ project: { id: number } }>("/api/projects", {
-        method: "POST", json: { teamId, name, key, description: description ?? null, courseName: courseName ?? null },
+        method: "POST", json: { teamId, name, key, description: description ?? null, courseName: courseName ?? null, templateSet:templateSet??"none" },
       });
       await afterSaved([refreshProjects()]);
       selectProject(d.project.id);
@@ -306,7 +310,7 @@ export default function WorkspacePage() {
         const target = await resolveNotificationTarget(notification, request.signal);
         if (!request.current()) return false;
         if (target && !projects.some((project) => project.id === target.projectId)) {
-          await loadResource<{ projects: ProjectSummary[] }>("projects", "/api/projects", (data) => setProjects(data.projects));
+          await loadResource<{ projects: ProjectSummary[] }>("projects", "/api/projects?includeArchived=1", (data) => setProjects(data.projects));
           if (!request.current()) return false;
         }
         let readFailed = false;
@@ -331,7 +335,7 @@ export default function WorkspacePage() {
       } finally { request.finish(); }
     },
   }), [
-    me, railView, focusSection, teams, projects, selectedId, detail, tasks, myTasks, chat,
+    me, railView, focusSection, documentTeamId, teams, projects, selectedId, detail, tasks, myTasks, chat,
     activities, files, notifications, unreadCount, overview, taskSearch, modal, drawerTaskId,
     selectProject, refreshProjects, refreshProjectData, refreshTasks, refreshChat,
     refreshActivities, refreshFiles, refreshNotifications, refreshMyTasks, refreshDetail, refreshTeams, refreshOverview,
@@ -344,7 +348,8 @@ export default function WorkspacePage() {
   if (authLoading) return <div className="ws-empty" role="status">正在加载工作空间…</div>;
   if (!me) return <div className="ws-empty" role="alert">{authError || "正在前往登录页面…"}{authError && <button className="ws-btn" onClick={() => void authenticate()}>重试</button>}</div>;
   const retries: Record<string, () => Promise<void>> = { projects: refreshProjects, teams: refreshTeams, overview: refreshOverview, notifications: refreshNotifications, myTasks: refreshMyTasks, detail: refreshDetail, tasks: refreshTasks, chat: refreshChat, activities: refreshActivities, files: refreshFiles };
-  const activeKey = railView === "todos" ? "myTasks" : railView === "notifications" ? "notifications" : railView === "projectManagement" ? "projects" : railView === "teamManagement" ? "teams" : focusSection === "tasks" ? "tasks" : focusSection === "chat" ? "chat" : "files";
+  const documentView = railView === "teamDocuments" || (railView === "projects" && focusSection === "documents");
+  const activeKey = railView === "todos" ? "myTasks" : railView === "notifications" ? "notifications" : railView === "projectManagement" ? "projects" : railView === "teamManagement" || railView === "teamDocuments" ? "teams" : focusSection === "documents" ? "projects" : focusSection === "tasks" ? "tasks" : focusSection === "chat" ? "chat" : "files";
   const initialPending = loads[activeKey] && !loads[activeKey].loaded && (loads[activeKey].loading || loads[activeKey].error);
 
   const project = projects.find((p) => p.id === selectedId);
@@ -353,24 +358,26 @@ export default function WorkspacePage() {
     <WorkspaceContext.Provider value={store}>
       <div className="ws-app">
         <IconRail />
-        {railView === "projects" && <ProjectSidebar />}
+        {railView === "projects" && !documentView && <ProjectSidebar />}
 
         <div className="ws-main">
           <TopBar />
           {notice && <div className="ws-error" role="status">{notice}<button className="ws-btn" onClick={() => setNotice("")}>关闭</button></div>}
           {Object.entries(loads).filter(([, state]) => state.error).map(([key, state]) => <div className="ws-error" role="alert" key={key}>{resourceNames[key]}加载失败：{state.error} <button className="ws-btn" disabled={state.loading} onClick={() => void retries[key]().catch(() => {})}>{state.loading ? "重试中…" : "重试"}</button></div>)}
           <div className="ws-body">
-            <div className="ws-center" id="ws-center">
+            <div className={`ws-center ${documentView ? "ws-doc-center" : ""}`} id="ws-center">
               {initialPending && <div className="ws-empty" role="status">{loads[activeKey].loading ? `正在加载${resourceNames[activeKey]}…` : "加载失败，请点击上方重试"}</div>}
               {!initialPending && railView === "projects" && focusSection === "tasks" && <TaskPanel key={selectedId} />}
               {railView === "projects" && focusSection === "chat" && !initialPending && <ChatPanel key={selectedId} />}
               {railView === "projects" && focusSection === "space" && !initialPending && <SpacePanel key={selectedId} />}
+              {railView === "projects" && focusSection === "documents" && !initialPending && <DocumentsPanel mode="project" />}
+              {railView === "teamDocuments" && !initialPending && <DocumentsPanel mode="team" />}
               {railView === "projectManagement" && <ManagementPanel kind="project" />}
               {railView === "teamManagement" && <ManagementPanel key="teams" kind="team" />}
               {railView === "todos" && !initialPending && <TodosView />}
               {railView === "notifications" && !initialPending && <NotificationsView />}
             </div>
-            {railView === "projects" && <ProjectActivitySidebar />}
+            {railView === "projects" && !documentView && <ProjectActivitySidebar />}
           </div>
           <div className="ws-statusbar">
             <span className="ws-dot" /> {Object.values(loads).some((s) => s.error) ? "部分数据加载失败" : "工作空间"}

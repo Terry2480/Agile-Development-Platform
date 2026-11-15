@@ -39,8 +39,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         .values({ teamId, name: body.name, color: body.color })
         .returning();
       return Response.json({ label }, { status: 201 });
-    } catch (error: any) {
-      if (error?.cause?.code === "23505" || error?.code === "23505") {
+    } catch (error: unknown) {
+      const dbError = error as { cause?: { code?: string }; code?: string } | null;
+      if (dbError?.cause?.code === "23505" || dbError?.code === "23505") {
         return Response.json({ error: "该标签名已存在" }, { status: 409 });
       }
       throw error;

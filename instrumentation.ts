@@ -1,5 +1,14 @@
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
+  const documentState=globalThis as typeof globalThis & {documentMaintenanceTimer?:ReturnType<typeof setInterval>};
+  if(!documentState.documentMaintenanceTimer){
+    const {tryDocumentMaintenance}=await import("./lib/documents/maintenance");
+    let maintaining=false;
+    const run=async()=>{if(maintaining)return;maintaining=true;try{await tryDocumentMaintenance();}finally{maintaining=false;}};
+    documentState.documentMaintenanceTimer=setInterval(run,60000);documentState.documentMaintenanceTimer.unref();void run();
+  }
+  const exportState=globalThis as typeof globalThis & {documentExportTimer?:ReturnType<typeof setInterval>};
+  if(!exportState.documentExportTimer){const {tryDocumentExports}=await import("./lib/documents/export-worker");let exporting=false;const run=async()=>{if(exporting)return;exporting=true;try{await tryDocumentExports();}finally{exporting=false;}};exportState.documentExportTimer=setInterval(run,5000);exportState.documentExportTimer.unref();void run();}
   const { tryFileCleanup } = await import("./lib/file-cleanup");
   const state = globalThis as typeof globalThis & { fileCleanupTimer?: ReturnType<typeof setInterval> };
   const reminderState = globalThis as typeof globalThis & { deadlineReminderTimer?: ReturnType<typeof setInterval> };

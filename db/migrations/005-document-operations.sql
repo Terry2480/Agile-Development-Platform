@@ -1,0 +1,2 @@
+CREATE TABLE document_operations(id serial PRIMARY KEY,node_id integer NOT NULL REFERENCES document_nodes(id) ON DELETE CASCADE,actor_id integer REFERENCES users(id) ON DELETE SET NULL,action text NOT NULL,detail jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),CONSTRAINT document_operations_action_ck CHECK(action IN ('file.replaced','link.updated')));
+CREATE INDEX document_operations_node_idx ON document_operations(node_id);

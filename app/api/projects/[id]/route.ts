@@ -87,6 +87,13 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const projectId = parseId((await params).id, "项目 ID");
     const { project } = await requireProjectAccess(user.id, projectId, "admin");
     const body = await parseBody(request, updateSchema);
+    if(body.status&&body.status!==project.status&&typeof db.execute==="function"){
+      const {documentsEnabled}=await import("@/lib/documents/lifecycle");if(await documentsEnabled(db)){
+        const editing=await db.execute<{name:string;editor:string}>(sql`SELECT n.name,coalesce(nullif(u.name,''),u.student_id,'团队成员') AS editor FROM document_edit_locks l JOIN document_nodes n ON n.id=l.node_id JOIN document_spaces s ON s.id=n.space_id LEFT JOIN users u ON u.id=l.user_id WHERE s.project_id=${projectId} AND l.expires_at>clock_timestamp()`);
+        if(editing.length)return Response.json({code:"DOCUMENT_EDITING",error:`请先结束编辑：${editing.map(n=>`${n.name}（${n.editor}）`).join('、')}`},{status:409});
+      }
+    }
+
 
     const [updated] = await db
       .update(projects)
@@ -109,6 +116,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     }
     return Response.json({ project: updated });
   } catch (error) {
+    if(String((error as {cause?:{message?:string}})?.cause?.message??"").includes("DOCUMENT_")){const {documentErrorResponse}=await import("@/lib/documents/errors");return documentErrorResponse(error);}
     return handleApiError(error);
   }
 }
@@ -120,6 +128,14 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     const projectId = parseId((await params).id, "项目 ID");
     const { project } = await requireProjectAccess(user.id, projectId, "admin");
 
+    if(typeof db.execute==="function"){
+      const {documentsEnabled,createDocumentLifecycle}=await import("@/lib/documents/lifecycle");
+      if(await documentsEnabled(db)){
+        try{const {deletionInput}=await import("@/lib/documents/validation");const input=deletionInput.parse(await request.json());
+          const result=await createDocumentLifecycle().remove(user.id,"project",projectId,input);await tryFileCleanup();return Response.json(result);
+        }catch(error){const {documentErrorResponse}=await import("@/lib/documents/errors");return documentErrorResponse(error);}
+      }
+    }
     await db.delete(projects).where(eq(projects.id, projectId));
     await tryFileCleanup();
     return Response.json({ ok: true, deleted: project.name });
