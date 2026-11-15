@@ -27,3 +27,17 @@ export function docExcerpt(content: string, limit = 90): string {
   const collapsed = content.replace(/\s+/g, " ").trim();
   return collapsed.length > limit ? `${collapsed.slice(0, limit)}…` : collapsed;
 }
+
+// 文件夹分组：按名称聚合（同名文件夹即使不相邻也合并，避免重复分组与重复 key），
+// 名称排序、未分组最后;组内保持传入顺序（接口已按更新时间排序）
+export function groupDocsByFolder<T extends { folder: string | null }>(docs: T[]): [string, T[]][] {
+  const byFolder = new Map<string, T[]>();
+  for (const doc of docs) {
+    const name = doc.folder ?? "未分组";
+    const bucket = byFolder.get(name);
+    if (bucket) bucket.push(doc);
+    else byFolder.set(name, [doc]);
+  }
+  return [...byFolder.entries()].sort(([a], [b]) =>
+    a === "未分组" ? 1 : b === "未分组" ? -1 : a.localeCompare(b, "zh-CN"));
+}

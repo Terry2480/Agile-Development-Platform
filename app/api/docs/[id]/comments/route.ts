@@ -5,6 +5,7 @@ import { docComments, docs, projects, teamMembers, users } from "@/db/schema";
 import { requireUser, parseBody, parseId, handleApiError, displayName } from "@/lib/api";
 import { notify, notifyMentions } from "@/lib/notify";
 import { loadDocDetail } from "@/lib/docs-access";
+import { consumeLimit } from "@/lib/rate-limit";
 
 // 文档评论：GET /api/docs/[id]/comments（时间正序）
 //           POST { content, quote? }  发表评论；通知文档创建者 + @提及的项目成员
@@ -52,6 +53,8 @@ const commentSchema = z.object({
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await requireUser(request);
+    const blocked = await consumeLimit(`doc-comment:user:${user.id}`, 30, 60);
+    if (blocked) return blocked;
     const docId = parseId((await params).id, "文档 ID");
     const { doc } = await loadDocDetail(user.id, docId);
     const body = await parseBody(request, commentSchema);

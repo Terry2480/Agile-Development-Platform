@@ -9,9 +9,11 @@ import {
   type DocDetail, type DocSummary, type DocVersion, type DocComment, type TaskItem,
 } from "@/lib/api-client";
 import { renderMarkdown, extractToc } from "@/lib/markdown";
+import { groupDocsByFolder } from "@/lib/docs";
 import { useWorkspace, Icon, Modal } from "./shared";
 import { DocListSkeleton } from "./LoadingSkeleton";
 import { toast } from "@/lib/toast";
+import { startPolling } from "@/lib/polling";
 
 export function DocsPanel() {
   const ws = useWorkspace();
@@ -47,17 +49,8 @@ export function DocsPanel() {
     return doc.title.toLowerCase().includes(q) || doc.excerpt.toLowerCase().includes(q);
   });
 
-  // 文件夹分组：名称排序，未分组最后；组内按更新时间（接口已排序）
-  const groups: [string, DocSummary[]][] = [];
-  for (const doc of filtered) {
-    const name = doc.folder ?? "未分组";
-    const last = groups.at(-1);
-    if (last && last[0] === name) last[1].push(doc);
-    else groups.push([name, [doc]]);
-  }
-  const named = groups.filter(([name]) => name !== "未分组");
-  const ungrouped = groups.filter(([name]) => name === "未分组");
-  const orderedGroups = [...named, ...ungrouped];
+  // 文件夹分组：按名称聚合排序、未分组最后（纯函数见 lib/docs.ts，含单测）
+  const orderedGroups = groupDocsByFolder(filtered);
 
   // 编辑器退出后回到列表并刷新（保存/删除都会改变列表数据）
   if (openDoc) {
@@ -255,14 +248,20 @@ function DocEditor({ initial, allFolders, onExit }: { initial: DocDetail; allFol
   }, [initial.projectId]);
 
   // 评论面板：打开即加载；发表后刷新
-  const loadComments = useCallback(() => {
+  const fetchComments = useCallback(() =>
     api<{ comments: DocComment[] }>(`/api/docs/${initial.id}/comments`)
-      .then((d) => setComments(d.comments))
-      .catch((e: Error) => toast(e.message, "error"));
-  }, [initial.id]);
+      .then((d) => { setComments(d.comments); }),
+  [initial.id]);
   useEffect(() => {
-    if (commentsOpen && comments === null) loadComments();
-  }, [commentsOpen, comments, loadComments]);
+    if (commentsOpen && comments === null) {
+      fetchComments().catch((e: Error) => toast(e.message, "error"));
+    }
+  }, [commentsOpen, comments, fetchComments]);
+  // 评论面板打开期间每 30 秒同步他人新评论（失败自动退避，关闭面板即停止）
+  useEffect(() => {
+    if (!commentsOpen) return;
+    return startPolling(fetchComments, 30000);
+  }, [commentsOpen, fetchComments]);
 
   const save = useCallback(async () => {
     if (savingRef.current) return;
