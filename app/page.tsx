@@ -71,7 +71,8 @@ export default function WorkspacePage() {
   const [dmUnreadTotal, setDmUnreadTotal] = useState(0);
   const [dmTargetId, setDmTargetId] = useState<number | null>(null);
   const [dmsLoaded, setDmsLoaded] = useState(false);
-  const [docTargetId, setDocTargetId] = useState<number | null>(null);
+  const [docTarget, setDocTarget] = useState<{ id: number; n: number } | null>(null);
+  const docTargetNonce = useRef(0); // 每次跳转递增，重复打开同一篇文档也能触发
   const [overview, setOverview] = useState<Overview | null>(null);
   const [taskSearch, setTaskSearch] = useState("");
   const [modal, setModal] = useState<ModalState>(null);
@@ -181,9 +182,11 @@ export default function WorkspacePage() {
   // 项目数据轮询；文件库同步其他成员的上传和撤回。
   useEffect(() => {
     if (!me || selectedId === null) return;
-    const stopChat = startPolling(() => gate.isPending("chat") ? Promise.resolve() : refreshChat(), 8000);
-    const stopActivities = startPolling(() => gate.isPending("activities") ? Promise.resolve() : refreshActivities(), 8000);
-    const stopDetail = startPolling(() => gate.isPending("detail") ? Promise.resolve() : refreshDetail(), 20000);
+    // 页面在后台时暂停轮询，与下方文件库同步的行为保持一致
+    const visible = () => document.visibilityState !== "hidden";
+    const stopChat = startPolling(() => (visible() && !gate.isPending("chat")) ? refreshChat() : Promise.resolve(), 8000);
+    const stopActivities = startPolling(() => (visible() && !gate.isPending("activities")) ? refreshActivities() : Promise.resolve(), 8000);
+    const stopDetail = startPolling(() => (visible() && !gate.isPending("detail")) ? refreshDetail() : Promise.resolve(), 20000);
     const syncFiles = () => {
       if (document.visibilityState === "hidden" || gate.isPending("files")) return Promise.resolve();
       return refreshFiles();
@@ -215,8 +218,8 @@ export default function WorkspacePage() {
     teams, projects, selectedId, detail, tasks, myTasks, chat, activities, files,
     notifications, unreadCount, overview,
     dmConversations, dmUnreadTotal, dmTargetId, dmsLoaded,
-    refreshDms, docTargetId,
-    openDoc: (id) => { gate.cancel(["notificationNavigation"]); setDocTargetId(id); setRailView("docs"); },
+    refreshDms, docTarget,
+    openDoc: (id) => { gate.cancel(["notificationNavigation"]); setDocTarget({ id, n: ++docTargetNonce.current }); setRailView("docs"); },
     taskSearch, setTaskSearch,
     selectProject,
     openDmConversation: (id) => { gate.cancel(["notificationNavigation"]); setDmTargetId(id); setRailView("messages"); },
@@ -370,7 +373,7 @@ export default function WorkspacePage() {
           setDmTargetId(target.dmConversationId);
           setRailView("messages");
         } else if (target.section === "docs") {
-          setDocTargetId(target.docId);
+          setDocTarget({ id: target.docId, n: ++docTargetNonce.current });
           setRailView("docs");
         } else {
           selectProject(target.projectId);
@@ -387,7 +390,7 @@ export default function WorkspacePage() {
     },
   }), [
     me, railView, focusSection, teams, projects, selectedId, detail, tasks, myTasks, chat,
-    activities, files, notifications, unreadCount, overview, dmConversations, dmUnreadTotal, dmTargetId, dmsLoaded, docTargetId,
+    activities, files, notifications, unreadCount, overview, dmConversations, dmUnreadTotal, dmTargetId, dmsLoaded, docTarget,
     taskSearch, modal, drawerTaskId,
     selectProject, refreshProjects, refreshProjectData, refreshTasks, refreshChat,
     refreshActivities, refreshFiles, refreshNotifications, refreshMyTasks, refreshDetail, refreshTeams, refreshOverview, refreshDms,

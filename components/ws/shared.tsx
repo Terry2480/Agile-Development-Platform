@@ -116,7 +116,8 @@ export interface WorkspaceStore {
   openDmWithPeer(peerId: number): Promise<void>;
   hideDmConversation(id: number): Promise<void>;
   deleteDmConversation(id: number): Promise<void>;
-  docTargetId: number | null;
+  // 跳转打开某篇文档；n 为递增序号，重复点击同一篇也能再次触发
+  docTarget: { id: number; n: number } | null;
   openDoc(id: number): void;
   taskSearch: string;
   setTaskSearch(q: string): void;

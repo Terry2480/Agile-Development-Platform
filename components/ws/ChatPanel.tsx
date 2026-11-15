@@ -51,6 +51,7 @@ export function ChatPanel() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const stickToBottom = useRef(true);
 
   // 展示的消息 = 本地翻页前缀 + store 最新窗口；轮询刷新时窗口仍来自 store，前缀保留
   const storeMessages = ws.chat;
@@ -62,10 +63,15 @@ export function ChatPanel() {
   const memberNames = ws.detail?.members.map((m) => m.displayName) ?? [];
   const projectId = project?.id ?? null;
 
-  // 新消息自动滚到底
+  // 切换项目：重新贴底（ref 不能在渲染期写；先于下方滚动 effect 声明，保证同批先执行）
+  useEffect(() => {
+    stickToBottom.current = true;
+  }, [project?.id]);
+
+  // 新消息自动滚到底；用户上滚翻看历史时不打断（与私信面板同一守卫）
   useEffect(() => {
     const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (el && stickToBottom.current) el.scrollTop = el.scrollHeight;
   }, [storeMessages.length, project?.id]);
 
   // 切换项目时清空输入与翻页状态（渲染期对齐，避免级联 effect）
@@ -135,8 +141,12 @@ export function ChatPanel() {
       try {
         const d = await api<{ messages: ChatMessage[] }>(`/api/projects/${projectId}/chat?beforeId=${cursor}`);
         if (d.messages.length === 0) { setNoMoreOlder(true); toast("该消息已无法加载"); return; }
-        const prefix = olderMessages ? [...d.messages, ...olderMessages.filter((o) => !d.messages.some((n) => n.id === o.id))] : d.messages;
-        setOlderMessages(prefix);
+        // 函数式更新：循环内不能引用过期的 olderMessages，否则逐页跳转时会覆盖掉已加载的页
+        setOlderMessages((prev) => {
+          const older = prev ?? [];
+          const seen = new Set(older.map((o) => o.id));
+          return [...d.messages.filter((m) => !seen.has(m.id)), ...older];
+        });
         if (d.messages.length < 50) setNoMoreOlder(true);
         if (d.messages.some((m) => m.id === id)) { flashMessage(id); return; }
         if (d.messages.length < 50) { toast("已加载全部历史，未找到该消息"); return; }
@@ -161,7 +171,7 @@ export function ChatPanel() {
       const el = scrollRef.current;
       const prevHeight = el?.scrollHeight ?? 0;
       const prevTop = el?.scrollTop ?? 0;
-      setOlderMessages(olderMessages ? [...d.messages, ...olderMessages] : d.messages);
+      setOlderMessages((prev) => (prev ? [...d.messages, ...prev] : d.messages));
       setTimeout(() => {
         const el2 = scrollRef.current;
         if (el2) el2.scrollTop = el2.scrollHeight - prevHeight + prevTop;
@@ -220,6 +230,7 @@ export function ChatPanel() {
     setBusy(true);
     try {
       await ws.sendChat(content, { replyToId: replyTo?.id });
+      stickToBottom.current = true; // 自己发消息后重新贴底
       setText("");
       setReplyTo(null);
     } catch (e) {
@@ -314,7 +325,14 @@ export function ChatPanel() {
           ))}
         </div>
       ) : (
-        <div className="ws-chat-scroll" ref={scrollRef}>
+        <div
+          className="ws-chat-scroll"
+          ref={scrollRef}
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+          }}
+        >
           {!noMoreOlder && messages.length > 0 && (
             <button className="ws-load-older" disabled={loadingOlder} onClick={() => void loadOlder()}>
               {loadingOlder ? "加载中…" : "加载更早的消息"}
@@ -455,7 +473,8 @@ export function ChatPanel() {
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
+              // isComposing：输入法选词回车不发送
+              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
                 e.preventDefault();
                 send();
               }
