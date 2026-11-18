@@ -224,6 +224,8 @@ export type DmConversation = {
   partner: { userId: number; displayName: string; online: boolean };
   lastMessage: { content: string; senderId: number; createdAt: string } | null;
   unreadCount: number;
+  pinned: boolean;
+  muted: boolean;
 };
 
 export type DmContact = {

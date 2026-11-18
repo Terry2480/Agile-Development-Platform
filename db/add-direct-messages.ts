@@ -38,6 +38,14 @@ async function main() {
       )`;
       await tx`CREATE INDEX IF NOT EXISTS dm_attachments_conversation_idx ON dm_attachments (conversation_id)`;
       await tx`ALTER TABLE dm_messages ADD COLUMN IF NOT EXISTS attachment_id integer REFERENCES dm_attachments(id) ON DELETE SET NULL`;
+      // 模块三（v6.2）：私聊个人设置（置顶/免打扰）
+      await tx`CREATE TABLE IF NOT EXISTS dm_settings (
+        user_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        conversation_id integer NOT NULL REFERENCES dm_conversations(id) ON DELETE CASCADE,
+        pinned boolean NOT NULL DEFAULT false,
+        muted boolean NOT NULL DEFAULT false,
+        PRIMARY KEY (user_id, conversation_id)
+      )`;
     });
     console.log("私聊数据表已就绪");
   } finally { await client.end(); }

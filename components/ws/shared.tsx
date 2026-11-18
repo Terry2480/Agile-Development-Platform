@@ -29,6 +29,9 @@ const ICON_PATHS: Record<string, string> = {
   x: "M18 6L6 18M6 6l12 12",
   pin: "M12 17v5M9 10.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V16a1 1 0 001 1h12a1 1 0 001-1v-.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V7a1 1 0 011-1 2 2 0 002-2v-.58a.42.42 0 00-.42-.42H6.42a.42.42 0 00-.42.42V4a2 2 0 002 2 1 1 0 011 1z",
   message: "M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z",
+  home: "M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10",
+  bellOff: "M13.73 21a2 2 0 01-3.46 0M18.63 13A17.89 17.89 0 0118 8M6.26 6.26A5.86 5.86 0 006 8c0 7-3 9-3 9h14M18 8a6 6 0 00-9.33-5M1 1l22 22",
+  pin2: "M12 17v5M9 10.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V16a1 1 0 001 1h12a1 1 0 001-1v-.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V7a1 1 0 011-1 2 2 0 002-2v-.58a.42.42 0 00-.42-.42H6.42a.42.42 0 00-.42.42V4a2 2 0 002 2 1 1 0 011 1z",
   more: "M5 12h.01M12 12h.01M19 12h.01",
   book: "M4 19.5A2.5 2.5 0 016.5 17H20M4 19.5A2.5 2.5 0 006.5 22H20V2H6.5A2.5 2.5 0 004 4.5v15z",
   file: "M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9zM13 2v7h7",
@@ -79,7 +82,7 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
 }
 
 /* ---------- 工作空间状态（page.tsx 提供实现） ---------- */
-export type RailView = "projects" | "todos" | "notifications" | "projectManagement" | "teamManagement" | "messages" | "docs";
+export type RailView = "today" | "projects" | "todos" | "notifications" | "projectManagement" | "teamManagement" | "messages" | "docs";
 export type FocusSection = "tasks" | "chat" | "space";
 export type ModalState =
   | { type: "newTeam" }
@@ -116,6 +119,7 @@ export interface WorkspaceStore {
   openDmWithPeer(peerId: number): Promise<void>;
   hideDmConversation(id: number): Promise<void>;
   deleteDmConversation(id: number): Promise<void>;
+  updateDmSettings(id: number, patch: { pinned?: boolean; muted?: boolean }): Promise<void>;
   docTargetId: number | null;
   openDoc(id: number): void;
   taskSearch: string;

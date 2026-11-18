@@ -1,0 +1,114 @@
+"use client";
+
+// 「今日」首页（飞书式）：一屏回答“今天该干什么”——
+// 截止提醒 / 进行中待办 / 未读私信 / 最近文档 四张卡片，点击直达对应内容
+import { useEffect, useState } from "react";
+import { api, dueInfo, type DocSummary, type TaskItem } from "@/lib/api-client";
+import { useWorkspace, Icon, Avatar } from "./shared";
+
+const dayKeyToday = () => {
+  const d = new Date();
+  const tomorrow = new Date(d.getTime() + 86400000);
+  return { today: toKey(d), tomorrow: toKey(tomorrow) };
+};
+function toKey(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+export function TodayPanel() {
+  const ws = useWorkspace();
+  const [docs, setDocs] = useState<DocSummary[] | null>(null);
+  useEffect(() => {
+    api<{ docs: DocSummary[] }>("/api/docs")
+      .then((d) => setDocs(d.docs.slice(0, 3)))
+      .catch(() => setDocs([]));
+  }, []);
+
+  const { today, tomorrow } = dayKeyToday();
+  const deadlines = ws.myTasks
+    .filter((t) => t.status !== "done" && (t.dueOn === today || t.dueOn === tomorrow))
+    .sort((a, b) => (a.dueOn ?? "").localeCompare(b.dueOn ?? ""));
+  const doing = ws.myTasks.filter((t) => t.status === "doing").slice(0, 5);
+  const unreadDms = ws.dmConversations.filter((c) => c.unreadCount > 0 && !c.muted).slice(0, 3);
+
+  const openTask = (t: TaskItem) => {
+    ws.selectProject(t.projectId);
+    ws.setRailView("projects");
+    ws.setFocusSection("tasks");
+    ws.openTask(t.id);
+  };
+
+  const hour = new Date().getHours();
+  const greeting = hour < 6 ? "夜深了" : hour < 11 ? "早上好" : hour < 14 ? "中午好" : hour < 18 ? "下午好" : "晚上好";
+  const dateText = new Intl.DateTimeFormat("zh-CN", { month: "long", day: "numeric", weekday: "long" }).format(new Date());
+
+  return (
+    <div className="ws-today">
+      <header className="ws-today-head">
+        <div>
+          <h1>{greeting}，{ws.me.name || ws.me.studentId}</h1>
+          <p>{dateText} · {ws.overview ? `${ws.overview.myTodo + ws.overview.myDoing} 个待办 · ${ws.dmUnreadTotal} 条未读私信` : "正在加载…"}</p>
+        </div>
+      </header>
+
+      <div className="ws-today-grid">
+        <section className="ws-today-card">
+          <h2><Icon name="flag" size={14} /> 截止临近 <span className="ws-count-pill">{deadlines.length}</span></h2>
+          {deadlines.length === 0 && <div className="ws-empty" style={{ padding: 18 }}>今天和明天没有截止任务，节奏不错 👍</div>}
+          {deadlines.map((t) => {
+            const info = dueInfo(t.dueOn!);
+            return (
+              <button key={t.id} className="ws-today-item" onClick={() => openTask(t)}>
+                <span className={`ws-pill due-${info.overdue ? "over" : info.soon ? "soon" : "norm"}`}>{info.text}</span>
+                <span className="ws-today-item-main">
+                  <b>{t.code}</b> {t.title}
+                </span>
+              </button>
+            );
+          })}
+        </section>
+
+        <section className="ws-today-card">
+          <h2><Icon name="check" size={14} /> 进行中 <span className="ws-count-pill">{doing.length}</span></h2>
+          {doing.length === 0 && <div className="ws-empty" style={{ padding: 18 }}>暂无进行中的任务，从待办里挑一个开始吧</div>}
+          {doing.map((t) => (
+            <button key={t.id} className="ws-today-item" onClick={() => openTask(t)}>
+              <span className="ws-pill st-doing">进行中</span>
+              <span className="ws-today-item-main"><b>{t.code}</b> {t.title}</span>
+            </button>
+          ))}
+        </section>
+
+        <section className="ws-today-card">
+          <h2><Icon name="message" size={14} /> 未读私信 <span className="ws-count-pill">{ws.dmUnreadTotal}</span></h2>
+          {unreadDms.length === 0 && <div className="ws-empty" style={{ padding: 18 }}>没有未读私信</div>}
+          {unreadDms.map((c) => (
+            <button key={c.id} className="ws-today-item" onClick={() => ws.openDmConversation(c.id)}>
+              <Avatar name={c.partner.displayName} colorKey={c.partner.userId} size="sm" />
+              <span className="ws-today-item-main">
+                <b>{c.partner.displayName}</b>
+                <small>{c.lastMessage?.content ?? "新消息"}</small>
+              </span>
+              {c.unreadCount > 0 && <span className="ws-dm-unread">{c.unreadCount}</span>}
+            </button>
+          ))}
+        </section>
+
+        <section className="ws-today-card">
+          <h2><Icon name="book" size={14} /> 最近文档</h2>
+          {docs === null && <div className="ws-empty" style={{ padding: 18 }}>正在加载…</div>}
+          {docs?.length === 0 && <div className="ws-empty" style={{ padding: 18 }}>还没有文档，去云文档里新建一篇吧</div>}
+          {docs?.map((d) => (
+            <button key={d.id} className="ws-today-item" onClick={() => ws.openDoc(d.id)}>
+              <Icon name="book" size={13} />
+              <span className="ws-today-item-main">
+                <b>{d.title}</b>
+                <small>{d.projectName} · {d.updatedByName ?? "—"}</small>
+              </span>
+            </button>
+          ))}
+        </section>
+      </div>
+    </div>
+  );
+}

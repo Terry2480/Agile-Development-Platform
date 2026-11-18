@@ -38,6 +38,7 @@ npm run dev                 # 启动 http://localhost:3000
 | 方法 | 路径 | 说明 |
 |---|---|---|
 | GET | `/api/overview` | `{ teamCount, projectCount, taskTotal, taskDone, myTodo, myDoing }` |
+| GET | `/api/search/messages?q=` | **全局消息搜索**（Ctrl+K「聊天」分组）：跨我所在团队的项目频道与我的私信各取新→旧 5 条，不含已撤回 |
 
 ### 团队
 
@@ -108,7 +109,7 @@ npm run dev                 # 启动 http://localhost:3000
 
 | 方法 | 路径 | 权限 | 说明 |
 |---|---|---|---|
-| GET | `/api/dm` | 登录 | 我的会话列表（对方资料、最后一条消息摘要、未读数、`unreadTotal`），按最后活跃倒序；我方隐藏的会话不返回 |
+| GET | `/api/dm` | 登录 | 我的会话列表（对方资料、最后消息、未读数、置顶/免打扰）；**置顶的排最前**，其余按最近活跃倒序（最近对话的对象自动位于置顶下第一条）；免打扰会话不计入 unreadTotal |
 | POST | `/api/dm` | 登录 | `{ peerId }` 与同团队成员打开（或创建）一对一会话；非同团队返回 403；重新发起会自动取消我方的隐藏 |
 | GET | `/api/dm/contacts` | 登录 | 可私聊的联系人 = 我所有团队的其他成员（去重，在线优先排序） |
 | GET | `/api/dm/[id]/messages?afterId=/beforeId=` | 会话双方 | 最新 80 条（时间正序）；`afterId` 增量；`beforeId` 向前翻页；含 `attachment`（文件消息）、`replyTo`（引用）、`recalled` |
@@ -120,6 +121,7 @@ npm run dev                 # 启动 http://localhost:3000
 | GET | `/api/dm/files/[id]` | 会话双方 | 下载私聊文件（校验会话双方身份，中文文件名 RFC 5987 编码） |
 | PUT | `/api/dm/[id]/read` | 会话双方 | 标记对方发来的未读消息为已读（幂等），返回 `{ updated }` |
 | PUT | `/api/dm/[id]/hide` | 会话双方 | 隐藏会话（仅从我的列表移除，消息保留）；对方来新消息或我重新发起时自动恢复 |
+| PUT | `/api/dm/[id]/settings` | 会话双方 | **个人设置**：`{ pinned?, muted? }` 置顶（排最前）/ 免打扰（不计入未读角标），仅影响本人 |
 | DELETE | `/api/dm/[id]` | 会话双方 | 删除会话：清空双方全部消息与附件（级联），清理关联私信通知并尽力删除物理文件 |
 
 消息对象含 `mine`（是否我发的）与 `readAt`（对方阅读时间，null 即未读，用于已读回执）。文件消息的 `attachment` 含 `{ id, name, size, mimeType }`，下载走 `GET /api/dm/files/{id}`。同一对用户只存一条会话（`user_a_id < user_b_id` 唯一约束）。

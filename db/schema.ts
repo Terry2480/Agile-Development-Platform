@@ -313,6 +313,14 @@ export const dmAttachments = pgTable("dm_attachments", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 }, (t) => [index("dm_attachments_conversation_idx").on(t.conversationId)]);
 
+// 私聊个人设置：置顶（排最前）与免打扰（不计入未读角标）；每人每会话一条
+export const dmSettings = pgTable("dm_settings", {
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  conversationId: integer("conversation_id").notNull().references(() => dmConversations.id, { onDelete: "cascade" }),
+  pinned: boolean("pinned").notNull().default(false),
+  muted: boolean("muted").notNull().default(false),
+}, (t) => [unique("dm_settings_user_conversation_uq").on(t.userId, t.conversationId)]);
+
 /* ============ 云文档 ============ */
 
 // 项目文档：飞书式协作文档，正文本为 Markdown，项目成员均可读可写

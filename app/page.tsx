@@ -19,6 +19,8 @@ import { TaskPanel, TodosView, NotificationsView, TaskDrawer, NewTaskModal } fro
 import { ChatPanel } from "@/components/ws/ChatPanel";
 import { MessagesPanel } from "@/components/ws/MessagesPanel";
 import { DocsPanel } from "@/components/ws/DocsPanel";
+import { TodayPanel } from "@/components/ws/TodayPanel";
+import { ShortcutsPanel } from "@/components/ws/ShortcutsPanel";
 import { ScaleFrame } from "@/components/ws/ScaleFrame";
 import { ToastHost } from "@/components/ws/ToastHost";
 import { CommandPalette } from "@/components/ws/CommandPalette";
@@ -237,6 +239,10 @@ export default function WorkspacePage() {
       await afterSaved([refreshDms(), refreshNotifications()]);
       setDmTargetId((current) => current === id ? null : current);
     },
+    async updateDmSettings(id, patch) {
+      await api(`/api/dm/${id}/settings`, { method: "PUT", json: patch });
+      await afterSaved([refreshDms()]);
+    },
     modal, openModal: setModal, closeModal: () => setModal(null),
     drawerTaskId,
     openTask: (id) => { gate.cancel(["notificationNavigation"]); setDrawerTaskId(id); },
@@ -432,6 +438,7 @@ export default function WorkspacePage() {
               {railView === "notifications" && !initialPending && <NotificationsView />}
               {railView === "messages" && <MessagesPanel />}
               {railView === "docs" && <DocsPanel />}
+              {railView === "today" && <TodayPanel />}
             </div>
             {railView === "projects" && <ProjectActivitySidebar />}
           </div>
@@ -455,6 +462,7 @@ export default function WorkspacePage() {
 
       <ToastHost />
       <CommandPalette />
+      <ShortcutsPanel />
     </WorkspaceContext.Provider>
   );
 }

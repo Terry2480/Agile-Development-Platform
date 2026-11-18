@@ -99,7 +99,7 @@ export function MessagesPanel() {
           {ws.dmConversations.map((c) => (
             <div
               key={c.id}
-              className={`ws-dm-item ${activeId === c.id ? "active" : ""}`}
+              className={`ws-dm-item ${activeId === c.id ? "active" : ""} ${c.pinned ? "pinned" : ""}`}
               role="button"
               tabIndex={0}
               aria-label={`与 ${c.partner.displayName} 的会话`}
@@ -113,7 +113,7 @@ export function MessagesPanel() {
               </span>
               <span className="ws-dm-item-main">
                 <span className="ws-dm-item-top">
-                  <b>{c.partner.displayName}</b>
+                  <b>{c.pinned && <span className="ws-dm-pin" title="已置顶"><Icon name="pin" size={11} /></span>}{c.partner.displayName}{c.muted && <span className="ws-dm-mute" title="免打扰"><Icon name="bellOff" size={11} /></span>}</b>
                   {c.lastMessage && <small>{listTime(c.lastMessage.createdAt)}</small>}
                 </span>
                 <span className="ws-dm-item-preview">
@@ -122,7 +122,7 @@ export function MessagesPanel() {
                     : "开始对话吧"}
                 </span>
               </span>
-              {c.unreadCount > 0 && <span className="ws-dm-unread">{c.unreadCount > 99 ? "99+" : c.unreadCount}</span>}
+              {c.unreadCount > 0 && <span className={`ws-dm-unread ${c.muted ? "muted" : ""}`}>{c.unreadCount > 99 ? "99+" : c.unreadCount}</span>}
               <button
                 className="ws-dm-more"
                 title="会话选项"
@@ -143,6 +143,19 @@ export function MessagesPanel() {
       {menu && (
         <div className="ws-dm-menu" role="menu" aria-label="会话选项" style={{ left: menu.x, top: menu.y }}
           onClick={(e) => e.stopPropagation()}>
+          {(() => {
+            const target = ws.dmConversations.find((c) => c.id === menu.id);
+            return target ? (<>
+              <button role="menuitem" onClick={() => { void ws.updateDmSettings(menu.id, { pinned: !target.pinned }).catch((e: Error) => toast(e.message, "error")); setMenu(null); }}>
+                {target.pinned ? "取消置顶" : "置顶会话"}
+                <small>{target.pinned ? "恢复按最近活跃排序" : "固定在列表最前"}</small>
+              </button>
+              <button role="menuitem" onClick={() => { void ws.updateDmSettings(menu.id, { muted: !target.muted }).catch((e: Error) => toast(e.message, "error")); setMenu(null); }}>
+                {target.muted ? "取消免打扰" : "免打扰"}
+                <small>{target.muted ? "恢复计入未读角标" : "新消息不计入未读角标"}</small>
+              </button>
+            </>) : null;
+          })()}
           <button role="menuitem" onClick={() => void hideConversation(menu.id)}>
             隐藏会话
             <small>仅从我的列表移除；来新消息自动恢复</small>

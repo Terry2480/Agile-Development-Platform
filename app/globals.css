@@ -591,6 +591,38 @@ html[data-theme="day"] .ws-task-description{background:#fffaf2;border-color:#b6a
 .ws-task-refdoc-list button{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--ws-color-304467);background:var(--ws-color-1b2942);color:var(--ws-color-9cbcff);border-radius:7px;padding:5px 10px;font-size:12px;cursor:pointer;font-family:inherit}
 .ws-task-refdoc-list button:hover{border-color:var(--ws-color-3b6ef5)}
 
+/* ══════════ 「今日」首页（模块三） ══════════ */
+.ws-today{max-width:980px;margin:0 auto}
+.ws-today-head{display:flex;justify-content:space-between;align-items:flex-end;padding:6px 2px 18px}
+.ws-today-head h1{font-size:24px;margin:0 0 6px;color:var(--ws-color-e8eaf2)}
+.ws-today-head p{margin:0;font-size:13px;color:var(--ws-color-9aa1b5)}
+.ws-today-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:900px){.ws-today-grid{grid-template-columns:1fr}}
+.ws-today-card{border:1px solid var(--ws-color-262a38);background:var(--ws-color-141722);border-radius:12px;padding:14px 16px;min-width:0}
+.ws-today-card h2{display:flex;align-items:center;gap:8px;font-size:13px;margin:0 0 10px;color:var(--ws-color-9aa1b5)}
+.ws-today-card h2 .ws-count-pill{margin-left:2px}
+.ws-today-item{display:flex;align-items:center;gap:10px;width:100%;border:0;background:transparent;border-radius:9px;padding:8px 9px;font:inherit;font-size:13px;color:var(--ws-color-c6cbdb);cursor:pointer;text-align:left;margin-bottom:4px}
+.ws-today-item:hover{background:var(--ws-color-191c29)}
+.ws-today-item-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;overflow:hidden}
+.ws-today-item-main b{font-family:Consolas,monospace;font-weight:600;font-size:12px;color:var(--ws-color-6f9bff);display:inline}
+.ws-today-item-main b::after{content:" "}
+.ws-today-item-main small{font-size:11px;color:var(--ws-color-5d6273);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ws-today-item .ws-dm-unread{position:static}
+
+/* ══════════ 快捷键速查面板（模块三） ══════════ */
+.ws-shortcuts{display:grid;gap:4px}
+.ws-shortcut-row{display:flex;align-items:center;gap:14px;padding:8px 6px;border-bottom:1px solid var(--ws-color-22242f)}
+.ws-shortcut-row:last-child{border-bottom:0}
+.ws-shortcut-row kbd{min-width:86px;text-align:center;background:var(--ws-color-23273a);border:1px solid var(--ws-color-2f3347);border-radius:6px;padding:4px 10px;font:11px Consolas,monospace;color:var(--ws-color-9cbcff)}
+.ws-shortcut-row span{font-size:13px;color:var(--ws-color-c6cbdb)}
+
+/* ══════════ 私聊置顶/免打扰标记（模块三） ══════════ */
+.ws-dm-item.pinned{background:var(--ws-color-171927)}
+.ws-dm-item.pinned.active{background:var(--ws-color-1c2233)}
+.ws-dm-pin,.ws-dm-mute{display:inline-flex;align-items:center;margin-right:5px;color:var(--ws-color-8a8fa3)}
+.ws-dm-mute{margin-right:0;margin-left:6px;color:var(--ws-color-5d6273)}
+.ws-dm-unread.muted{background:var(--ws-color-3a3f52)}
+
 /* ══════════ 图标栏激活块（QQ/微信式，P0-4 修订版） ══════════ */
 /* 夜间：亮蓝底圆角块 + 白图标；日间：深暖底圆角块 + 米白图标（workspace-theme 未映射的
    旧激活色在日间呈深底深字，改由这里的高优先级规则统一接管） */

@@ -8,11 +8,24 @@ import { useWorkspace, Icon, Avatar } from "./shared";
 import { toast } from "@/lib/toast";
 
 type Member = { userId: number; displayName: string; teamName: string | null };
+type MessageHit = {
+  id: number;
+  content: string;
+  createdAt: string;
+  projectId?: number;
+  projectName?: string;
+  authorName?: string;
+  conversationId?: number;
+  partnerName?: string;
+  mine?: boolean;
+};
 type Entry =
   | { kind: "project"; id: number; label: string; sub: string }
   | { kind: "task"; id: number; label: string; sub: string; projectId: number }
   | { kind: "doc"; id: number; label: string; sub: string }
-  | { kind: "member"; id: number; label: string; sub: string };
+  | { kind: "member"; id: number; label: string; sub: string }
+  | { kind: "chat"; id: number; label: string; sub: string; projectId: number }
+  | { kind: "dmmsg"; id: number; label: string; sub: string; conversationId: number };
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
@@ -39,6 +52,7 @@ function PalettePanel({ onClose }: { onClose(): void }) {
   const [selected, setSelected] = useState(0);
   const [docs, setDocs] = useState<DocSummary[] | null>(null);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [messages, setMessages] = useState<{ projectHits: MessageHit[]; dmHits: MessageHit[] }>({ projectHits: [], dmHits: [] });
   const [members, setMembers] = useState<Member[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -49,13 +63,16 @@ function PalettePanel({ onClose }: { onClose(): void }) {
     inputRef.current?.focus();
   }, []);
 
-  // 任务为服务端搜索（跨我所有团队），300ms 防抖
+  // 任务与聊天走服务端搜索（跨我所有团队），300ms 防抖
   useEffect(() => {
     const query = q.trim();
-    if (!query) return;
     const timer = setTimeout(() => {
+      if (!query) { setTasks([]); setMessages({ projectHits: [], dmHits: [] }); return; }
       api<{ tasks: TaskItem[] }>(`/api/tasks?q=${encodeURIComponent(query)}&limit=6`)
         .then((d) => setTasks(d.tasks))
+        .catch(() => {});
+      api<{ projectHits: MessageHit[]; dmHits: MessageHit[] }>(`/api/search/messages?q=${encodeURIComponent(query)}`)
+        .then((d) => setMessages({ projectHits: d.projectHits ?? [], dmHits: d.dmHits ?? [] }))
         .catch(() => {});
     }, 300);
     return () => clearTimeout(timer);
@@ -80,13 +97,19 @@ function PalettePanel({ onClose }: { onClose(): void }) {
         out.push({ kind: "task", id: t.id, label: `${t.code} ${t.title}`, sub: `任务 · ${t.projectName ?? ""}`, projectId: t.projectId });
       }
     }
+    for (const hit of messages.projectHits) {
+      out.push({ kind: "chat", id: hit.id, label: hit.content, sub: `聊天 · ${hit.authorName} @ ${hit.projectName}`, projectId: hit.projectId! });
+    }
+    for (const hit of messages.dmHits) {
+      out.push({ kind: "dmmsg", id: hit.id, label: (hit.mine ? "我：" : "") + hit.content, sub: `私信 · ${hit.partnerName}`, conversationId: hit.conversationId! });
+    }
     for (const m of members) {
       if (match(m.displayName) || (m.teamName ? match(m.teamName) : false)) {
         out.push({ kind: "member", id: m.userId, label: m.displayName, sub: `成员 · ${m.teamName ?? ""}` });
       }
     }
     return out.slice(0, 14);
-  }, [q, ws.projects, docs, tasks, members]);
+  }, [q, ws.projects, docs, tasks, messages, members]);
 
   function run(entry: Entry) {
     onClose();
@@ -101,6 +124,12 @@ function PalettePanel({ onClose }: { onClose(): void }) {
       ws.openTask(entry.id);
     } else if (entry.kind === "doc") {
       ws.openDoc(entry.id);
+    } else if (entry.kind === "chat") {
+      ws.selectProject(entry.projectId);
+      ws.setRailView("projects");
+      ws.setFocusSection("chat");
+    } else if (entry.kind === "dmmsg") {
+      ws.openDmConversation(entry.conversationId);
     } else {
       void ws.openDmWithPeer(entry.id).catch((e: Error) => toast(e.message, "error"));
     }
@@ -121,7 +150,7 @@ function PalettePanel({ onClose }: { onClose(): void }) {
           <input
             ref={inputRef}
             value={q}
-            placeholder="搜索项目、任务、文档、成员…"
+            placeholder="搜索项目、任务、文档、聊天、成员…"
             aria-label="全局搜索"
             onChange={(e) => { setQ(e.target.value); setSelected(0); }}
             onKeyDown={onInputKey}
@@ -131,7 +160,7 @@ function PalettePanel({ onClose }: { onClose(): void }) {
         <div className="ws-cmdk-list">
           {results.length === 0 && (
             <div className="ws-cmdk-empty">
-              {q.trim() ? "没有匹配的结果" : "输入关键词搜索；支持项目 / 任务 / 文档 / 成员，回车直达"}
+              {q.trim() ? "没有匹配的结果" : "输入关键词搜索；支持项目 / 任务 / 文档 / 聊天 / 成员，回车直达"}
             </div>
           )}
           {results.map((r, i) => (
@@ -143,7 +172,7 @@ function PalettePanel({ onClose }: { onClose(): void }) {
             >
               {r.kind === "member"
                 ? <Avatar name={r.label} colorKey={r.id} size="sm" />
-                : <span className="ws-cmdk-ic"><Icon name={r.kind === "project" ? "grid" : r.kind === "task" ? "check" : "book"} size={14} /></span>}
+                : <span className="ws-cmdk-ic"><Icon name={r.kind === "project" ? "grid" : r.kind === "task" ? "check" : r.kind === "doc" ? "book" : "message"} size={14} /></span>}
               <span className="ws-cmdk-label">{r.label}</span>
               <span className="ws-cmdk-sub">{r.sub}</span>
             </button>

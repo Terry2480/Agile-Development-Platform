@@ -15,6 +15,14 @@ export function IconRail() {
   return (
     <aside className="ws-rail">
       <div className="ws-rail-logo" title="AgileCampus">AC</div>
+      <button
+        className={`ws-rail-btn ${ws.railView === "today" ? "active" : ""}`}
+        title="今日"
+        aria-label="今日"
+        onClick={() => ws.setRailView("today")}
+      >
+        <Icon name="home" size={17} />
+      </button>
       <button className={`ws-rail-btn ws-rail-management ${ws.railView === "projectManagement" ? "active" : ""}`} title="项目管理" aria-label="项目管理" onClick={() => ws.setRailView("projectManagement")}><Icon name="file" size={17} /><small>项目管理</small></button>
       <button className={`ws-rail-btn ws-rail-management ${ws.railView === "teamManagement" ? "active" : ""}`} title="团队管理" aria-label="团队管理" onClick={() => ws.setRailView("teamManagement")}><Icon name="users" size={17} /><small>团队管理</small></button>
       <button
