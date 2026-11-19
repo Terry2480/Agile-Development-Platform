@@ -16,10 +16,10 @@ export function IconRail() {
     <aside className="ws-rail">
       <div className="ws-rail-logo" title="AgileCampus">AC</div>
       <button
-        className={`ws-rail-btn ${ws.railView === "today" ? "active" : ""}`}
-        title="今日"
-        aria-label="今日"
-        onClick={() => ws.setRailView("today")}
+        className="ws-rail-btn"
+        title="首页"
+        aria-label="返回首页"
+        onClick={() => router.push("/")}
       >
         <Icon name="home" size={17} />
       </button>

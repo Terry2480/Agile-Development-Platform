@@ -1,468 +1,681 @@
 "use client";
-import { resolveNotificationTarget } from "@/lib/notification-navigation";
 
-// AgileCampus 工作空间（深色 · 按「同频」设计图）：状态中心 + 布局组装
-// 数据全部来自后端 API（无演示数据）；登录守卫与 v1 一致
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import {
-  api, ApiError, uploadFile as apiUpload,
-  type Me, type Team, type ProjectSummary, type ProjectDetail, type TaskItem,
-  type ChatMessage, type ActivityItem, type FileItem, type NotificationItem, type Overview,
-  type DmConversation,
-} from "@/lib/api-client";
-import { WorkspaceContext, type WorkspaceStore, type RailView, type FocusSection, type ModalState } from "@/components/ws/shared";
-import { IconRail } from "@/components/ws/IconRail";
-import { ProjectSidebar } from "@/components/ws/ProjectSidebar";
-import { TopBar } from "@/components/ws/TopBar";
-import { TaskPanel, TodosView, NotificationsView, TaskDrawer, NewTaskModal } from "@/components/ws/TaskPanel";
-import { ChatPanel } from "@/components/ws/ChatPanel";
-import { MessagesPanel } from "@/components/ws/MessagesPanel";
-import { DocsPanel } from "@/components/ws/DocsPanel";
-import { TodayPanel } from "@/components/ws/TodayPanel";
-import { ShortcutsPanel } from "@/components/ws/ShortcutsPanel";
-import { ScaleFrame } from "@/components/ws/ScaleFrame";
-import { ToastHost } from "@/components/ws/ToastHost";
-import { CommandPalette } from "@/components/ws/CommandPalette";
-import { TaskListSkeleton, ConversationSkeleton } from "@/components/ws/LoadingSkeleton";
-import { toast } from "@/lib/toast";
-import { ManagementPanel } from "@/components/ws/ManagementPanel";
-import { ProjectActivitySidebar } from "@/components/ws/ProjectActivitySidebar";
-import { SpacePanel, NewSprintModal, InviteModal } from "@/components/ws/SpacePanel";
-import { NewTeamModal, NewProjectModal } from "@/components/ws/Modals";
+/**
+ * AgileCampus · 首页
+ * ------------------------------------------------------------------
+ * 设计：发布会级深色版面 + 浅蓝 → 紫 → 浅粉 光谱（深空冷黑底 + 极细分割线）
+ * 结构：品牌首屏 → 我的数据 / 三步开始 → 进行中的项目 → 能力矩阵
+ * 数据：全部复用现有接口（/api/auth/me、/api/overview、/api/projects），
+ *       未登录时不请求业务数据，直接按访客态展示，不阻塞首屏。
+ * 迁移：原工作台页面需移动到 app/workspace/page.tsx，
+ *       本文件替换 app/page.tsx（详见 README）。
+ */
 
-import { RequestGate } from "@/lib/request-gate";
-import { startPolling } from "@/lib/polling";
+import Link from "next/link";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
-const projectResources = ["detail", "tasks", "chat", "activities", "files"];
-const resourceNames: Record<string, string> = { projects: "项目列表", teams: "团队列表", overview: "统计", notifications: "通知", myTasks: "我的待办", detail: "项目详情", tasks: "项目任务", chat: "团队聊天", activities: "项目日志", files: "文件列表", dms: "私信列表" };
-type LoadState = { loading: boolean; loaded: boolean; error: string | null };
+import { api, type Me, type Overview, type ProjectSummary } from "@/lib/api-client";
+import { useTheme } from "@/components/ws/ThemeProvider";
 
-export default function WorkspacePage() {
-  const router = useRouter();
+import "./home.css";
 
-  /* ---------- 登录守卫 ---------- */
-  const [me, setMe] = useState<Me | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [authError, setAuthError] = useState("");
-  const authenticate = useCallback(async () => {
-    setAuthLoading(true); setAuthError("");
-    try { const d = await api<{ user: Me }>("/api/auth/me"); setMe(d.user); }
-    catch (e) {
-      if (e instanceof ApiError && e.status === 401) router.replace("/login");
-      else setAuthError((e as Error).message);
-    } finally { setAuthLoading(false); }
-  }, [router]);
-  useEffect(() => { void authenticate(); }, [authenticate]);
+/** 工作台路由：原 app/page.tsx 移动后的地址 */
+const WORKSPACE_HREF = "/workspace";
+const LOGIN_HREF = "/login";
 
-  /* ---------- 状态 ---------- */
-  const [railView, setRailView] = useState<RailView>("projects");
-  const [focusSection, setFocusSection] = useState<FocusSection>("tasks");
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [projects, setProjects] = useState<ProjectSummary[]>([]);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [detail, setDetail] = useState<ProjectDetail | null>(null);
-  const [tasks, setTasks] = useState<TaskItem[]>([]);
-  const [myTasks, setMyTasks] = useState<TaskItem[]>([]);
-  const [chat, setChat] = useState<ChatMessage[]>([]);
-  const [activities, setActivities] = useState<ActivityItem[]>([]);
-  const [files, setFiles] = useState<FileItem[]>([]);
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [dmConversations, setDmConversations] = useState<DmConversation[]>([]);
-  const [dmUnreadTotal, setDmUnreadTotal] = useState(0);
-  const [dmTargetId, setDmTargetId] = useState<number | null>(null);
-  const [dmsLoaded, setDmsLoaded] = useState(false);
-  const [docTargetId, setDocTargetId] = useState<number | null>(null);
-  const [overview, setOverview] = useState<Overview | null>(null);
-  const [taskSearch, setTaskSearch] = useState("");
-  const [modal, setModal] = useState<ModalState>(null);
-  const [drawerTaskId, setDrawerTaskId] = useState<number | null>(null);
-  const selectedIdRef = useRef<number | null>(null);
-  const [gate] = useState(() => new RequestGate());
-  const [loads, setLoads] = useState<Record<string, LoadState>>({});
-  const [notice, setNotice] = useState("");
-  useEffect(() => () => gate.cancel(), [gate]);
-  const selectProject = useCallback((id: number | null) => {
-    gate.cancel(["notificationNavigation"]);
-    if (selectedIdRef.current === id) return;
-    gate.cancel(projectResources);
-    selectedIdRef.current = id;
-    setSelectedId(id);
-    setDetail(null); setTasks([]); setChat([]); setActivities([]); setFiles([]);
-    setDrawerTaskId(null); setTaskSearch(""); setNotice("");
-    setModal((m) => m?.type === "newTeam" || m?.type === "newProject" ? m : null);
-    setLoads((prev) => {
-      const next = { ...prev };
-      for (const key of projectResources) next[key] = { loading: id !== null, loaded: false, error: null };
-      return next;
-    });
-  }, [gate]);
-  const loadResource = useCallback(async <T,>(key: string, path: string, commit: (data: T) => void) => {
-    const request = gate.begin(key);
-    setLoads((prev) => ({ ...prev, [key]: { loaded: prev[key]?.loaded ?? false, loading: true, error: null } }));
-    try {
-      const data = await api<T>(path, { signal: request.signal });
-      if (!request.current()) return;
-      commit(data);
-      setLoads((prev) => ({ ...prev, [key]: { loaded: true, loading: false, error: null } }));
-    } catch (e) {
-      if (!request.current()) return;
-      setLoads((prev) => ({ ...prev, [key]: { loaded: prev[key]?.loaded ?? false, loading: false, error: (e as Error).message } }));
-      throw e;
-    } finally { request.finish(); }
-  }, [gate]);
-  const afterSaved = useCallback(async (requests: Promise<void>[]) => {
-    const results = await Promise.allSettled(requests);
-    if (results.some((r) => r.status === "rejected")) setNotice("操作已成功，但部分数据刷新失败。请使用下方重试按钮刷新，无需再次提交。");
+const NAV = [
+  { label: "首页", href: "/", active: true },
+  { label: "工作台", href: WORKSPACE_HREF, active: false },
+  { label: "项目", href: `${WORKSPACE_HREF}#projects`, active: false },
+  { label: "团队", href: `${WORKSPACE_HREF}#teams`, active: false },
+  { label: "文档", href: `${WORKSPACE_HREF}#docs`, active: false },
+] as const;
+
+const CHIPS = ["开箱即用，无需额外配置", "多人实时协作", "面向高校课程项目"] as const;
+
+const STEPS = [
+  {
+    title: "创建或加入团队",
+    desc: "用学校邮箱注册，按学号加入课程团队，或用邀请码组建新团队。",
+  },
+  {
+    title: "建立项目与迭代",
+    desc: "选择课程、设定迭代周期，任务创建后直接进入看板。",
+  },
+  {
+    title: "邀请成员开始协作",
+    desc: "分工、站会、文档与里程碑在同一处同步，进度肉眼可见。",
+  },
+] as const;
+
+type Feature = { tag: string; title: string; desc: string; icon: ReactNode };
+
+const FEATURES: Feature[] = [
+  {
+    tag: "BOARD",
+    title: "任务看板",
+    desc: "待开始 / 进行中 / 已完成三列流转，截止日、优先级与检查清单同步更新。",
+    icon: <IconBoard />,
+  },
+  {
+    tag: "STANDUP",
+    title: "每日站会",
+    desc: "在项目频道完成站会，进展与阻塞自动汇总成当日摘要，不必再逐条追问。",
+    icon: <IconChat />,
+  },
+  {
+    tag: "MILESTONE",
+    title: "里程碑",
+    desc: "把答辩节点、交付物与参考资料挂到同一条时间线上，关键日期不再漏项。",
+    icon: <IconFlag />,
+  },
+  {
+    tag: "DOCS",
+    title: "文档协作",
+    desc: "课程文档在线协作，版本留痕、评论可追溯，随时回到任意一稿。",
+    icon: <IconDoc />,
+  },
+];
+
+type HomeState = {
+  loading: boolean;
+  user: Me | null;
+  overview: Overview | null;
+  projects: ProjectSummary[];
+};
+
+const INITIAL: HomeState = { loading: true, user: null, overview: null, projects: [] };
+
+/* ------------------------------------------------------------------ 工具 */
+
+function greetingWord(hour: number): string {
+  if (hour < 5) return "夜深了";
+  if (hour < 11) return "早上好";
+  if (hour < 14) return "中午好";
+  if (hour < 18) return "下午好";
+  return "晚上好";
+}
+
+function initialsOf(name: string): string {
+  const trimmed = name.trim();
+  return trimmed ? trimmed.slice(0, 1).toUpperCase() : "?";
+}
+
+function displayNameOf(user: Me): string {
+  const name = user.name?.trim();
+  if (name) return name;
+  const mail = user.email.split("@")[0];
+  return mail || "同学";
+}
+
+/** 兼容 "2026-11-30" 与完整 ISO 两种写法 */
+function daysLeft(iso?: string | null): number | null {
+  if (!iso) return null;
+  const target = new Date(iso.length <= 10 ? `${iso}T00:00:00` : iso);
+  if (Number.isNaN(target.getTime())) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((target.getTime() - today.getTime()) / 86_400_000);
+}
+
+function percentOf(project: ProjectSummary): number {
+  const total = project.taskCounts?.total ?? 0;
+  if (!total) return 0;
+  return Math.round(((project.taskCounts?.done ?? 0) / total) * 100);
+}
+
+/* ------------------------------------------------------------------ 页面 */
+
+export default function HomePage() {
+  const [state, setState] = useState<HomeState>(INITIAL);
+  const [hour, setHour] = useState<number | null>(null);
+  const { theme, toggle } = useTheme();
+
+  // 问候语由客户端计算，服务端首帧固定渲染“你好”，避免水合不一致；
+  // rAF 延迟到首帧绘制后，避免 effect 内同步 setState 触发级联渲染
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setHour(new Date().getHours()));
+    return () => cancelAnimationFrame(id);
   }, []);
 
-  /* ---------- 数据加载 ---------- */
-  const refreshProjects = useCallback(async () => {
-    await loadResource<{ projects: ProjectSummary[] }>("projects", "/api/projects", (d) => {
-      setProjects(d.projects);
-      const cur = selectedIdRef.current;
-      if (cur === null || !d.projects.some((p) => p.id === cur)) selectProject(d.projects[0]?.id ?? null);
-    });
-  }, [loadResource, selectProject]);
-  const refreshTeams = useCallback(() => loadResource<{ teams: Team[] }>("teams", "/api/teams", (d) => setTeams(d.teams)), [loadResource]);
-  const refreshOverview = useCallback(() => loadResource<{ overview: Overview }>("overview", "/api/overview", (d) => setOverview(d.overview)), [loadResource]);
-  const refreshNotifications = useCallback(() => loadResource<{ notifications: NotificationItem[]; unreadCount: number }>("notifications", "/api/notifications", (d) => { setNotifications(d.notifications); setUnreadCount(d.unreadCount); }), [loadResource]);
-  const refreshMyTasks = useCallback(() => loadResource<{ tasks: TaskItem[] }>("myTasks", "/api/tasks?mine=1", (d) => setMyTasks(d.tasks)), [loadResource]);
-  const refreshTasks = useCallback(async () => {
-    const id = selectedIdRef.current;
-    if (id !== null) await loadResource<{ tasks: TaskItem[] }>("tasks", `/api/tasks?projectId=${id}`, (d) => setTasks(d.tasks));
-  }, [loadResource]);
-  const refreshDetail = useCallback(async () => {
-    const id = selectedIdRef.current;
-    if (id !== null) await loadResource<ProjectDetail>("detail", `/api/projects/${id}`, setDetail);
-  }, [loadResource]);
-  const refreshChat = useCallback(async () => {
-    const id = selectedIdRef.current;
-    if (id !== null) await loadResource<{ messages: ChatMessage[] }>("chat", `/api/projects/${id}/chat`, (d) => setChat(d.messages));
-  }, [loadResource]);
-  const refreshActivities = useCallback(async () => {
-    const id = selectedIdRef.current;
-    if (id !== null) await loadResource<{ activities: ActivityItem[] }>("activities", `/api/projects/${id}/activities?limit=30`, (d) => setActivities(d.activities));
-  }, [loadResource]);
-  const refreshFiles = useCallback(async () => {
-    const id = selectedIdRef.current;
-    if (id !== null) await loadResource<{ files: FileItem[] }>("files", `/api/projects/${id}/files`, (d) => setFiles(d.files));
-  }, [loadResource]);
-  const refreshDms = useCallback(async () => {
-    await loadResource<{ conversations: DmConversation[]; unreadTotal: number }>("dms", "/api/dm", (d) => {
-      setDmConversations(d.conversations);
-      setDmUnreadTotal(d.unreadTotal);
-      setDmsLoaded(true);
-    });
-  }, [loadResource]);
-
-  const refreshProjectData = useCallback(async () => {
-    await Promise.all([refreshDetail(), refreshTasks(), refreshChat(), refreshActivities(), refreshFiles()]);
-  }, [refreshDetail, refreshTasks, refreshChat, refreshActivities, refreshFiles]);
-
-  // 初始加载 + 轻量轮询（通知/统计/我的任务/私信列表）
   useEffect(() => {
-    if (!me) return;
-    Promise.all([refreshTeams(), refreshProjects(), refreshOverview(), refreshNotifications(), refreshMyTasks(), refreshDms()]).catch(() => {});
-    const stop = [
-      ["notifications", refreshNotifications], ["overview", refreshOverview], ["myTasks", refreshMyTasks],
-      ["dms", refreshDms],
-    ].map(([key, refresh]) => startPolling(() => gate.isPending(key as string) ? Promise.resolve() : (refresh as () => Promise<void>)(), 20000));
-    return () => stop.forEach((cancel) => cancel());
-  }, [me, gate, refreshTeams, refreshProjects, refreshOverview, refreshNotifications, refreshMyTasks, refreshDms]);
+    let alive = true;
 
-  // 切换项目时拉取项目数据
-  useEffect(() => {
-    if (!me || selectedId === null) {
-      return;
-    }
-    refreshProjectData().catch(() => {});
-  }, [me, selectedId, refreshProjectData]);
-
-  // 项目数据轮询；文件库同步其他成员的上传和撤回。
-  useEffect(() => {
-    if (!me || selectedId === null) return;
-    const stopChat = startPolling(() => gate.isPending("chat") ? Promise.resolve() : refreshChat(), 8000);
-    const stopActivities = startPolling(() => gate.isPending("activities") ? Promise.resolve() : refreshActivities(), 8000);
-    const stopDetail = startPolling(() => gate.isPending("detail") ? Promise.resolve() : refreshDetail(), 20000);
-    const syncFiles = () => {
-      if (document.visibilityState === "hidden" || gate.isPending("files")) return Promise.resolve();
-      return refreshFiles();
-    };
-    const stopFiles = startPolling(syncFiles, 20000);
-    const onFilesVisible = () => { void syncFiles().catch(() => {}); };
-    window.addEventListener("focus", onFilesVisible);
-    document.addEventListener("visibilitychange", onFilesVisible);
-    return () => {
-      stopChat(); stopActivities(); stopDetail(); stopFiles();
-      window.removeEventListener("focus", onFilesVisible);
-      document.removeEventListener("visibilitychange", onFilesVisible);
-    };
-  }, [me, selectedId, gate, refreshChat, refreshActivities, refreshDetail, refreshFiles]);
-
-  /* ---------- 动作 ---------- */
-  const afterProjectMutation = useCallback(async () => {
-    await afterSaved([refreshProjects(), refreshTeams(), refreshOverview()]);
-  }, [refreshProjects, refreshTeams, refreshOverview, afterSaved]);
-
-  const afterTaskMutation = useCallback(async () => {
-    await afterSaved([refreshTasks(), refreshProjects(), refreshActivities(), refreshMyTasks(), refreshOverview()]);
-  }, [refreshTasks, refreshProjects, refreshActivities, refreshMyTasks, refreshOverview, afterSaved]);
-
-  const store: WorkspaceStore = useMemo(() => ({
-    me: me!,
-    railView, setRailView: (view) => { gate.cancel(["notificationNavigation"]); setRailView(view); },
-    focusSection, setFocusSection: (section) => { gate.cancel(["notificationNavigation"]); setFocusSection(section); },
-    teams, projects, selectedId, detail, tasks, myTasks, chat, activities, files,
-    notifications, unreadCount, overview,
-    dmConversations, dmUnreadTotal, dmTargetId, dmsLoaded,
-    refreshDms, docTargetId,
-    openDoc: (id) => { gate.cancel(["notificationNavigation"]); setDocTargetId(id); setRailView("docs"); },
-    taskSearch, setTaskSearch,
-    selectProject,
-    openDmConversation: (id) => { gate.cancel(["notificationNavigation"]); setDmTargetId(id); setRailView("messages"); },
-    async openDmWithPeer(peerId) {
-      const d = await api<{ conversation: { id: number } }>("/api/dm", { method: "POST", json: { peerId } });
-      await afterSaved([refreshDms()]);
-      gate.cancel(["notificationNavigation"]);
-      setDmTargetId(d.conversation.id);
-      setRailView("messages");
-    },
-    async hideDmConversation(id) {
-      await api(`/api/dm/${id}/hide`, { method: "PUT", json: {} });
-      await afterSaved([refreshDms()]);
-      setDmTargetId((current) => current === id ? null : current);
-    },
-    async deleteDmConversation(id) {
-      await api(`/api/dm/${id}`, { method: "DELETE" });
-      await afterSaved([refreshDms(), refreshNotifications()]);
-      setDmTargetId((current) => current === id ? null : current);
-    },
-    async updateDmSettings(id, patch) {
-      await api(`/api/dm/${id}/settings`, { method: "PUT", json: patch });
-      await afterSaved([refreshDms()]);
-    },
-    modal, openModal: setModal, closeModal: () => setModal(null),
-    drawerTaskId,
-    openTask: (id) => { gate.cancel(["notificationNavigation"]); setDrawerTaskId(id); },
-    closeTask: () => setDrawerTaskId(null),
-    refreshTeams, refreshProjects, refreshProjectData, refreshTasks, refreshChat, refreshActivities, refreshFiles, refreshNotifications, refreshMyTasks,
-
-    async createTeam(name, description) {
-      await api("/api/teams", { method: "POST", json: { name, description: description ?? null } });
-      await afterProjectMutation();
-    },
-    async deleteWorkspaceItem(kind, id) {
-      await api(`/api/${kind === "project" ? "projects" : "teams"}/${id}`, { method: "DELETE" });
-      toast(`已删除${kind === "project" ? "项目" : "团队"}`);
-      const removesSelection = kind === "project"
-        ? selectedIdRef.current === id
-        : projects.some((p) => p.id === selectedIdRef.current && p.teamId === id);
-      if (removesSelection) {
-        selectProject(null);
-        setDetail(null); setTasks([]); setChat([]); setActivities([]); setFiles([]);
-      }
-      // 删除已成功，立即移除本地列表；刷新失败不应让用户再次删除。
-      setProjects((items) => items.filter((p) => kind === "project" ? p.id !== id : p.teamId !== id));
-      if (kind === "team") setTeams((items) => items.filter((t) => t.id !== id));
-      await afterSaved([
-        refreshProjects(), refreshTeams(), refreshOverview(), refreshMyTasks(), refreshNotifications(),
-      ]);
-    },
-    async createProject(teamId, name, key, description, courseName) {
-      const d = await api<{ project: { id: number } }>("/api/projects", {
-        method: "POST", json: { teamId, name, key, description: description ?? null, courseName: courseName ?? null },
-      });
-      await afterSaved([refreshProjects()]);
-      selectProject(d.project.id);
-    },
-    async createTask(input) {
-      await api("/api/tasks", { method: "POST", json: input });
-      await afterTaskMutation();
-    },
-    async updateTask(id, patch) {
-      await api(`/api/tasks/${id}`, { method: "PUT", json: patch });
-      await afterTaskMutation();
-    },
-    async deleteTask(id) {
-      await api(`/api/tasks/${id}`, { method: "DELETE" });
-      setTasks((items) => items.filter((t) => t.id !== id));
-      await afterSaved([refreshTasks(), refreshProjects(), refreshActivities(), refreshMyTasks(), refreshOverview(), refreshFiles()]);
-    },
-    async createSprint(input) {
-      const id = selectedIdRef.current;
-      if (!id) return;
-      await api(`/api/projects/${id}/sprints`, { method: "POST", json: input });
-      await afterSaved([refreshDetail(), refreshProjects()]);
-    },
-    async completeSprint(sprintId) {
-      await api(`/api/sprints/${sprintId}`, { method: "PUT", json: { status: "completed" } });
-      await afterSaved([refreshDetail(), refreshProjects()]);
-    },
-    async inviteMember(email) {
-      const d = detail;
-      if (!d) return;
-      await api(`/api/teams/${d.team.id}/members`, { method: "POST", json: { email } });
-      toast("成员已加入团队");
-      await afterSaved([refreshDetail(), refreshProjects()]);
-    },
-    async toggleStar(projectId) {
-      const wasStarred = projects.some((p) => p.id === projectId && p.starred);
-      await api(`/api/projects/${projectId}/star`, { method: "POST", json: {} });
-      toast(wasStarred ? "已取消收藏" : "已收藏项目");
-      await afterSaved([refreshProjects(), refreshDetail()]);
-    },
-    async sendChat(content, opts) {
-      const id = selectedIdRef.current;
-      if (!id) return;
-      await api(`/api/projects/${id}/chat`, {
-        method: "POST",
-        json: { content, replyToId: opts?.replyToId ?? null, taskId: opts?.taskId ?? null },
-      });
-      await afterSaved([refreshChat()]);
-    },
-    async toggleLike(messageId, emoji) {
-      await api(`/api/chat/${messageId}/like`, { method: "POST", json: { emoji: emoji ?? "👍" } });
-      await afterSaved([refreshChat()]);
-    },
-    async togglePin(messageId, pinned) {
-      await api(`/api/chat/${messageId}/pin`, { method: "PUT", json: { pinned } });
-      await afterSaved([refreshChat()]);
-    },
-    async uploadProjectFile(file) {
-      const id = selectedIdRef.current;
-      if (!id) throw new Error("请先选择项目");
-      // 聊天输入区的文件上传：chatFile=1 同时生成聊天文件消息（QQ 式留在聊天记录）
-      const d = await apiUpload<{ file: { originalName: string } }>(`/api/projects/${id}/files`, file, undefined, undefined, { chatFile: "1" });
-      await afterSaved([refreshFiles()]);
-      return d.file.originalName;
-    },
-    async withdrawFile(id) {
-      await api(`/api/files/${id}`, { method: "DELETE" });
-      setFiles((items) => items.filter((f) => f.id !== id));
-      await afterSaved([refreshFiles(), refreshActivities()]);
-    },
-    async uploadTaskFile(taskId, file) {
-      const id = selectedIdRef.current;
-      if (!id) throw new Error("请先选择项目");
-      await apiUpload(`/api/projects/${id}/files`, file, taskId);
-      await afterSaved([refreshFiles()]);
-    },
-    async markRead(ids) {
-      await api("/api/notifications", { method: "PUT", json: ids?.length ? { ids } : { all: true } });
-      await afterSaved([refreshNotifications()]);
-    },
-    async openNotification(notification) {
-      const request = gate.begin("notificationNavigation");
+    const run = async () => {
+      let user: Me | null = null;
       try {
-        const target = await resolveNotificationTarget(notification, request.signal);
-        if (!request.current()) return false;
-        if (target && target.section !== "dm" && target.section !== "docs" && !projects.some((project) => project.id === target.projectId)) {
-          await loadResource<{ projects: ProjectSummary[] }>("projects", "/api/projects", (data) => setProjects(data.projects));
-          if (!request.current()) return false;
-        }
-        let readFailed = false;
-        if (!notification.read) {
-          try { await api("/api/notifications", { method: "PUT", json: { ids: [notification.id] } }); }
-          catch { readFailed = true; }
-        }
-        if (!request.current()) return false;
-        if (!target) {
-          void refreshNotifications().catch(() => {});
-          throw new Error("这条通知没有可打开的关联内容。");
-        }
-        if (target.section === "dm") {
-          setDmTargetId(target.dmConversationId);
-          setRailView("messages");
-        } else if (target.section === "docs") {
-          setDocTargetId(target.docId);
-          setRailView("docs");
-        } else {
-          selectProject(target.projectId);
-          setRailView("projects"); setFocusSection(target.section); setTaskSearch("");
-          setDrawerTaskId(target.taskId ?? null);
-        }
-        if (readFailed) setNotice("内容已打开，但未能标记已读，请稍后重试。");
-        void refreshNotifications().catch(() => {});
-        return true;
-      } catch (error) {
-        if (!request.current()) return false;
-        throw error;
-      } finally { request.finish(); }
-    },
-  }), [
-    me, railView, focusSection, teams, projects, selectedId, detail, tasks, myTasks, chat,
-    activities, files, notifications, unreadCount, overview, dmConversations, dmUnreadTotal, dmTargetId, dmsLoaded, docTargetId,
-    taskSearch, modal, drawerTaskId,
-    selectProject, refreshProjects, refreshProjectData, refreshTasks, refreshChat,
-    refreshActivities, refreshFiles, refreshNotifications, refreshMyTasks, refreshDetail, refreshTeams, refreshOverview, refreshDms,
-    afterProjectMutation, afterTaskMutation, afterSaved,
-    gate,
-    loadResource,
-  ]);
+        const data = await api<{ user: Me }>("/api/auth/me");
+        user = data.user;
+      } catch {
+        user = null; // 未登录：按访客态展示，不视为错误
+      }
+      if (!alive) return;
+      setState((prev) => ({ ...prev, user, loading: false }));
+      if (!user) return;
 
-  /* ---------- 渲染 ---------- */
-  if (authLoading) return <div className="ws-empty" role="status">正在加载工作空间…</div>;
-  if (!me) return <div className="ws-empty" role="alert">{authError || "正在前往登录页面…"}{authError && <button className="ws-btn" onClick={() => void authenticate()}>重试</button>}</div>;
-  const retries: Record<string, () => Promise<void>> = { projects: refreshProjects, teams: refreshTeams, overview: refreshOverview, notifications: refreshNotifications, myTasks: refreshMyTasks, detail: refreshDetail, tasks: refreshTasks, chat: refreshChat, activities: refreshActivities, files: refreshFiles };
-  const activeKey = railView === "todos" ? "myTasks" : railView === "notifications" ? "notifications" : railView === "messages" ? "dms" : railView === "docs" ? "docs" : railView === "projectManagement" ? "projects" : railView === "teamManagement" ? "teams" : focusSection === "tasks" ? "tasks" : focusSection === "chat" ? "chat" : "files";
-  const initialPending = loads[activeKey] && !loads[activeKey].loaded && (loads[activeKey].loading || loads[activeKey].error);
+      const [overviewRes, projectsRes] = await Promise.all([
+        api<{ overview: Overview }>("/api/overview").catch(() => null),
+        api<{ projects: ProjectSummary[] }>("/api/projects").catch(() => null),
+      ]);
+      if (!alive) return;
+      setState((prev) => ({
+        ...prev,
+        overview: overviewRes?.overview ?? prev.overview,
+        projects: projectsRes?.projects ?? prev.projects,
+      }));
+    };
 
-  const project = projects.find((p) => p.id === selectedId);
+    void run();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const { user, overview, projects, loading } = state;
+  const name = user ? displayNameOf(user) : "";
+  const greetWord = hour === null ? "你好" : greetingWord(hour);
+
+  const activeProjects = useMemo(
+    () =>
+      [...projects]
+        .sort(
+          (a, b) =>
+            Number(b.starred) - Number(a.starred) ||
+            (b.taskCounts?.total ?? 0) - (a.taskCounts?.total ?? 0),
+        )
+        .slice(0, 4),
+    [projects],
+  );
+
+  const doneRate =
+    overview && overview.taskTotal > 0
+      ? Math.round((overview.taskDone / overview.taskTotal) * 100)
+      : 0;
+
+  const myOpen = (overview?.myTodo ?? 0) + (overview?.myDoing ?? 0);
 
   return (
-    <WorkspaceContext.Provider value={store}>
-      <ScaleFrame>
-        <div className="ws-app">
-        <IconRail />
-        {railView === "projects" && <ProjectSidebar />}
+    <div className="ac-home">
+      {/* ------------------------------------------------------------ 导航 */}
+      <header className="ac-nav">
+        <div className="ac-nav__inner">
+          <Link className="ac-brand" href="/" aria-label="AgileCampus 首页">
+            <span className="ac-brand__mark" aria-hidden="true">
+              <IconLogo />
+            </span>
+            <span className="ac-brand__text">
+              <strong>AgileCampus</strong>
+              <i aria-hidden="true" />
+              <span>敏捷校园</span>
+            </span>
+          </Link>
 
-        <div className="ws-main">
-          <TopBar />
-          {notice && <div className="ws-error" role="status">{notice}<button className="ws-btn" onClick={() => setNotice("")}>关闭</button></div>}
-          {Object.entries(loads).filter(([, state]) => state.error).map(([key, state]) => <div className="ws-error" role="alert" key={key}>{resourceNames[key]}加载失败：{state.error} <button className="ws-btn" disabled={state.loading} onClick={() => void retries[key]().catch(() => {})}>{state.loading ? "重试中…" : "重试"}</button></div>)}
-          <div className="ws-body">
-            <div className="ws-center" id="ws-center">
-              {initialPending && railView !== "messages" && railView !== "docs" && (loads[activeKey].error
-                ? <div className="ws-empty" role="alert">加载失败，请点击上方重试</div>
-                : activeKey === "tasks" ? <TaskListSkeleton />
-                : activeKey === "chat" ? <ConversationSkeleton rows={5} />
-                : <div className="ws-empty" role="status">正在加载{resourceNames[activeKey]}…</div>)}
-              {!initialPending && railView === "projects" && focusSection === "tasks" && <TaskPanel key={selectedId} />}
-              {railView === "projects" && focusSection === "chat" && !initialPending && <ChatPanel key={selectedId} />}
-              {railView === "projects" && focusSection === "space" && !initialPending && <SpacePanel key={selectedId} />}
-              {railView === "projectManagement" && <ManagementPanel kind="project" />}
-              {railView === "teamManagement" && <ManagementPanel key="teams" kind="team" />}
-              {railView === "todos" && !initialPending && <TodosView />}
-              {railView === "notifications" && !initialPending && <NotificationsView />}
-              {railView === "messages" && <MessagesPanel />}
-              {railView === "docs" && <DocsPanel />}
-              {railView === "today" && <TodayPanel />}
-            </div>
-            {railView === "projects" && <ProjectActivitySidebar />}
-          </div>
-          <div className="ws-statusbar">
-            <span className="ws-dot" /> {Object.values(loads).some((s) => s.error) ? "部分数据加载失败" : "工作空间"}
-            <span>· {project ? project.name : "未选择项目"}</span>
-            <span>· {detail?.members.length ?? 0} 位成员</span>
-            <span style={{ marginLeft: "auto" }}>AgileCampus 敏捷校园</span>
+          <nav className="ac-nav__links" aria-label="主导航">
+            {NAV.map((item) => (
+              <Link
+                key={item.label}
+                href={item.href}
+                className={`ac-nav__link${item.active ? " ac-nav__link--active" : ""}`}
+                aria-current={item.active ? "page" : undefined}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+
+          <div className="ac-nav__actions">
+            <button
+              type="button"
+              className="ac-theme-btn"
+              onClick={toggle}
+              aria-label={theme === "night" ? "切换日间模式" : "切换夜间模式"}
+              title={theme === "night" ? "切换日间模式" : "切换夜间模式"}
+            >
+              {theme === "night" ? <IconSun /> : <IconMoon />}
+            </button>
+            {user ? (
+              <span className="ac-user">
+                <span className="ac-user__avatar" aria-hidden="true">
+                  {initialsOf(name)}
+                </span>
+                <span>{name}</span>
+              </span>
+            ) : (
+              <Link className="ac-btn ac-btn--ghost" href={LOGIN_HREF}>
+                登录
+              </Link>
+            )}
+            <Link className="ac-btn ac-btn--primary" href={WORKSPACE_HREF}>
+              进入工作台
+              <IconArrow />
+            </Link>
           </div>
         </div>
-      </div>
+      </header>
 
-      <TaskDrawer key={`${selectedId}-${drawerTaskId}`} />
+      <main>
+        {/* ---------------------------------------------------------- 首屏 */}
+        <section className="ac-hero">
+          <div className="ac-hero__copy">
+            <span className="ac-eyebrow">
+              <i aria-hidden="true" />
+              Agile · 校园敏捷协作平台
+            </span>
 
-      {modal?.type === "newTeam" && <NewTeamModal onClose={() => setModal(null)} />}
-      {modal?.type === "newProject" && <NewProjectModal onClose={() => setModal(null)} />}
-      {modal?.type === "newTask" && (selectedId ? <NewTaskModal onClose={() => setModal(null)} /> : null)}
-      {modal?.type === "newSprint" && (selectedId ? <NewSprintModal onClose={() => setModal(null)} /> : null)}
-      {modal?.type === "invite" && (detail ? <InviteModal onClose={() => setModal(null)} /> : null)}
-      </ScaleFrame>
+            <h1 className="ac-title">
+              把课程项目
+              <br />
+              做得<em>清晰而漂亮</em>
+            </h1>
 
-      <ToastHost />
-      <CommandPalette />
-      <ShortcutsPanel />
-    </WorkspaceContext.Provider>
+            <p className="ac-lead">
+              分工、看板、站会、文档与里程碑，收进同一个工作台。
+              <br className="ac-lead__br" />
+              从开学第一周到结课答辩，团队的节奏始终清晰。
+            </p>
+
+            <div className="ac-cta">
+              <Link
+                className="ac-btn ac-btn--primary ac-btn--lg"
+                href={user ? WORKSPACE_HREF : LOGIN_HREF}
+              >
+                {user ? "进入工作台" : "登录并开始"}
+                <IconArrow />
+              </Link>
+              <a className="ac-btn ac-btn--ghost ac-btn--lg" href="#features">
+                看看它能做什么
+              </a>
+            </div>
+
+            <ul className="ac-chips">
+              {CHIPS.map((text) => (
+                <li className="ac-chip" key={text}>
+                  <IconCheck />
+                  {text}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* 视觉：一个数据焦点，其余留白 */}
+          <div className="ac-art" aria-hidden="true">
+            <div className="ac-art__stage">
+              <div className="ac-art__glow" />
+              <div className="ac-art__guide" />
+              <div className="ac-art__guide ac-art__guide--inner" />
+              <div className="ac-art__ring" />
+              <div className="ac-art__orbit" />
+
+              <div className="ac-art__core">
+                <span className="ac-art__num">
+                  68<span>%</span>
+                </span>
+                <span className="ac-art__cap">本迭代完成度</span>
+              </div>
+
+              <div className="ac-art__tag ac-art__tag--top">
+                <i />
+                Sprint 14 · 进行中
+              </div>
+              <div className="ac-art__tag ac-art__tag--bottom">
+                剩余 9 天 <span aria-hidden="true">·</span> 4 位成员
+              </div>
+            </div>
+
+            <ul className="ac-art__legend">
+              <li>
+                <em />
+                <b>12</b> 已完成
+              </li>
+              <li>
+                <em />
+                <b>4</b> 进行中
+              </li>
+              <li>
+                <em />
+                <b>2</b> 待开始
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        {/* -------------------------------------------- 已登录：我的概览 */}
+        {user ? (
+          <section className="ac-section" aria-labelledby="ac-overview">
+            <h2 className="ac-greet" id="ac-overview">
+              {greetWord}，{name}
+              <span>
+                {myOpen > 0
+                  ? `今天有 ${myOpen} 项任务需要推进`
+                  : "今天没有待办，可以去看看里程碑"}
+              </span>
+            </h2>
+
+            <div className="ac-stats">
+              <div className="ac-stat">
+                <span className="ac-stat__label">我的团队</span>
+                <span className="ac-stat__value">
+                  {loading ? "—" : (overview?.teamCount ?? 0)}
+                </span>
+                <span className="ac-stat__meta">已加入的团队</span>
+              </div>
+              <div className="ac-stat">
+                <span className="ac-stat__label">进行中项目</span>
+                <span className="ac-stat__value">
+                  {loading ? "—" : (overview?.projectCount ?? 0)}
+                </span>
+                <span className="ac-stat__meta">状态为 active</span>
+              </div>
+              <div className="ac-stat">
+                <span className="ac-stat__label">任务完成</span>
+                <span className="ac-stat__value">
+                  {loading ? "—" : (overview?.taskDone ?? 0)}
+                  <small>/ {loading ? "—" : (overview?.taskTotal ?? 0)}</small>
+                </span>
+                <span className="ac-stat__meta">完成率 {loading ? "—" : `${doneRate}%`}</span>
+              </div>
+              <div className="ac-stat">
+                <span className="ac-stat__label">我的待办</span>
+                <span className="ac-stat__value">{loading ? "—" : (overview?.myTodo ?? 0)}</span>
+                <span className="ac-stat__meta">进行中 {loading ? "—" : (overview?.myDoing ?? 0)} 项</span>
+              </div>
+            </div>
+          </section>
+        ) : (
+          /* ------------------------------------------ 访客：三步开始 */
+          <section className="ac-section">
+            <div className="ac-start">
+              <div className="ac-start__body">
+                <span className="ac-kicker">Get started</span>
+                <h2 className="ac-h2">三步，开始你的第一个敏捷项目</h2>
+                <p className="ac-section__desc">
+                  用学校邮箱注册，加入课程团队，剩下的交给工作台。第一次使用大约需要两分钟。
+                </p>
+                <Link className="ac-btn ac-btn--primary ac-btn--lg" href={LOGIN_HREF}>
+                  登录 / 注册
+                  <IconArrow />
+                </Link>
+              </div>
+
+              <ol className="ac-steps">
+                {STEPS.map((step, index) => (
+                  <li className="ac-step" key={step.title}>
+                    <span className="ac-step__n">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <div>
+                      <b>{step.title}</b>
+                      <p>{step.desc}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </section>
+        )}
+
+        {/* ------------------------------------------ 已登录：进行中的项目 */}
+        {user && (
+          <section className="ac-section" aria-labelledby="ac-projects">
+            <div className="ac-section__head">
+              <div>
+                <span className="ac-kicker">Workspace</span>
+                <h2 className="ac-h2" id="ac-projects">
+                  进行中的项目
+                </h2>
+              </div>
+              <Link className="ac-link" href={WORKSPACE_HREF}>
+                查看全部
+                <IconArrow />
+              </Link>
+            </div>
+
+            {activeProjects.length > 0 ? (
+              <div className="ac-projects">
+                {activeProjects.map((project) => {
+                  const percent = percentOf(project);
+                  const remaining = daysLeft(project.activeSprint?.endsOn);
+                  const meta = [project.courseName, project.teamName]
+                    .filter(Boolean)
+                    .join(" · ");
+                  return (
+                    <article className="ac-project" key={project.id}>
+                      <span className="ac-project__badge" aria-hidden="true">
+                        {(project.key || "AC").slice(0, 4).toUpperCase()}
+                      </span>
+
+                      <div>
+                        <div className="ac-project__title">
+                          {project.name}
+                          <em>
+                            {project.starred ? "已收藏" : "项目"} ·{" "}
+                            {project.activeSprint?.name ?? "暂无迭代"}
+                          </em>
+                        </div>
+                        <div className="ac-project__meta">
+                          {meta || "未填写课程与团队"}
+                          {remaining !== null && (
+                            <>
+                              {" · "}
+                              {remaining >= 0 ? `迭代剩余 ${remaining} 天` : `迭代已超期 ${-remaining} 天`}
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="ac-project__progress">
+                        <span className="ac-bar" aria-hidden="true">
+                          <i style={{ width: `${percent}%` }} />
+                        </span>
+                        <span>{percent}%</span>
+                      </div>
+
+                      <div className="ac-avatars ac-project__people">
+                        {project.members.slice(0, 4).map((member) => (
+                          <span
+                            className="ac-avatar"
+                            key={member.userId}
+                            title={member.name}
+                            aria-label={member.name}
+                          >
+                            {initialsOf(member.name)}
+                          </span>
+                        ))}
+                        {project.members.length > 4 && (
+                          <span className="ac-avatar ac-avatar--more">
+                            +{project.members.length - 4}
+                          </span>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="ac-empty">
+                <p>还没有进行中的项目。先在团队里创建一个，任务就会出现在工作台。</p>
+                <Link className="ac-btn ac-btn--ghost" href={WORKSPACE_HREF}>
+                  去工作台创建
+                  <IconArrow />
+                </Link>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* -------------------------------------------------------- 能力矩阵 */}
+        <section className="ac-section" id="features" aria-labelledby="ac-features">
+          <div className="ac-section__head ac-section__head--center">
+            <span className="ac-kicker">Capabilities</span>
+            <h2 className="ac-h2" id="ac-features">
+              一个工作台，覆盖课程项目全流程
+            </h2>
+            <p className="ac-section__desc">
+              分工、进度、沟通与文档不再散落在五个工具里。每个环节都有明确的位置，
+              团队只需要关心一件事：把事情做完。
+            </p>
+          </div>
+
+          <div className="ac-features">
+            {FEATURES.map((feature) => (
+              <article className="ac-feature" key={feature.tag}>
+                <span className="ac-feature__tag">{feature.tag}</span>
+                <span className="ac-feature__icon">{feature.icon}</span>
+                <h3>{feature.title}</h3>
+                <p>{feature.desc}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      </main>
+
+      {/* -------------------------------------------------------------- 页脚 */}
+      <footer className="ac-footer">
+        <div className="ac-footer__inner">
+          <Link className="ac-brand" href="/">
+            <span className="ac-brand__mark" aria-hidden="true">
+              <IconLogo />
+            </span>
+            <span className="ac-brand__text">
+              <strong>AgileCampus</strong>
+              <i aria-hidden="true" />
+              <span>敏捷校园</span>
+            </span>
+          </Link>
+          <p className="ac-footer__note">面向高校学生团队的敏捷协作平台 · 课程项目管理工具</p>
+          <span className="ac-footer__ver">v6.2</span>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ 图标 */
+
+function IconLogo() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M5.6 18.4 12 5.6l6.4 12.8M8.8 13.6h6.4"
+        stroke="currentColor"
+        strokeWidth="2.1"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function IconArrow() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path
+        d="M4 10h11M11 5.5 15.5 10 11 14.5"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function IconSun() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <circle cx="10" cy="10" r="3.4" stroke="currentColor" strokeWidth="1.6" />
+      <path
+        d="M10 2.6v1.8M10 15.6v1.8M2.6 10h1.8M15.6 10h1.8M4.8 4.8l1.3 1.3M13.9 13.9l1.3 1.3M15.2 4.8l-1.3 1.3M6.1 13.9l-1.3 1.3"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function IconMoon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path
+        d="M15.4 12.4A6.4 6.4 0 0 1 7.6 4.6a6.4 6.4 0 1 0 7.8 7.8Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function IconCheck() {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="8" cy="8" r="6.2" stroke="currentColor" strokeWidth="1.2" opacity=".45" />
+      <path
+        d="m5.4 8.2 1.8 1.8 3.4-3.8"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function IconBoard() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="3.5" y="4.5" width="5" height="15" rx="1.6" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="9.5" y="4.5" width="5" height="9.5" rx="1.6" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="15.5" y="4.5" width="5" height="12" rx="1.6" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+function IconChat() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M20.5 12.4c0 3.9-3.8 7-8.5 7-1 0-2-.1-2.9-.4L4.2 20.4l1.3-3.3A6.6 6.6 0 0 1 3.5 12.4c0-3.9 3.8-7 8.5-7s8.5 3.1 8.5 7Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path d="M8.6 12h6.8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconFlag() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M6 20.5V4.2M6 5h9.4l-1.6 3.3 1.6 3.3H6"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function IconDoc() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M13.8 3.5H7.2c-.9 0-1.6.7-1.6 1.6v13.8c0 .9.7 1.6 1.6 1.6h9.6c.9 0 1.6-.7 1.6-1.6V8.2l-4.6-4.7Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M13.6 4v4.2h4.4M9 12.6h6M9 16h4.2"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
