@@ -16,6 +16,8 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { api, type Me, type Overview, type ProjectSummary } from "@/lib/api-client";
 import { useTheme } from "@/components/ws/ThemeProvider";
+import { DailyReportCard } from "@/components/ws/DailyReportCard";
+import { HomeCalendar } from "@/components/ws/HomeCalendar";
 
 import "./home.css";
 
@@ -380,6 +382,23 @@ export default function HomePage() {
                 <span className="ac-stat__meta">进行中 {loading ? "—" : (overview?.myDoing ?? 0)} 项</span>
               </div>
             </div>
+
+            {!loading && overview && overview.taskTotal > 0 && (
+              <div className="ac-progress" role="group" aria-label="任务进度">
+                <span className="ac-progress__num">
+                  任务进度 {overview.taskDone}/{overview.taskTotal}（{doneRate}%）
+                </span>
+                <div className="ac-progress__track" aria-hidden="true">
+                  <div
+                    className={`ac-progress__fill${doneRate >= 100 ? " full" : ""}`}
+                    style={{ width: `${doneRate}%` }}
+                  />
+                </div>
+                <span className="ac-progress__meta">
+                  待办 {overview.myTodo} · 进行中 {overview.myDoing} · 已完成 {overview.taskDone}
+                </span>
+              </div>
+            )}
           </section>
         ) : (
           /* ------------------------------------------ 访客：三步开始 */
@@ -410,6 +429,25 @@ export default function HomePage() {
                   </li>
                 ))}
               </ol>
+            </div>
+          </section>
+        )}
+
+        {/* -------------------------------------- 已登录：AI 日报与日历 */}
+        {user && (
+          <section className="ac-section" aria-labelledby="ac-daily">
+            <div className="ac-section__head">
+              <div>
+                <span className="ac-kicker">Today</span>
+                <h2 className="ac-h2" id="ac-daily">
+                  AI 日报与日历
+                </h2>
+              </div>
+            </div>
+
+            <div className="ac-dash">
+              <DailyReportCard />
+              <HomeCalendar />
             </div>
           </section>
         )}
