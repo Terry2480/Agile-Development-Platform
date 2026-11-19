@@ -1,0 +1,34 @@
+<Slide style={{ width: '1280px', height: '720px', background: '#F5F5F5', padding: '60px' }}>
+  <Box style={{ width: '100%', height: '100%', flexDirection: 'row', gap: 40 }}>
+    <Box style={{ width: 340, height: '100%', background: '#334EAC', padding: 32, flexDirection: 'column', justifyContent: 'space-between' }}>
+      <Text style={{ fontSize: 16, color: '#C9D4F5', letterSpacing: 3 }}>02 / 方法</Text>
+      <Box>
+        <Text style={{ fontSize: 64, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.15 }}>方法<br />PERSONA</Text>
+        <Box style={{ height: 24 }} />
+        <Text style={{ fontSize: 18, color: '#DCE4FA', lineHeight: 1.6 }}>基于 Allen Cooper 的典型用户建模方法，用少量差异鲜明的角色代表真实用户群体。</Text>
+      </Box>
+      <Text style={{ fontSize: 14, color: '#AABBE8' }}>交互设计课程项目 · 2026.11</Text>
+    </Box>
+    <Box style={{ flex: 1, height: '100%', flexDirection: 'column', justifyContent: 'space-between' }}>
+      <Box>
+        <Text style={{ fontSize: 34, fontWeight: 'bold', color: '#081F5C' }}>我们如何建模</Text>
+        <Box style={{ height: 10, width: '100%', borderBottom: '1px solid #D4D7E0' }} />
+      </Box>
+      <Box style={{ flexDirection: 'row', gap: 36 }}>
+        <Box style={{ flex: 1, gap: 14 }}>
+          <Text style={{ fontSize: 16, color: '#2A5E96', fontWeight: 'bold' }}>PERSONA 七要素</Text>
+          <Text style={{ fontSize: 17, color: '#20346B', lineHeight: 1.5 }}><span style={{ fontWeight: 'bold', color: '#334EAC' }}>P  Primary</span>　基于真实访谈<br /><span style={{ fontWeight: 'bold', color: '#334EAC' }}>E  Empathy</span>　能引发同理心<br /><span style={{ fontWeight: 'bold', color: '#334EAC' }}>R  Realistic</span>　像真实的人<br /><span style={{ fontWeight: 'bold', color: '#334EAC' }}>S  Singular</span>　彼此差异鲜明</Text>
+        </Box>
+        <Box style={{ flex: 1, gap: 14 }}>
+          <Text style={{ fontSize: 16, color: '#2A5E96', fontWeight: 'bold' }}>建模循环</Text>
+          <Text style={{ fontSize: 17, color: '#20346B', lineHeight: 1.5 }}><span style={{ fontWeight: 'bold', color: '#334EAC' }}>O  Objectives</span>　包含高层目标<br /><span style={{ fontWeight: 'bold', color: '#334EAC' }}>N  Number</span>　数量少到记得住<br /><span style={{ fontWeight: 'bold', color: '#334EAC' }}>A  Applicable</span>　可用于设计决策</Text>
+          <Text style={{ fontSize: 16, color: '#737FA1', lineHeight: 1.5 }}>拼凑 → 组织 → 细节 → 求精，循环反复。</Text>
+        </Box>
+      </Box>
+      <Box style={{ background: '#334EAC', padding: 20, gap: 6 }}>
+        <Text style={{ fontSize: 17, color: '#FFFFFF', fontWeight: 'bold' }}>数据声明</Text>
+        <Text style={{ fontSize: 16, color: '#DCE4FA', lineHeight: 1.5 }}>以下三个人物是基于项目功能与校园场景推导的初版假设，尚待访谈与问卷验证，不是头脑风暴的结论。</Text>
+      </Box>
+    </Box>
+  </Box>
+</Slide>

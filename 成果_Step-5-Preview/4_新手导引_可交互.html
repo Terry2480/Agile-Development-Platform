@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgileCampus 新手导引</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif}
+body{background:#f7f9fc;color:#192238;--blue:#294a78;--soft:#e8eef8;--accent:#bf6a34;--line:#e6e9f0;--mute:#687386}
+.top{height:64px;display:flex;align-items:center;gap:28px;padding:0 36px;background:#fff;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px}
+.logo{width:30px;height:30px;border-radius:9px;background:var(--blue);color:#fff;display:grid;place-items:center;font-weight:700}
+.brand em{font-style:normal;font-size:12px;color:var(--accent);background:#fbf1e9;padding:3px 9px;border-radius:20px;margin-left:4px;font-weight:500}
+.progress{display:flex;align-items:center;gap:12px;flex:1;max-width:360px}
+.track{flex:1;height:6px;background:var(--soft);border-radius:6px;overflow:hidden}
+.track span{display:block;height:100%;background:linear-gradient(90deg,var(--blue),var(--accent));border-radius:6px;transition:width .4s}
+.progress small{color:var(--mute);font-size:12px;white-space:nowrap}
+.skip{margin-left:auto;color:var(--blue);font-size:13px;text-decoration:none;cursor:pointer}
+.skip:hover{text-decoration:underline}
+.layout{display:flex;max-width:1240px;margin:0 auto;padding:32px 28px 60px;gap:32px}
+.side{width:210px;flex:0 0 210px}
+.side-title{margin:4px 0 14px;font-size:12px;color:var(--mute);letter-spacing:.1em}
+.side ol{list-style:none;position:relative}
+.side ol::before{content:"";position:absolute;left:15px;top:18px;bottom:18px;width:1px;background:var(--line)}
+.side li{position:relative;margin-bottom:4px}
+.step{width:100%;display:flex;align-items:center;gap:12px;padding:9px 10px;border:0;border-radius:9px;background:transparent;color:var(--mute);font-size:13px;cursor:pointer;text-align:left;transition:.18s}
+.step:hover{background:#eef2f8;color:var(--blue)}
+.step.active{background:var(--soft);color:var(--blue);font-weight:600}
+.num{width:26px;height:26px;flex:0 0 26px;border-radius:50%;background:#fff;border:1px solid var(--line);display:grid;place-items:center;font-size:12px;z-index:1}
+.step.active .num{background:var(--blue);color:#fff;border-color:var(--blue)}
+.step.done .num{background:#e6f1e4;color:#3b6d11;border-color:#c0dd97}
+.side-foot{margin-top:20px;display:flex;align-items:center;gap:7px;color:var(--accent);font-size:12px;padding-left:10px}
+.content{flex:1;min-width:0;background:#fff;border:1px solid var(--line);border-radius:16px;padding:34px 38px 26px}
+.kicker{color:var(--accent);font-size:12px;font-weight:600;letter-spacing:.08em;margin:0 0 10px}
+.title{font-size:27px;line-height:1.3;margin:0 0 12px;font-weight:600}
+.desc{color:var(--mute);font-size:14px;line-height:1.75;margin:0 0 26px;max-width:720px}
+.sub{font-size:12px;color:var(--mute);margin:0 0 14px;letter-spacing:.05em}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:34px}
+.points ul{list-style:none;margin:0 0 20px;padding:0}
+.points li{display:flex;gap:11px;font-size:13px;line-height:1.65;margin-bottom:13px;color:#333d52}
+.bullet{flex:0 0 20px;width:20px;height:20px;border-radius:6px;background:var(--soft);color:var(--blue);font-size:11px;display:grid;place-items:center;font-weight:600;margin-top:1px}
+.tip{display:flex;gap:11px;background:#fdf6ef;border:1px solid #f2ddc7;border-radius:11px;padding:13px 15px;color:var(--accent)}
+.tip b{display:block;font-size:12px;margin-bottom:3px}
+.tip span{font-size:12px;color:#7a5a3f;line-height:1.6}
+.mock{position:relative;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fbfcfe;box-shadow:0 8px 24px rgba(25,34,56,.06)}
+.mock-bar{display:flex;align-items:center;gap:5px;height:28px;padding:0 11px;background:#f1f4f8;border-bottom:1px solid var(--line)}
+.dot{width:7px;height:7px;border-radius:50%;background:#d3d8e2}
+.url{margin-left:10px;font-size:10px;color:#9aa3b2;background:#fff;padding:2px 12px;border-radius:4px}
+.mock-body{display:flex;height:236px}
+.rail{width:42px;flex:0 0 42px;background:var(--blue);display:flex;flex-direction:column;align-items:center;gap:13px;padding:12px 0;color:#b9cbe4;font-size:14px}
+.rail-logo{width:22px;height:22px;border-radius:6px;background:rgba(255,255,255,.2);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700;margin-bottom:4px}
+.main{flex:1;padding:16px 18px;min-width:0}
+.hero{background:linear-gradient(135deg,#eef2fb,#f8eef4);border-radius:9px;padding:16px;display:flex;flex-direction:column;gap:6px}
+.hero b{font-size:14px;color:var(--blue)}
+.hero span{font-size:11px;color:var(--mute)}
+.cta{display:inline-block;font-style:normal;font-size:11px;color:#fff;background:var(--accent);padding:5px 12px;border-radius:6px;margin-top:4px;align-self:flex-start}
+.cards{display:flex;gap:8px;margin-top:12px}
+.cards span{flex:1;height:54px;background:#f1f4f8;border-radius:7px}
+.form{display:flex;flex-direction:column;gap:8px;max-width:230px;margin:6px auto 0}
+.form b{font-size:14px;text-align:center;margin-bottom:4px}
+.field{height:30px;background:#f5f7fa;border:1px solid var(--line);border-radius:6px;padding:7px 10px;font-size:11px;color:#9aa3b2}
+.form .cta{text-align:center;align-self:stretch}
+.heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.heading b{font-size:14px}
+.heading small{font-size:11px;color:var(--mute)}
+.heading .cta{margin:0}
+.list{display:flex;flex-direction:column;gap:8px}
+.list>span{display:flex;align-items:center;gap:8px;font-size:12px;background:#f7f9fc;border:1px solid var(--line);border-radius:7px;padding:10px 12px}
+.list small{margin-left:auto;color:var(--mute);font-size:10px}
+.avatar{width:20px;height:20px;border-radius:5px;background:var(--soft);color:var(--blue);display:grid;place-items:center;font-style:normal;font-size:10px}
+.board{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.col{background:#f3f6fa;border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:7px}
+.col small{font-size:10px;color:var(--mute)}
+.tcard{background:#fff;border:1px solid var(--line);border-radius:6px;padding:8px;font-size:10px;display:flex;justify-content:space-between;align-items:center}
+.pri{width:8px;height:8px;border-radius:50%;display:inline-block}
+.chat{display:flex;flex-direction:column;gap:8px}
+.bubble{font-size:11px;padding:8px 11px;border-radius:9px;max-width:82%}
+.bubble.left{background:#f1f4f8;align-self:flex-start}
+.bubble.right{background:var(--soft);color:var(--blue);align-self:flex-end}
+.input{margin-top:auto;height:30px;border:1px solid var(--line);border-radius:7px;padding:7px 10px;font-size:10px;color:#9aa3b2}
+.pbar{height:9px;background:var(--soft);border-radius:6px;overflow:hidden;margin-bottom:12px}
+.pbar span{display:block;height:100%;background:var(--blue);border-radius:6px}
+.twoCard{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.mini{background:#f7f9fc;border:1px solid var(--line);border-radius:8px;padding:11px}
+.mini small{display:block;color:var(--accent);font-size:10px;margin-bottom:5px}
+.mini span{font-size:11px}
+.cmd{display:flex;align-items:center;gap:8px;border:1px solid var(--blue);border-radius:9px;padding:10px 12px;font-size:11px;color:var(--mute);box-shadow:0 0 0 3px var(--soft)}
+.cmd kbd{margin-left:auto;font-size:9px;border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+.cmd-list{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.cmd-list span{font-size:11px;background:#f7f9fc;border-radius:6px;padding:8px 10px}
+.hlring{position:absolute;width:62px;height:62px;border-radius:50%;border:2px solid var(--accent);box-shadow:0 0 0 6px rgba(191,106,52,.14);animation:pulse 1.8s ease-out infinite}
+.hltip{position:absolute;white-space:nowrap;background:var(--accent);color:#fff;font-size:10px;padding:4px 9px;border-radius:5px;top:58px;left:0}
+@keyframes pulse{0%{transform:scale(.9);opacity:1}70%{transform:scale(1.15);opacity:.4}100%{transform:scale(1.15);opacity:0}}
+.badge{position:absolute;right:10px;top:36px;font-size:9px;color:#9aa3b2;background:rgba(255,255,255,.9);padding:2px 7px;border-radius:4px}
+.actions{display:flex;align-items:center;justify-content:space-between;margin-top:30px;padding-top:22px;border-top:1px solid var(--line)}
+.btn{display:inline-flex;align-items:center;gap:7px;font-size:13px;padding:10px 20px;border-radius:9px;cursor:pointer;border:1px solid transparent;font-family:inherit;transition:.18s}
+.btn.primary{background:var(--blue);color:#fff}
+.btn.primary:hover{background:#1d365c}
+.btn.ghost{background:#fff;color:var(--mute);border-color:var(--line)}
+.btn.ghost:hover:not(:disabled){color:var(--blue);border-color:var(--blue)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.dots{display:flex;gap:6px}
+.dots span{width:6px;height:6px;border-radius:50%;background:#d3d8e2;transition:.2s}
+.dots span.on{background:var(--accent);width:18px;border-radius:4px}
+.finish{text-align:center;padding:30px 20px 20px}
+.ficon{width:76px;height:76px;border-radius:22px;background:var(--soft);color:var(--blue);display:grid;place-items:center;margin:0 auto 18px;font-size:34px}
+.finish h1{font-size:27px;margin:0 0 12px}
+.fdesc{color:var(--mute);font-size:14px;line-height:1.75;max-width:520px;margin:0 auto 26px}
+.factions{display:flex;gap:12px;justify-content:center;margin-bottom:32px}
+.recap{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;border-top:1px solid var(--line);padding-top:24px}
+.recap span{font-size:11px;color:#3b6d11;background:#eef6ea;border-radius:20px;padding:5px 11px}
+@media(max-width:980px){.two{grid-template-columns:1fr}.side{display:none}.layout{padding:20px 14px}.content{padding:24px 20px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="logo">A</span><span>AgileCampus</span><em>新手导引</em></div>
+  <div class="progress"><div class="track"><span id="track"></span></div><small id="ptext">1 / 8 步</small></div>
+  <a class="skip" onclick="alert('跳转到 /workspace 工作台（演示版无后端）')">跳过，直接进工作台 →</a>
+</header>
+<div class="layout">
+  <nav class="side">
+    <p class="side-title">上手路线</p>
+    <ol id="navlist"></ol>
+    <div class="side-foot">✦ <span>约 3 分钟看完</span></div>
+  </nav>
+  <section class="content" id="content"></section>
+</div>
+<script>
+const S=[
+{nav:"认识平台",kicker:"第 1 步 · 全局认知",title:"三分钟认识 AgileCampus",desc:"这是面向高校课程项目的敏捷协作平台。一个地方放看板、文档、讨论和进度，小组作业不用再在微信、网盘、表格之间来回切。",bullets:["首页（/）展示平台能做什么和三步开始入口","工作台（/workspace）是每天真正干活的地方","顶部导航和工作台左侧图标栏是两条主线"],tip:"先记住两个地址：/ 是门面，/workspace 是主场。之后所有操作都在工作台里完成。",mock:"home",route:"/",hl:"top:96px;left:74%",label:"从这里开始探索"},
+{nav:"注册登录",kicker:"第 2 步 · 进入系统",title:"用学工号创建账号",desc:"点击首页右上角「登录 / 注册」，填学工号、姓名和密码即可。密码经过加盐哈希存储，登录状态保留 7 天，不用每次重新登。",bullets:["学工号是你在团队里的唯一标识，建议用真实学号","已有账号直接登录；忘记密码联系团队管理员重置","登录后自动进入工作台"],tip:"学工号别乱填——队友邀请你进团队时，是按学工号匹配成员的。",mock:"login",route:"/login",hl:"top:150px;left:40%",label:"点这里注册 / 登录"},
+{nav:"加入团队",kicker:"第 3 步 · 建立组织",title:"创建团队或接受邀请",desc:"工作台左侧「团队管理」里可以新建团队，或填入队友发来的邀请码加入。团队里分三种角色：所有者、管理员、普通成员。",bullets:["所有者（owner）：能改团队设置、删团队","管理员（admin）：能建项目、管成员、发邀请","成员（member）：能建任务、参与讨论和文档"],tip:"第一次用建议自己建一个团队练手，把角色权限点一遍就明白了。",mock:"team",route:"/workspace#teams",hl:"top:52px;left:72%",label:"点这里管理团队"},
+{nav:"建项目迭代",kicker:"第 4 步 · 搭好骨架",title:"建项目，再开一个迭代",desc:"团队建好后，在「项目管理」里新建项目，选好课程和迭代周期。项目是任务的容器，迭代则把大目标切成一两周能看到成果的小段。",bullets:["一个课程项目对应一个项目，别什么都塞进去","迭代周期建议 1–2 周，和小组周会节奏对齐","建好项目后会自动生成看板、讨论、文件等区域"],tip:"迭代不用一开始规划得很满，先拉一个最短周期跑起来，边做边加。",mock:"project",route:"/workspace#projects",hl:"top:52px;left:72%",label:"点这里新建项目"},
+{nav:"任务看板",kicker:"第 5 步 · 核心玩法",title:"在看板上推进任务",desc:"进入项目后的「任务」页是三列看板：待开始 → 进行中 → 已完成。每张卡片能设负责人、截止日、优先级和检查清单，拖动卡片就能改状态。",bullets:["点卡片打开详情，拆子任务、勾检查清单、写评论","绿/黄/红标签区分优先级，一眼看清轻重缓急","设了截止日的任务会自动进入「今日」的临期提醒"],tip:"把「今天要做」的任务拖到进行中，下班前拖到已完成——进度条和 AI 日报都会跟着变。",mock:"board",route:"/workspace#tasks",hl:"top:120px;left:30%",label:"拖动卡片推进状态"},
+{nav:"协作沟通",kicker:"第 6 步 · 团队同步",title:"讨论、私聊与云文档",desc:"项目里的「讨论」是全员群聊，支持 @提及、表情、引用回复和附件；左侧图标栏还有「私信」和「云文档」，一对一沟通和资料沉淀分开做。",bullets:["群聊适合公开同步，私聊适合一对一确认细节","云文档支持多人编辑、评论，还能引用任务","重要结论顺手存进云文档，避免淹没在聊天记录里"],tip:"少开一个会，多写一条清楚的讨论——所有沟通都留在项目里，期末复盘有据可查。",mock:"chat",route:"/workspace",hl:"top:168px;left:34%",label:"在这里发消息 @队友"},
+{nav:"今日视图",kicker:"第 7 步 · 每天必看",title:"用「今日」开始每一天",desc:"工作台「今日」页把散落的信息聚到一起：任务进度条、临期与逾期提醒、AI 生成的中文日报，还有按日期分组的项目日历。",bullets:["进度条按「逾期 → 今天 → 明天」排序，先看最紧急的","AI 日报汇总多源数据并给中文建议，不用自己写周报","日历把里程碑和截止日标在月历上，点日期看当天安排"],tip:"每天早上先看这一页，10 秒就能知道今天全组在忙什么、有没有要救火的。",mock:"today",route:"/workspace#today",hl:"top:44px;left:30%",label:"每天先看这一屏"},
+{nav:"效率技巧",kicker:"第 8 步 · 快人一步",title:"两个让你变快的小技巧",desc:"按 Ctrl / ⌘ + K 打开命令面板，能直接搜任务、切换项目、跳转页面；右上角太阳/月亮图标可以在日间和夜间主题间切换。",bullets:["Ctrl / ⌘ + K：全局搜索与快捷跳转，少点三层菜单","主题切换：晚上做作业切夜间模式，护眼","通知铃铛：看已读/未读消息和截止提醒，别漏事"],tip:"把 Ctrl+K 练成肌肉记忆，这是从「会用」到「用得快」的分水岭。",mock:"shortcut",route:"/workspace",hl:"top:44px;left:30%",label:"按 Ctrl + K 试试"}
+];
+let cur=0,done=[],finished=false;
+function mock(k){
+  const rail=`<div class="rail"><div class="rail-logo">A</div><div>▦</div><div>◫</div><div>◷</div><div>☰</div></div>`;
+  let body="";
+  if(k==="home")body=`<div class="hero"><b>敏捷协作 · 课程项目</b><span>三步开始你的第一个敏捷项目</span><i class="cta">进入工作台 →</i></div><div class="cards"><span></span><span></span><span></span></div>`;
+  if(k==="login")body=`<div class="form"><b>欢迎回来</b><div class="field">学工号</div><div class="field">密码</div><i class="cta">登录 / 注册</i></div>`;
+  if(k==="team")body=`<div class="heading"><b>团队管理</b><i class="cta">+ 新建团队</i></div><div class="list"><span><em class="avatar">软</em> 软件工程小组 <small>owner · 6 人</small></span><span><em class="avatar">课</em> 课程设计一组 <small>admin · 4 人</small></span></div>`;
+  if(k==="project")body=`<div class="heading"><b>项目管理</b><i class="cta">+ 新建项目</i></div><div class="list"><span>▦ 敏捷工具课程设计 <small>迭代 2 · 进行中</small></span><span>▦ 数据库大作业 <small>迭代 1 · 进行中</small></span></div>`;
+  if(k==="board")body=`<div class="board"><div class="col"><small>待开始</small><div class="tcard">需求文档 <i class="pri" style="background:#e24b4a"></i></div><div class="tcard">用户调研</div></div><div class="col"><small>进行中</small><div class="tcard">看板开发 <i class="pri" style="background:#ef9f27"></i></div></div><div class="col"><small>已完成</small><div class="tcard">项目立项 <i class="pri" style="background:#639922"></i></div></div></div>`;
+  if(k==="chat")body=`<div class="chat"><div class="bubble left">@陈昱 看板做完记得同步一下</div><div class="bubble right">好的，今晚推到进行中</div><div class="bubble left">收到，我更新下日报 📌</div><div class="input">输入消息… @ 提及队友</div></div>`;
+  if(k==="today")body=`<div class="heading"><b>今日 · 进度总览</b><small>周四</small></div><div class="pbar"><span style="width:68%"></span></div><div class="twoCard"><div class="mini"><small>AI 日报</small><span>今日 3 项待办，1 项临期</span></div><div class="mini"><small>日历</small><span>11 · 里程碑 2 个</span></div></div>`;
+  if(k==="shortcut")body=`<div class="cmd"><span>⌕</span> 搜索任务、项目或跳转页面… <kbd>ESC</kbd></div><div class="cmd-list"><span>▦ 跳转到 · 任务看板</span><span>◫ 跳转到 · 云文档</span><span>◷ 跳转到 · 今日视图</span></div>`;
+  return `<div class="mock"><div class="mock-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">agilecampus.cn${S[cur].route}</span></div><div class="mock-body">${rail}<div class="main">${body}</div></div><div style="position:absolute;${S[cur].hl}"><div class="hlring"></div><div class="hltip">${S[cur].label}</div></div><span class="badge">示意 · 第 ${cur+1}/${S.length} 步</span></div>`;
+}
+function render(){
+  const nav=document.getElementById("navlist");
+  nav.innerHTML=S.map((s,i)=>`<li><button class="step ${i===cur&&!finished?"active":""} ${done.includes(i)?"done":""}" onclick="go(${i})"><span class="num">${done.includes(i)?"✓":i+1}</span><span>${s.nav}</span></button></li>`).join("");
+  const pct=finished?100:Math.max(done.length/S.length*100,(cur+1)/S.length*100);
+  document.getElementById("track").style.width=pct+"%";
+  document.getElementById("ptext").textContent=finished?"全部完成":`${Math.max(done.length,cur+1)} / 8 步`;
+  const c=document.getElementById("content");
+  if(finished){
+    c.innerHTML=`<div class="finish"><div class="ficon">🚀</div><p class="kicker">恭喜完成</p><h1>你已经会用它了，开始动手吧</h1><p class="fdesc">从建一个团队、拉一个迭代开始，把第一次课程作业放进来跑一遍，遇到问题回来看对应步骤。</p><div class="factions"><button class="btn primary" onclick="alert('跳转到 /workspace（演示版无后端）')">进入工作台 →</button><button class="btn ghost" onclick="restart()">再看一遍</button></div><div class="recap">${S.map(s=>`<span>✓ ${s.nav}</span>`).join("")}</div></div>`;
+    return;
+  }
+  const s=S[cur];
+  c.innerHTML=`<p class="kicker">${s.kicker}</p><h1 class="title">${s.title}</h1><p class="desc">${s.desc}</p><div class="two"><div class="points"><p class="sub">怎么做</p><ul>${s.bullets.map((b,i)=>`<li><span class="bullet">${i+1}</span>${b}</li>`).join("")}</ul><div class="tip"><div><b>⚑ 小提示</b><span>${s.tip}</span></div></div></div><div class="visual"><p class="sub">界面示意</p>${mock(s.mock)}</div></div><div class="actions"><button class="btn ghost" onclick="prev()" ${cur===0?"disabled":""}>← 上一步</button><div class="dots">${S.map((_,i)=>`<span class="${i===cur?"on":""}"></span>`).join("")}</div><button class="btn primary" onclick="next()">${cur===S.length-1?"完成导引":"下一步"} →</button></div>`;
+}
+function go(i){cur=i;finished=false;render()}
+function next(){if(!done.includes(cur))done.push(cur);if(cur===S.length-1){finished=true}else cur++;render()}
+function prev(){finished=false;if(cur>0)cur--;render()}
+function restart(){done=[];cur=0;finished=false;render()}
+render();
+</script>
+</body>
+</html>

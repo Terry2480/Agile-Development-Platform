@@ -1,0 +1,29 @@
+<Slide style={{ width: '1280px', height: '720px', background: '#F5F5F5', padding: '60px' }}>
+  <Box style={{ width: '100%', height: '100%', flexDirection: 'row', gap: 36 }}>
+    <Box style={{ width: 360, height: '100%', background: '#334EAC', padding: 32, flexDirection: 'column', justifyContent: 'space-between' }}>
+      <Text style={{ fontSize: 14, color: '#C9D4F5', letterSpacing: 3 }}>04 / 人物角色 A</Text>
+      <Box>
+        <Text style={{ fontSize: 150, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1 }}>晓</Text>
+        <Text style={{ fontSize: 30, fontWeight: 'bold', color: '#FFFFFF' }}>林晓彤</Text>
+        <Text style={{ fontSize: 19, color: '#DCE4FA' }}>学生组员 · 执行者</Text>
+      </Box>
+      <Text style={{ fontSize: 15, color: '#AABBE8', lineHeight: 1.5 }}>初版假设 · 待访谈验证</Text>
+    </Box>
+    <Box style={{ flex: 1, height: '100%', flexDirection: 'column', justifyContent: 'space-between' }}>
+      <Box>
+        <Text style={{ fontSize: 34, fontWeight: 'bold', color: '#081F5C' }}>她只想确认：我现在该做什么</Text>
+        <Box style={{ height: 10, width: '100%', borderBottom: '1px solid #D4D7E0' }} />
+      </Box>
+      <Box style={{ gap: 16 }}>
+        <Text style={{ fontSize: 17, color: '#20346B', lineHeight: 1.6 }}><span style={{ fontWeight: 'bold', color: '#334EAC' }}>基本信息</span>　20 岁 · 大二 · 数字媒体技术 · 厦门 · 参与 2 门小组课</Text>
+        <Text style={{ fontSize: 17, color: '#20346B', lineHeight: 1.6 }}><span style={{ fontWeight: 'bold', color: '#334EAC' }}>口头禅</span>　「啊？这个要我做什么？」</Text>
+        <Text style={{ fontSize: 17, color: '#20346B', lineHeight: 1.6 }}><span style={{ fontWeight: 'bold', color: '#334EAC' }}>性格坐标</span>　偏内向 · 合作意愿高 · 不擅长主动追问</Text>
+        <Text style={{ fontSize: 17, color: '#20346B', lineHeight: 1.6 }}><span style={{ fontWeight: 'bold', color: '#334EAC' }}>核心目标</span>　清楚自己的任务与截止时间，按时交差，不被点名</Text>
+        <Text style={{ fontSize: 17, color: '#20346B', lineHeight: 1.6 }}><span style={{ fontWeight: 'bold', color: '#334EAC' }}>常用 APP</span>　微信 / 飞书 · 手机日历 · 腾讯文档 · 小红书</Text>
+      </Box>
+      <Box style={{ background: '#ECECEC', padding: 18 }}>
+        <Text style={{ fontSize: 17, color: '#081F5C', lineHeight: 1.5 }}><span style={{ fontWeight: 'bold' }}>设计含义：</span>首页第一屏必须回答「我的任务」——而不是项目总览。</Text>
+      </Box>
+    </Box>
+  </Box>
+</Slide>

@@ -1,0 +1,27 @@
+<Slide style={{ width: '1280px', height: '720px', background: '#041133', padding: '60px' }}>
+  <Box style={{ width: '100%', height: '100%', flexDirection: 'column', justifyContent: 'space-between' }}>
+    <Text style={{ fontSize: 14, color: '#A3AFDA', letterSpacing: 3 }}>09 / 关键场景</Text>
+    <Box style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 40 }}>
+      <Text style={{ fontSize: 130, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1 }}>10<span style={{ fontSize: 54, color: '#A3AFDA' }}>min</span></Text>
+      <Text style={{ fontSize: 100, fontWeight: 'bold', color: '#334EAC', lineHeight: 1 }}>/</Text>
+      <Text style={{ fontSize: 130, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1 }}>8<span style={{ fontSize: 54, color: '#A3AFDA' }}>groups</span></Text>
+    </Box>
+    <Box style={{ flexDirection: 'row', gap: 48 }}>
+      <Box style={{ flex: 1, gap: 12 }}>
+        <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#FFFFFF' }}>耐心很低</Text>
+        <Text style={{ fontSize: 17, color: '#A3AFDA', lineHeight: 1.6 }}>课间 10 分钟要看 8 组状态，任何一次加载等待都会打断检查。</Text>
+      </Box>
+      <Box style={{ flex: 1, gap: 12 }}>
+        <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#FFFFFF' }}>公共设备</Text>
+        <Text style={{ fontSize: 17, color: '#A3AFDA', lineHeight: 1.6 }}>教室电脑、投影仪，没有安装权限，浏览器打开即用是硬要求。</Text>
+      </Box>
+      <Box style={{ flex: 1, gap: 12 }}>
+        <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#FFFFFF' }}>投影对比度</Text>
+        <Text style={{ fontSize: 17, color: '#A3AFDA', lineHeight: 1.6 }}>浅灰细字在投影上会消失；关键结论必须高对比、远距可读。</Text>
+      </Box>
+    </Box>
+    <Box style={{ borderTop: '1px solid #334EAC', paddingTop: 20 }}>
+      <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#FFFFFF' }}>设计判断：教师端不是「另一个仪表盘」，而是「10 分钟内能下结论的一屏」。</Text>
+    </Box>
+  </Box>
+</Slide>
