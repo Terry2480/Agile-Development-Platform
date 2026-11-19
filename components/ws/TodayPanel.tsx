@@ -3,17 +3,18 @@
 // 「今日」首页（飞书式）：一屏回答“今天该干什么”——
 // 截止提醒 / 进行中待办 / 未读私信 / 最近文档 四张卡片，点击直达对应内容
 import { useEffect, useState } from "react";
-import { api, dueInfo, type DocSummary, type TaskItem } from "@/lib/api-client";
+import { api, dayKey, dueInfo, type DocSummary, type TaskItem } from "@/lib/api-client";
 import { useWorkspace, Icon, Avatar } from "./shared";
+import { DailyReportCard } from "./DailyReportCard";
+import { HomeCalendar } from "./HomeCalendar";
 
+// 与 dueOn（东八区日期串）、后端日报口径一致：统一用 Asia/Hong_Kong 当天
 const dayKeyToday = () => {
   const d = new Date();
-  const tomorrow = new Date(d.getTime() + 86400000);
-  return { today: toKey(d), tomorrow: toKey(tomorrow) };
+  const today = dayKey(d.toISOString());
+  const tomorrow = dayKey(new Date(d.getTime() + 86400000).toISOString());
+  return { today, tomorrow };
 };
-function toKey(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
 
 export function TodayPanel() {
   const ws = useWorkspace();
@@ -42,6 +43,10 @@ export function TodayPanel() {
   const greeting = hour < 6 ? "夜深了" : hour < 11 ? "早上好" : hour < 14 ? "中午好" : hour < 18 ? "下午好" : "晚上好";
   const dateText = new Intl.DateTimeFormat("zh-CN", { month: "long", day: "numeric", weekday: "long" }).format(new Date());
 
+  // 任务进度（PDF 4.1：实时汇总任务待办 + 当前进度 + 截止日期）
+  const ov = ws.overview;
+  const taskPct = ov && ov.taskTotal > 0 ? Math.round((ov.taskDone / ov.taskTotal) * 100) : 0;
+
   return (
     <div className="ws-today">
       <header className="ws-today-head">
@@ -50,6 +55,16 @@ export function TodayPanel() {
           <p>{dateText} · {ws.overview ? `${ws.overview.myTodo + ws.overview.myDoing} 个待办 · ${ws.dmUnreadTotal} 条未读私信` : "正在加载…"}</p>
         </div>
       </header>
+
+      {ov && (
+        <div className="ws-today-progress" role="group" aria-label="任务进度">
+          <span className="ws-progress-num">任务进度 {ov.taskDone}/{ov.taskTotal}（{taskPct}%）</span>
+          <div className="ws-progress-track" aria-hidden>
+            <div className={`ws-progress-fill ${taskPct >= 100 ? "full" : ""}`} style={{ width: `${taskPct}%` }} />
+          </div>
+          <span className="ws-progress-breakdown">待办 {ov.myTodo} · 进行中 {ov.myDoing} · 已完成 {ov.taskDone}</span>
+        </div>
+      )}
 
       <div className="ws-today-grid">
         <section className="ws-today-card">
@@ -108,6 +123,12 @@ export function TodayPanel() {
             </button>
           ))}
         </section>
+      </div>
+
+      {/* AI 日报 + 日历（PDF 4.2 / 计划项「日历」） */}
+      <div className="ws-today-grid2">
+        <DailyReportCard />
+        <HomeCalendar />
       </div>
     </div>
   );
