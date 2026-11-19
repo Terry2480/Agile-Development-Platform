@@ -1,0 +1,28 @@
+<Slide style={{ width: '1280px', height: '720px', background: '#F5F5F5', padding: '60px' }}>
+  <Box style={{ width: '100%', height: '100%', flexDirection: 'column', justifyContent: 'space-between' }}>
+    <Box>
+      <Text style={{ fontSize: 14, color: '#2A5E96', letterSpacing: 3 }}>11 / 边界与验证</Text>
+      <Text style={{ fontSize: 34, fontWeight: 'bold', color: '#081F5C' }}>边界、包容性与验证</Text>
+      <Box style={{ height: 10, width: '100%', borderBottom: '1px solid #D4D7E0' }} />
+    </Box>
+    <Box style={{ width: '100%', height: 390, flexDirection: 'row', gap: 16 }}>
+      <Box style={{ width: 520, height: 390, background: '#ECECEC', padding: 24, flexDirection: 'column', justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#334EAC' }}>非目标用户与边缘情况</Text>
+        <Text style={{ fontSize: 17, color: '#20346B', lineHeight: 1.6 }}>企业项目经理不是本产品用户：复杂的工时与成本核算会稀释校园轻量场景。<br /><br />边缘情况用课件标准判断：「A 会经常做这种操作吗？」只支持高频边缘，不为个例加菜单。</Text>
+        <Text style={{ fontSize: 15, color: '#737FA1' }}>避免弹性用户 · 自参考设计 · 边缘情况设计</Text>
+      </Box>
+      <Box style={{ width: 340, height: 320, background: '#ECECEC', padding: 24, flexDirection: 'column', justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#27707F' }}>包容性</Text>
+        <Text style={{ fontSize: 17, color: '#20346B', lineHeight: 1.6 }}>永久 / 暂时 / 情境性障碍都要检查：投影对比度、小屏单手操作、网络不稳、公用设备无账号。</Text>
+      </Box>
+      <Box style={{ flex: 1, height: 250, background: '#334EAC', padding: 24, flexDirection: 'column', justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#FFFFFF' }}>验证计划</Text>
+        <Text style={{ fontSize: 16, color: '#DCE4FA', lineHeight: 1.6 }}>访谈 6 人（2 组）；问卷 30 份；用真实任务观察一次小组周会，再修订这三人。</Text>
+      </Box>
+    </Box>
+    <Box style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+      <Text style={{ fontSize: 16, color: '#20346B' }}>三个人物是初版假设——验证完成前，不把它们当作结论使用。</Text>
+      <Text style={{ fontSize: 14, color: '#737FA1' }}>11 / 12</Text>
+    </Box>
+  </Box>
+</Slide>

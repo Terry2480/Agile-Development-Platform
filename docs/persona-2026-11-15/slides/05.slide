@@ -1,0 +1,27 @@
+<Slide style={{ width: '1280px', height: '720px', background: '#F5F5F5', padding: '60px' }}>
+  <Box style={{ width: '100%', height: '100%', flexDirection: 'column', justifyContent: 'space-between' }}>
+    <Box>
+      <Text style={{ fontSize: 14, color: '#2A5E96', letterSpacing: 3 }}>05 / 互动场景 A</Text>
+      <Text style={{ fontSize: 34, fontWeight: 'bold', color: '#081F5C' }}>晓彤的周日晚：在群聊里找任务</Text>
+      <Box style={{ height: 10, width: '100%', borderBottom: '1px solid #D4D7E0' }} />
+    </Box>
+    <Box style={{ width: '100%', height: 350, flexDirection: 'row', gap: 20 }}>
+      <Box style={{ width: 480, height: 350, background: '#334EAC', padding: 24, flexDirection: 'column', justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 18, color: '#C9D4F5', fontWeight: 'bold' }}>可视化瞬间</Text>
+        <Text style={{ fontSize: 22, color: '#FFFFFF', lineHeight: 1.5 }}>晚上 9 点，宿舍床上，微信群连刷 60 条消息。她在群里问：「我这边要做啥来着？」没人回。</Text>
+        <Text style={{ fontSize: 15, color: '#AABBE8' }}>接触点：群聊 · 任务列表 · 手机通知</Text>
+      </Box>
+      <Box style={{ width: 340, height: 290, background: '#ECECEC', padding: 24, flexDirection: 'column', justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 18, color: '#2A5E96', fontWeight: 'bold' }}>情绪与环境</Text>
+        <Text style={{ fontSize: 18, color: '#20346B', lineHeight: 1.6 }}>轻微焦虑，怕遗漏又不敢打断组长；床上、灯光暗、手机电量 20%。</Text>
+      </Box>
+      <Box style={{ flex: 1, height: 230, background: '#ECECEC', padding: 24, flexDirection: 'column', justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 18, color: '#2A5E96', fontWeight: 'bold' }}>注意力 / 负荷</Text>
+        <Text style={{ fontSize: 18, color: '#20346B', lineHeight: 1.6 }}>注意力分散，边刷剧边看群；信息过载时直接放弃阅读。</Text>
+      </Box>
+    </Box>
+    <Box style={{ background: '#334EAC', padding: 18 }}>
+      <Text style={{ fontSize: 17, color: '#FFFFFF', lineHeight: 1.5 }}><span style={{ fontWeight: 'bold' }}>设计启示：</span>「我的任务」应主动推到眼前，并支持手机小屏一眼可读，而不是埋在群聊与二级菜单里。</Text>
+    </Box>
+  </Box>
+</Slide>
