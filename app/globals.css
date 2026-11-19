@@ -730,3 +730,9 @@ html[data-theme="day"] .ws-avatar[data-av="4"]{background:#8a4710}
 .auth-notice{margin:0 0 14px;color:#3f7a58;background:#e7f2e9;border-radius:7px;padding:10px 12px;font-size:13px}
 .auth-back{display:block;border:0;background:transparent;color:#687386;font-size:12px;cursor:pointer;padding:0 0 6px}
 .auth-back:hover{color:#294a78}
+
+/* 全局效率中心悬浮入口（terry/personal-suite） */
+.su-launcher{position:fixed;right:22px;bottom:22px;z-index:60;display:flex;align-items:center;gap:9px;height:48px;padding:0 18px 0 14px;border:0;border-radius:26px;background:linear-gradient(135deg,#294a78,#3d6ab5);color:#fff;box-shadow:0 8px 24px #294a7855;font-size:13px;font-weight:600;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.su-launcher:hover{transform:translateY(-2px);box-shadow:0 12px 30px #294a7877}
+.su-launcher:active{transform:translateY(0)}
+@media(max-width:600px){.su-launcher span{display:none}.su-launcher{padding:0;width:48px;justify-content:center}}

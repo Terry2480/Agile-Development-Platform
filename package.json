@@ -21,6 +21,7 @@
     "db:add-team-invites": "tsx db/add-team-invites.ts",
     "db:add-auth-protection": "tsx db/add-auth-protection.ts",
     "db:add-password-reset": "tsx db/add-password-reset.ts",
+    "db:add-personal-suite": "tsx db/add-personal-suite.ts",
     "db:add-file-cleanup": "tsx db/add-file-cleanup.ts",
     "db:add-direct-messages": "tsx db/add-direct-messages.ts",
     "db:add-docs": "tsx db/add-docs.ts",

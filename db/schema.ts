@@ -380,3 +380,28 @@ export const milestoneResources = pgTable("milestone_resources", {
 }, (table) => [unique("milestone_resources_file_uq").on(table.milestoneId, table.attachmentId),
   unique("milestone_resources_url_uq").on(table.milestoneId, table.url),
   check("milestone_resources_kind_check", sql`(${table.attachmentId} is not null and ${table.url} is null) or (${table.attachmentId} is null and ${table.url} is not null)`)]);
+
+/* ============ 个人效率中心（terry/personal-suite）============ */
+// 个人待办：不依赖项目，随手记；按 user_id 隔离。done 标记完成，dueOn 可为空（YYYY-MM-DD）。
+export const personalTodos = pgTable("personal_todos", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  note: text("note"),                                       // 备注（可空）
+  done: boolean("done").notNull().default(false),
+  dueOn: date("due_on"),                                    // 截止日 YYYY-MM-DD（可空，用于日历联动）
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("personal_todos_user_idx").on(t.userId)]);
+
+// 个人记事（Keep 风格）：标题 + 正文 + 颜色 + 置顶；按 user_id 隔离。
+export const personalNotes = pgTable("personal_notes", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull().default(""),
+  content: text("content").notNull().default(""),
+  color: text("color").notNull().default("yellow"),          // yellow/blue/green/pink/purple
+  pinned: boolean("pinned").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("personal_notes_user_idx").on(t.userId)]);
