@@ -32,6 +32,19 @@ export const sessions = pgTable("sessions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// 密码找回验证码表：忘记密码时生成一次性 6 位验证码，仅有效期内可重置密码
+// codeHash 存 sha256 摘要（不存明文）；attempts 限制猜解次数；usedAt 标记已使用防重放
+// 重置成功后删除该用户所有会话，强制用新密码重新登录
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: serial("id").primaryKey(),
+  email: text("email").notNull(),                    // 关联账号邮箱
+  codeHash: text("code_hash").notNull(),             // 验证码 sha256 摘要
+  attempts: integer("attempts").notNull().default(0),// 已尝试次数（上限 5）
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+}, (t) => [index("password_reset_tokens_email_idx").on(t.email)]);
+
 /* ============ 团队 ============ */
 export const authRateLimits = pgTable("auth_rate_limits", {
   key: text("key").primaryKey(),

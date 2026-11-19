@@ -719,3 +719,14 @@ html[data-theme="day"] .ws-avatar[data-av="4"]{background:#8a4710}
 .ws-guide-entry:hover{background:var(--ws-color-2a3a5e, #2a3a5e);color:#fff;border-color:var(--ws-color-3d527f, #3d527f)}
 .ws-guide-q{width:17px;height:17px;border-radius:50%;background:var(--ws-color-8fa9e6, #8fa9e6);color:#141a2b;display:grid;place-items:center;font-size:12px;font-weight:700}
 @media(max-width:900px){.ws-guide-entry span:last-child{display:none}.ws-guide-entry{padding:0;width:34px;justify-content:center}}
+
+/* 找回密码流程（terry/password-recovery） */
+.auth-forgot-link{display:block;margin:14px auto 0;border:0;background:transparent;color:#294a78;font-size:13px;cursor:pointer;padding:4px}
+.auth-forgot-link:hover{text-decoration:underline}
+.auth-tabs .auth-forgot-tab{grid-column:1/-1;background:#294a78;color:#fff;font-weight:bold;cursor:default}
+.auth-devcode{background:#e8eef8;border:1px dashed #294a78;border-radius:9px;padding:12px 14px;text-align:center}
+.auth-devcode small{display:block;color:#687386;font-size:11px;margin-bottom:5px}
+.auth-devcode b{font:700 26px Georgia;letter-spacing:6px;color:#294a78}
+.auth-notice{margin:0 0 14px;color:#3f7a58;background:#e7f2e9;border-radius:7px;padding:10px 12px;font-size:13px}
+.auth-back{display:block;border:0;background:transparent;color:#687386;font-size:12px;cursor:pointer;padding:0 0 6px}
+.auth-back:hover{color:#294a78}
