@@ -10,7 +10,8 @@ import { generateResetCode, hashCode, RESET_CODE_TTL_MINUTES } from "@/lib/passw
 // 1. 邮箱不存在也返回统一提示，不暴露「账号是否注册」
 // 2. 按来源 + 账号双重限流，防刷接口 / 撞库
 // 3. 生成新验证码前让该邮箱旧验证码失效，避免多个有效码并存
-// 4. 项目未接入邮件服务：演示模式（RESET_DEV_MODE 非 "false"）把验证码随响应返回，供课堂演示
+// 4. 项目未接入邮件服务：演示模式把验证码随响应返回，供课堂演示。开关规则：
+//    RESET_DEV_MODE="true" 强制开启；未设置时仅开发环境默认开启；生产环境默认关闭（防止验证码泄露导致任意账号可被重置）
 const bodySchema = z.object({
   email: z.string().trim().max(254).email("邮箱格式不正确"),
 });
@@ -44,7 +45,9 @@ export async function POST(request: Request) {
       expiresAt: sql`now() + ${RESET_CODE_TTL_MINUTES} * interval '1 minute'`,
     });
 
-    const devMode = process.env.RESET_DEV_MODE !== "false";
+    // 演示模式开关：显式开启，或开发环境默认开启；生产环境默认关闭
+    const devMode = process.env.RESET_DEV_MODE === "true"
+      || (process.env.RESET_DEV_MODE !== "false" && process.env.NODE_ENV !== "production");
     return Response.json({
       ok: true,
       message: OK_MESSAGE,

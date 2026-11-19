@@ -32,6 +32,7 @@ test("collaborators receive unique assignment reminders and all see shared todos
   const common={"@/db":{db:tx},"@/db/schema":schema,"@/lib/auth":{getSessionUser:async()=>actor}};
   common["@/lib/api"]=moduleAt("../lib/api.ts",common);
   common["@/lib/activity"]=moduleAt("../lib/activity.ts",common);
+  common["./dm"]=moduleAt("../lib/dm.ts",common); // notify.ts 依赖 ./dm：vm 转译模块的相对导入按测试目录解析，必须显式映射
   const notify=moduleAt("../lib/notify.ts",common);
   common["@/lib/task-collaborators"]=moduleAt("../lib/task-collaborators.ts",{...common,"./api":common["@/lib/api"],"./notify":{notify:async(...args)=>{if(failNotify)throw new Error("notification failure");return notify.notify(...args);}}});
   const list=moduleAt("../app/api/tasks/route.ts",common);
