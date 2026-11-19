@@ -13,6 +13,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "node --import tsx --test tests/*.test.*",
     "db:push": "drizzle-kit push",
     "db:add-member-duty": "tsx db/add-member-duty.ts",
     "db:add-project-course": "tsx db/add-project-course.ts",
