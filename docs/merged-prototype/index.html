@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgileCampus · 全功能整合版原型</title>
+<style>
+:root{
+  --bg:#0d1320; --rail:#090e18; --panel:#151d2e; --panel2:#1b2538; --panel3:#212d44;
+  --line:#26324a; --line2:#32405c; --txt:#e8eefb; --muted:#9aabc8; --faint:#64748f;
+  --blue:#5b8cff; --blued:#3d6ae0; --cyan:#2dd4a8; --amber:#f5b942; --red:#ff6b7a;
+  --purple:#a78bfa; --green:#34d399;
+  --r:14px; --rs:9px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--txt);line-height:1.5;-webkit-font-smoothing:antialiased}
+.app{display:flex;min-height:100vh}
+.rail{width:72px;background:var(--rail);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:18px 0;gap:6px;position:sticky;top:0;height:100vh;flex:none}
+.logo{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--blue),var(--purple));display:grid;place-items:center;font-weight:800;font-size:17px;color:#fff;margin-bottom:14px;box-shadow:0 6px 18px rgba(91,140,255,.35)}
+.nav{width:100%;display:flex;flex-direction:column;align-items:center;gap:5px;overflow-y:auto;flex:1}
+.nav::-webkit-scrollbar{display:none}
+.navbtn{width:52px;min-height:50px;border:0;background:transparent;color:var(--faint);border-radius:11px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:.18s;position:relative}
+.navbtn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.navbtn span{font-size:10px;white-space:nowrap}
+.navbtn:hover{background:var(--panel2);color:var(--muted)}
+.navbtn.on{background:rgba(91,140,255,.14);color:var(--blue)}
+.navbtn.on:before{content:"";position:absolute;left:-10px;top:12px;bottom:12px;width:3px;border-radius:0 3px 3px 0;background:var(--blue)}
+.dot{position:absolute;top:7px;right:9px;width:7px;height:7px;border-radius:50%;background:var(--red);border:2px solid var(--rail)}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{height:64px;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 28px;gap:16px;position:sticky;top:0;background:rgba(13,19,32,.92);backdrop-filter:blur(12px);z-index:20}
+.crumb{font-size:13px;color:var(--faint)}
+.crumb b{color:var(--txt);font-size:17px;font-weight:600;display:block}
+.tb-search{margin-left:auto;display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:8px 12px;color:var(--faint);font-size:13px;min-width:210px}
+.tb-search kbd{margin-left:auto;font-size:11px;background:var(--panel3);border:1px solid var(--line2);padding:1px 6px;border-radius:5px}
+.ava{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#5b8cff,#2dd4a8);display:grid;place-items:center;font-size:13px;font-weight:700;color:#08101f}
+.badge-ver{font-size:11px;color:var(--cyan);border:1px solid rgba(45,212,168,.35);background:rgba(45,212,168,.08);padding:4px 9px;border-radius:20px;font-weight:600}
+.content{padding:26px 30px 60px;max-width:1360px;width:100%;margin:0 auto}
+.view{display:none;animation:fade .3s ease}
+.view.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.src{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:3px 9px;border-radius:20px;font-weight:600;vertical-align:middle;margin-left:10px}
+.src-t{color:var(--blue);background:rgba(91,140,255,.12);border:1px solid rgba(91,140,255,.3)}
+.src-s{color:var(--purple);background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3)}
+.src-m{color:var(--cyan);background:rgba(45,212,168,.12);border:1px solid rgba(45,212,168,.3)}
+h2.vtitle{font-size:22px;font-weight:650;margin-bottom:4px}
+p.vsub{color:var(--muted);font-size:13px;margin-bottom:22px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:20px}
+.card h3{font-size:14px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.grid{display:grid;gap:18px}
+.g-home{grid-template-columns:1.35fr .9fr}
+.g-3{grid-template-columns:repeat(3,1fr)}
+.g-2{grid-template-columns:1fr 1fr}
+@media(max-width:1050px){.g-home,.g-3,.g-2{grid-template-columns:1fr}}
+
+/* 日报 */
+.report-head{display:flex;align-items:flex-start;gap:14px;margin-bottom:18px}
+.report-ico{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--blue),var(--purple));display:grid;place-items:center;flex:none}
+.report-ico svg{width:24px;height:24px;stroke:#fff;fill:none;stroke-width:1.8}
+.headline{font-size:16px;font-weight:600;line-height:1.5}
+.summary{font-size:13px;color:var(--muted);margin-top:5px}
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.stat{background:var(--panel2);border:1px solid var(--line);border-radius:var(--rs);padding:12px}
+.stat b{font-size:24px;font-weight:700;display:block;line-height:1.2}
+.stat span{font-size:11px;color:var(--muted)}
+.stat.b b{color:var(--blue)} .stat.c b{color:var(--cyan)} .stat.a b{color:var(--amber)} .stat.r b{color:var(--red)}
+.rsec{border-top:1px solid var(--line);padding-top:14px;margin-top:14px}
+.rsec h4{font-size:12px;color:var(--faint);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.ritem{display:flex;gap:10px;align-items:flex-start;font-size:13px;padding:6px 0;color:var(--txt)}
+.ritem .tag{font-size:10px;padding:2px 7px;border-radius:5px;font-weight:600;flex:none;margin-top:1px}
+.tag.over{background:rgba(255,107,122,.15);color:var(--red)}
+.tag.today{background:rgba(245,185,66,.15);color:var(--amber)}
+.tag.tmr{background:rgba(91,140,255,.15);color:var(--blue)}
+.focus{background:linear-gradient(135deg,rgba(91,140,255,.12),rgba(167,139,250,.08));border:1px solid rgba(91,140,255,.25);border-radius:var(--rs);padding:14px;margin-top:16px}
+.focus h4{font-size:12px;color:var(--blue);margin-bottom:8px;font-weight:600}
+.focus li{font-size:13px;padding:4px 0 4px 18px;position:relative}
+.focus li:before{content:"›";position:absolute;left:4px;color:var(--blue);font-weight:700}
+
+/* 日历 */
+.cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.cal-head b{font-size:15px}
+.cal-head button{background:var(--panel2);border:1px solid var(--line);color:var(--muted);width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:15px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-wd{text-align:center;font-size:11px;color:var(--faint);padding:4px 0}
+.cal-cell{aspect-ratio:1;border-radius:7px;padding:5px;font-size:12px;position:relative;background:var(--panel2);min-height:38px}
+.cal-cell.out{opacity:.3}
+.cal-cell.today{background:rgba(91,140,255,.18);border:1px solid var(--blue);color:#fff;font-weight:700}
+.ev{display:block;height:4px;border-radius:3px;margin-top:3px}
+.ev.task{background:var(--blue)} .ev.ms{background:var(--amber)} .ev.over{background:var(--red)}
+
+/* 进度条 */
+.prog{margin-bottom:14px}
+.prog:last-child{margin-bottom:0}
+.prog-t{display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px}
+.prog-t b{font-weight:600}
+.prog-t span{color:var(--muted)}
+.track{height:7px;background:var(--panel3);border-radius:10px;overflow:hidden}
+.fill{height:100%;border-radius:10px;background:linear-gradient(90deg,var(--blue),var(--cyan))}
+.fill.a{background:linear-gradient(90deg,var(--amber),var(--red))}
+
+/* 看板 */
+.board{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;align-items:start}
+@media(max-width:1000px){.board{grid-template-columns:repeat(2,1fr)}}
+.col{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px;min-height:200px}
+.col-h{display:flex;justify-content:space-between;font-size:12px;font-weight:600;margin-bottom:12px;padding:0 4px;color:var(--muted)}
+.col-h .n{background:var(--panel3);padding:1px 8px;border-radius:10px;font-size:11px}
+.tcard{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:9px;cursor:grab;transition:.15s}
+.tcard:hover{border-color:var(--blue);transform:translateY(-1px)}
+.tcard .code{font-size:10px;color:var(--blue);font-weight:700;letter-spacing:.5px}
+.tcard .ttl{font-size:13px;font-weight:500;margin:5px 0 9px}
+.chips{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.chip{font-size:10px;padding:2px 7px;border-radius:5px;background:var(--panel3);color:var(--muted)}
+.chip.hi{background:rgba(255,107,122,.15);color:var(--red)}
+.chip.md{background:rgba(245,185,66,.15);color:var(--amber)}
+.chip.ck{background:rgba(45,212,168,.13);color:var(--cyan)}
+.mini-av{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:9px;font-weight:700;color:#08101f;margin-left:auto}
+
+/* 消息 */
+.chat-wrap{display:grid;grid-template-columns:270px 1fr;gap:0;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;height:520px}
+@media(max-width:820px){.chat-wrap{grid-template-columns:1fr}.conv-list{display:none}}
+.conv-list{border-right:1px solid var(--line);overflow-y:auto}
+.conv-h{padding:14px;border-bottom:1px solid var(--line);font-size:13px;font-weight:600}
+.conv{display:flex;gap:10px;padding:12px 14px;cursor:pointer;border-bottom:1px solid var(--line)}
+.conv.on{background:rgba(91,140,255,.1)}
+.conv .ava2{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;color:#08101f;flex:none}
+.conv .cn{font-size:13px;font-weight:600}
+.conv .cp{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
+.conv .ct{font-size:10px;color:var(--faint);margin-left:auto;flex:none}
+.unread{background:var(--red);color:#fff;font-size:10px;padding:0 5px;border-radius:9px;margin-left:auto}
+.chat-main{display:flex;flex-direction:column}
+.chat-top{padding:14px 18px;border-bottom:1px solid var(--line);font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
+.msg-body{flex:1;padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+.msg{display:flex;gap:10px;max-width:80%}
+.msg.me{align-self:flex-end;flex-direction:row-reverse}
+.msg .ava2{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;color:#08101f;flex:none}
+.bubble{background:var(--panel2);border:1px solid var(--line);border-radius:4px 12px 12px 12px;padding:10px 13px;font-size:13px}
+.msg.me .bubble{background:rgba(91,140,255,.2);border-color:rgba(91,140,255,.35);border-radius:12px 4px 12px 12px}
+.msg .tm{font-size:10px;color:var(--faint);margin-top:4px}
+.chat-input{border-top:1px solid var(--line);padding:12px 16px;display:flex;gap:10px;align-items:center}
+.chat-input input{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:10px 13px;color:var(--txt);font-size:13px;outline:none}
+.chat-input button{background:var(--blue);border:0;color:#fff;padding:9px 16px;border-radius:9px;font-size:12px;cursor:pointer;font-weight:600}
+
+/* 文档 */
+.doc-grid{display:grid;grid-template-columns:260px 1fr;gap:16px}
+@media(max-width:820px){.doc-grid{grid-template-columns:1fr}}
+.doc-list{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px;height:460px;overflow-y:auto}
+.doc-item{padding:11px;border-radius:9px;cursor:pointer;font-size:13px;display:flex;gap:9px;align-items:center}
+.doc-item:hover,.doc-item.on{background:var(--panel3)}
+.doc-item svg{width:15px;height:15px;stroke:var(--blue);fill:none;stroke-width:1.8;flex:none}
+.doc-editor{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:24px;height:460px;overflow-y:auto}
+.doc-editor h1{font-size:22px;margin-bottom:8px}
+.doc-meta{font-size:11px;color:var(--faint);margin-bottom:20px}
+.doc-editor p{font-size:13px;color:var(--muted);margin-bottom:12px}
+.doc-editor h4{font-size:14px;margin:18px 0 8px;color:var(--txt)}
+
+/* AI 助手 */
+.ai-wrap{display:grid;grid-template-columns:1fr 340px;gap:18px}
+@media(max-width:900px){.ai-wrap{grid-template-columns:1fr}}
+.ai-chat{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:20px;height:520px;display:flex;flex-direction:column}
+.ai-msg{margin-bottom:16px;font-size:13px;line-height:1.65}
+.ai-msg .who{font-size:11px;font-weight:600;margin-bottom:6px;color:var(--purple)}
+.ai-msg.user .who{color:var(--blue)}
+.ai-msg .bub{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.ai-msg.user .bub{background:rgba(91,140,255,.12);border-color:rgba(91,140,255,.25)}
+.ai-plan{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:12px;margin:8px 0}
+.ai-plan .ph{font-size:12px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:7px}
+.tool{font-size:10px;background:rgba(167,139,250,.15);color:var(--purple);padding:2px 7px;border-radius:5px}
+.ai-plan label{font-size:12px;display:flex;gap:8px;align-items:center;padding:4px 0;color:var(--muted)}
+.ai-plan input{accent-color:var(--blue)}
+.ai-actions{display:flex;gap:8px;margin-top:10px}
+.btn{background:var(--blue);border:0;color:#fff;padding:9px 15px;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600}
+.btn.ghost{background:var(--panel3);color:var(--muted);border:1px solid var(--line)}
+.ai-side{display:flex;flex-direction:column;gap:16px}
+.mini-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.mini-card h4{font-size:13px;margin-bottom:12px}
+.kv{display:flex;justify-content:space-between;font-size:12px;padding:7px 0;border-bottom:1px solid var(--line)}
+.kv:last-child{border:0}
+.kv b{color:var(--cyan)}
+
+/* 甘特 */
+.gantt{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;overflow-x:auto}
+.gtable{min-width:760px}
+.grow{display:grid;grid-template-columns:180px repeat(8,1fr);align-items:center;min-height:40px;border-bottom:1px solid var(--line)}
+.grow.head{color:var(--faint);font-size:11px}
+.gname{font-size:12px;padding-right:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gname b{font-weight:600}
+.gname span{color:var(--faint);display:block;font-size:10px}
+.gcell{height:100%;border-left:1px solid var(--line);position:relative;min-height:40px}
+.gbar{position:absolute;height:20px;top:10px;border-radius:6px;font-size:10px;color:#fff;display:flex;align-items:center;padding:0 8px;white-space:nowrap;font-weight:600}
+.gbar.b{background:linear-gradient(90deg,var(--blue),var(--blued))}
+.gbar.c{background:linear-gradient(90deg,var(--cyan),#199e7d)}
+.gbar.a{background:linear-gradient(90deg,var(--amber),#d99318)}
+.gbar.over{background:linear-gradient(90deg,var(--red),#d94b5c)}
+.today-line{position:absolute;top:0;bottom:0;width:2px;background:var(--red);z-index:2;opacity:.8}
+
+/* 角色 */
+.role-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:820px){.role-grid{grid-template-columns:1fr}}
+.role{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:20px;position:relative;overflow:hidden}
+.role:before{content:"";position:absolute;top:0;left:0;right:0;height:3px}
+.role.admin:before{background:var(--blue)} .role.teacher:before{background:var(--purple)} .role.student:before{background:var(--cyan)}
+.role .ricon{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;margin-bottom:14px}
+.role.admin .ricon{background:rgba(91,140,255,.15)} .role.teacher .ricon{background:rgba(167,139,250,.15)} .role.student .ricon{background:rgba(45,212,168,.15)}
+.role h3{font-size:16px;margin-bottom:4px}
+.role .en{font-size:11px;color:var(--faint);margin-bottom:14px}
+.role ul{list-style:none;font-size:12px;color:var(--muted)}
+.role li{padding:5px 0 5px 18px;position:relative}
+.role li:before{content:"✓";position:absolute;left:0;color:var(--green);font-weight:700}
+
+/* 集成 */
+.int-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:900px){.int-grid{grid-template-columns:1fr}}
+.fs-box{display:flex;gap:14px;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:var(--rs);padding:14px;margin-bottom:14px}
+.fs-logo{width:42px;height:42px;border-radius:10px;background:#3370ff;display:grid;place-items:center;flex:none;font-weight:800;color:#fff;font-size:15px}
+.sw{margin-left:auto;width:44px;height:24px;border-radius:20px;background:var(--panel3);position:relative;cursor:pointer;border:1px solid var(--line2);flex:none}
+.sw:after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--faint);transition:.2s}
+.sw.on{background:var(--cyan);border-color:var(--cyan)}
+.sw.on:after{left:22px;background:#08101f}
+.token-row{display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:11px 13px;margin-bottom:9px;font-size:12px}
+.token-row code{font-family:ui-monospace,monospace;color:var(--cyan);font-size:11px}
+.token-row .st{margin-left:auto;font-size:10px;color:var(--green)}
+.code-block{background:#0a0f1a;border:1px solid var(--line);border-radius:9px;padding:14px;font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);line-height:1.8;overflow-x:auto}
+.code-block .k{color:var(--purple)} .code-block .s{color:var(--cyan)} .code-block .c{color:var(--faint)}
+
+/* 资源 */
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;color:var(--faint);font-weight:500;padding:10px;border-bottom:1px solid var(--line2);font-size:11px}
+td{padding:11px 10px;border-bottom:1px solid var(--line)}
+tr:last-child td{border:0}
+.pill{font-size:10px;padding:2px 8px;border-radius:10px}
+.pill.u{background:rgba(245,185,66,.15);color:var(--amber)}
+.pill.f{background:rgba(45,212,168,.15);color:var(--cyan)}
+.bar-mini{height:6px;background:var(--panel3);border-radius:8px;width:90px;overflow:hidden;display:inline-block;vertical-align:middle}
+.bar-mini i{display:block;height:100%;background:var(--blue);border-radius:8px}
+
+.toast{position:fixed;bottom:26px;right:26px;background:var(--panel3);border:1px solid var(--blue);color:var(--txt);padding:12px 18px;border-radius:10px;font-size:13px;box-shadow:0 10px 30px rgba(0,0,0,.4);transform:translateY(80px);opacity:0;transition:.3s;z-index:99}
+.toast.show{transform:none;opacity:1}
+.note{font-size:12px;color:var(--faint);margin-top:8px;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="logo">A</div>
+    <nav class="nav" id="nav">
+      <button class="navbtn on" data-v="home"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg><span>今日</span></button>
+      <button class="navbtn" data-v="board"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/></svg><span>看板</span></button>
+      <button class="navbtn" data-v="chat"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>消息</span><i class="dot"></i></button>
+      <button class="navbtn" data-v="docs"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg><span>文档</span></button>
+      <button class="navbtn" data-v="assistant"><svg viewBox="0 0 24 24"><path d="M12 3a4 4 0 0 1 4 4v2a4 4 0 0 1-8 0V7a4 4 0 0 1 4-4z"/><path d="M5 13a7 7 0 0 0 14 0M12 20v2"/></svg><span>AI助手</span></button>
+      <button class="navbtn" data-v="gantt"><svg viewBox="0 0 24 24"><path d="M3 5h12M6 12h12M3 19h10"/><circle cx="17" cy="5" r="2"/><circle cx="20" cy="12" r="2"/><circle cx="15" cy="19" r="2"/></svg><span>时间线</span></button>
+      <button class="navbtn" data-v="roles"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><circle cx="17" cy="9" r="2.5"/><path d="M15 20a5 5 0 0 1 6-4"/></svg><span>成员</span></button>
+      <button class="navbtn" data-v="integrations"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1-2.8 2.8-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21h-4v-.2a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1L4.2 17l.1-.1a1.6 1.6 0 0 0 .3-1.8A1.6 1.6 0 0 0 3 14H3v-4h.2a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8L4.2 7 7 4.2l.1.1a1.6 1.6 0 0 0 1.8.3A1.6 1.6 0 0 0 10 3.2V3h4v.2a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1L19.8 7l-.1.1a1.6 1.6 0 0 0-.3 1.8 1.6 1.6 0 0 0 1.5 1H21v4h-.2a1.6 1.6 0 0 0-1.4 1z"/></svg><span>集成</span></button>
+      <button class="navbtn" data-v="resources"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>资源</span></button>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="crumb"><b id="ttl">今日总览</b><span id="sub">AgileCampus · 敏捷校园</span></div>
+      <span class="badge-ver">v7.0 整合预览</span>
+      <div class="tb-search">搜索任务 / 文档 / 消息 <kbd>⌘ K</kbd></div>
+      <div class="ava">陈昱</div>
+    </header>
+
+    <div class="content">
+
+      <!-- 今日 -->
+      <section class="view on" id="v-home">
+        <h2 class="vtitle">今日总览<span class="src src-m">◆ 整合视图</span></h2>
+        <p class="vsub">把 terry 线的日报/日历/进度 与 student 线的跨项目总览合为一屏回答"今天该干什么"</p>
+        <div class="grid g-home">
+          <div class="card">
+            <h3>🤖 AI 日报 <span class="src src-t">terry 线</span></h3>
+            <div class="report-head">
+              <div class="report-ico"><svg viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 16l.7 1.8L21.5 18l-1.8.7L19 20.5l-.7-1.8L16.5 18l1.8-.2z"/></svg></div>
+              <div><div class="headline">11月19日 星期四 · 注意：有 2 个任务已逾期</div><div class="summary">你参与 3 个项目，今日完成 4 项任务，还有 6 项待办。逾期任务建议优先处理。</div></div>
+            </div>
+            <div class="stat-row">
+              <div class="stat b"><b>3</b><span>参与项目</span></div>
+              <div class="stat c"><b>4</b><span>今日完成</span></div>
+              <div class="stat a"><b>6</b><span>我的待办</span></div>
+              <div class="stat r"><b>2</b><span>已逾期</span></div>
+            </div>
+            <div class="rsec"><h4>优先级提醒</h4>
+              <div class="ritem"><span class="tag over">逾期</span><span>AGILE-014 需求文档终稿（逾期 2 天）</span></div>
+              <div class="ritem"><span class="tag over">逾期</span><span>AGILE-022 接口联调确认（逾期 1 天）</span></div>
+              <div class="ritem"><span class="tag today">今天</span><span>AGILE-031 完成用户测试中 5 个任务</span></div>
+              <div class="ritem"><span class="tag tmr">明天</span><span>AGILE-035 准备中期汇报 PPT</span></div>
+            </div>
+            <div class="rsec"><h4>项目动态</h4>
+              <div class="ritem">• 林晓彤 在《敏捷校园》文档新增了 3 条评论</div>
+              <div class="ritem">• 里程碑「Alpha 版本」还有 5 天到期，完成度 72%</div>
+              <div class="ritem">• 你在群聊中被 @提及 2 次</div>
+            </div>
+            <div class="focus"><h4>✦ 今日建议聚焦</h4>
+              <ol><li>先处理 2 个逾期任务，避免影响里程碑</li><li>上午完成用户测试剩余 5 项</li><li>下午和组长对齐汇报结构</li></ol>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:18px">
+            <div class="card">
+              <h3>📅 项目日历 <span class="src src-t">terry 线</span></h3>
+              <div class="cal-head"><button onclick="toast('上月')">‹</button><b>2026 年 11 月</b><button onclick="toast('下月')">›</button></div>
+              <div class="cal-grid" id="cal"></div>
+              <div class="note">● 任务截止　● 里程碑　● 逾期</div>
+            </div>
+            <div class="card">
+              <h3>📊 任务进度 <span class="src src-t">terry 线</span></h3>
+              <div class="prog"><div class="prog-t"><b>敏捷校园 · Alpha</b><span>18 / 25</span></div><div class="track"><div class="fill" style="width:72%"></div></div></div>
+              <div class="prog"><div class="prog-t"><b>数据结构课程设计</b><span>7 / 14</span></div><div class="track"><div class="fill" style="width:50%"></div></div></div>
+              <div class="prog"><div class="prog-t"><b>大创项目 · 中期</b><span>3 / 12 · 临期</span></div><div class="track"><div class="fill a" style="width:25%"></div></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 看板 -->
+      <section class="view" id="v-board">
+        <h2 class="vtitle">项目看板<span class="src src-t">terry 线</span></h2>
+        <p class="vsub">敏捷校园 / Alpha 版本 · 拖动卡片切换状态，支持标签筛选、负责人、迭代与检查清单</p>
+        <div class="board">
+          <div class="col"><div class="col-h">待办 <span class="n">3</span></div>
+            <div class="tcard"><div class="code">AGILE-031</div><div class="ttl">完成用户测试剩余任务</div><div class="chips"><span class="chip md">中</span><span class="chip">11-19</span><span class="mini-av" style="background:#5b8cff">林</span></div></div>
+            <div class="tcard"><div class="code">AGILE-033</div><div class="ttl">整理反馈问题清单</div><div class="chips"><span class="chip">低</span><span class="chip ck">清单 3/5</span><span class="mini-av" style="background:#a78bfa">王</span></div></div>
+            <div class="tcard"><div class="code">AGILE-035</div><div class="ttl">准备中期汇报 PPT</div><div class="chips"><span class="chip hi">高</span><span class="chip">11-20</span><span class="mini-av" style="background:#2dd4a8">陈</span></div></div>
+          </div>
+          <div class="col"><div class="col-h">进行中 <span class="n">2</span></div>
+            <div class="tcard"><div class="code">AGILE-028</div><div class="ttl">实现消息撤回与已读回执</div><div class="chips"><span class="chip hi">高</span><span class="chip ck">清单 4/6</span><span class="mini-av" style="background:#5b8cff">徐</span></div></div>
+            <div class="tcard"><div class="code">AGILE-030</div><div class="ttl">云文档版本对比交互</div><div class="chips"><span class="chip md">中</span><span class="chip">11-21</span><span class="mini-av" style="background:#f5b942">李</span></div></div>
+          </div>
+          <div class="col"><div class="col-h">评审中 <span class="n">1</span></div>
+            <div class="tcard"><div class="code">AGILE-025</div><div class="ttl">登录页改版设计方案</div><div class="chips"><span class="chip md">中</span><span class="chip">飞书式</span><span class="mini-av" style="background:#a78bfa">王</span></div></div>
+          </div>
+          <div class="col"><div class="col-h">完成 <span class="n">2</span></div>
+            <div class="tcard"><div class="code">AGILE-024</div><div class="ttl">搭建 PostgreSQL 测试环境</div><div class="chips"><span class="chip ck">✓ 已完成</span><span class="mini-av" style="background:#2dd4a8">陈</span></div></div>
+            <div class="tcard"><div class="code">AGILE-026</div><div class="ttl">Persona 用户建模</div><div class="chips"><span class="chip ck">✓ 已完成</span><span class="mini-av" style="background:#5b8cff">林</span></div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 消息 -->
+      <section class="view" id="v-chat">
+        <h2 class="vtitle">团队消息<span class="src src-t">terry 线</span></h2>
+        <p class="vsub">飞书式双栏私聊 + 项目群聊 · 未读角标、已读回执、表情回应、消息搜索、附件</p>
+        <div class="chat-wrap">
+          <div class="conv-list">
+            <div class="conv-h">会话</div>
+            <div class="conv on"><div class="ava2" style="background:#5b8cff">林</div><div><div class="cn">林晓彤</div><div class="cp">好的，那我下午把原型更新一版</div></div><span class="ct">10:32</span><span class="unread">2</span></div>
+            <div class="conv"><div class="ava2" style="background:#a78bfa">王</div><div><div class="cn">王敏华老师</div><div class="cp">中期汇报的时间定在周五下午</div></div><span class="ct">09:15</span></div>
+            <div class="conv"><div class="ava2" style="background:#2dd4a8">徐</div><div><div class="cn">徐小龙</div><div class="cp">接口已经联调通过了 👍</div></div><span class="ct">昨天</span></div>
+            <div class="conv"><div class="ava2" style="background:#f5b942">李</div><div><div class="cn">李悦</div><div class="cp">文档我看完了，提了几点</div></div><span class="ct">昨天</span></div>
+            <div class="conv"><div class="ava2" style="background:#5b8cff">群</div><div><div class="cn">敏捷校园 · 项目群</div><div class="cp">陈昱：今天的站会改到 4 点</div></div><span class="ct">昨天</span></div>
+          </div>
+          <div class="chat-main">
+            <div class="chat-top">林晓彤 <span style="color:var(--cyan);font-size:11px">● 在线</span></div>
+            <div class="msg-body">
+              <div class="msg"><div class="ava2" style="background:#5b8cff">林</div><div><div class="bubble">组长，用户测试的任务我这周能做完 5 个，剩下 2 个可能要下周了。</div><div class="tm">10:28 · 已读</div></div></div>
+              <div class="msg me"><div class="ava2" style="background:#2dd4a8">陈</div><div><div class="bubble">没问题，先把高优先级的做完就行。下周的排到迭代 2。</div><div class="tm">10:30</div></div></div>
+              <div class="msg"><div class="ava2" style="background:#5b8cff">林</div><div><div class="bubble">好的，那我下午把原型更新一版 👌</div><div class="tm">10:32</div></div></div>
+            </div>
+            <div class="chat-input"><input placeholder="发消息…（支持 @提及、附件）"><button onclick="toast('消息已发送')">发送</button></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 文档 -->
+      <section class="view" id="v-docs">
+        <h2 class="vtitle">协作文档<span class="src src-t">terry 线</span></h2>
+        <p class="vsub">飞书式协作文档 · Markdown 正文、版本历史、评论，项目成员均可读可写</p>
+        <div class="doc-grid">
+          <div class="doc-list">
+            <div class="conv-h">项目文档</div>
+            <div class="doc-item on"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>需求分析说明书</div>
+            <div class="doc-item"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>用户 Persona 建模</div>
+            <div class="doc-item"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>中期汇报大纲</div>
+            <div class="doc-item"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>会议纪要 11-12</div>
+            <div class="doc-item"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>接口约定 v2</div>
+          </div>
+          <div class="doc-editor">
+            <h1>需求分析说明书</h1>
+            <div class="doc-meta">最后编辑：林晓彤 · 2 小时前　|　版本 v7　|　3 条评论</div>
+            <h4>1. 项目背景</h4>
+            <p>敏捷校园是一款面向大学生课程项目的敏捷协作工具，支持团队分工、任务看板、即时沟通、教学周里程碑与汇报摘要。</p>
+            <h4>2. 用户角色</h4>
+            <p>整合后支持三级角色：管理员 / 教师 / 学生；团队内另有负责人、组员分工标签。教师可跨组查看进度，学生聚焦"我该做什么"。</p>
+            <h4>3. 核心功能</h4>
+            <p>任务看板与迭代、飞书式私聊与群聊、协作文档与版本、AI 日报与日历、AI 项目助手、Agent 写入 API、时间线甘特、资源占用登记。</p>
+            <p style="color:var(--cyan)">▸ 该文档由全员协作编辑，修改自动保存版本历史。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- AI 助手 -->
+      <section class="view" id="v-assistant">
+        <h2 class="vtitle">AI 项目助手<span class="src src-s">student 线</span></h2>
+        <p class="vsub">对话式拆解任务 · 读工具 + 四写兵器草案，两段式确认后才落库（不直接改数据）</p>
+        <div class="ai-wrap">
+          <div class="ai-chat">
+            <div class="ai-msg user"><div class="who">你</div><div class="bub">帮我把"中期汇报"拆成任务，安排到下周，负责人默认我。</div></div>
+            <div class="ai-msg"><div class="who">✦ AgileCampus AI 助手</div><div class="bub">我读了项目当前状态，生成了 4 个任务草案。请先勾选要创建的项，确认后才会写入数据库：</div>
+              <div class="ai-plan"><div class="ph">📋 任务草案 <span class="tool">读: 项目/任务/里程碑</span></div>
+                <label><input type="checkbox" checked> 整理中期汇报大纲（下周一 · 高优先级）</label>
+                <label><input type="checkbox" checked> 汇总各模块进度数据（下周二）</label>
+                <label><input type="checkbox" checked> 制作汇报 PPT（下周三）</label>
+                <label><input type="checkbox"> 预约会议室与设备（可选）</label>
+                <div class="ai-actions"><button class="btn" onclick="toast('已创建 3 个任务并写入项目')">确认创建 3 项</button><button class="btn ghost" onclick="toast('草案已丢弃')">取消</button></div>
+              </div>
+              <div style="font-size:11px;color:var(--faint);margin-top:6px">写入工具：addTask / updateTask / completeTask / logResource（均需二次确认）</div>
+            </div>
+          </div>
+          <div class="ai-side">
+            <div class="mini-card"><h4>助手配置</h4>
+              <div class="kv"><span>模型</span><b>DeepSeek</b></div>
+              <div class="kv"><span>读工具</span><b>项目 / 任务 / 文档</b></div>
+              <div class="kv"><span>写工具</span><b>4 个（草案确认制）</b></div>
+              <div class="kv"><span>对话历史</span><b>已保存</b></div>
+            </div>
+            <div class="mini-card"><h4>安全边界</h4>
+              <div class="note" style="margin:0">AI 只生成草案，任何写操作都要你在界面上二次确认后才落库；Agent API 需携带本人 Token，权限与本人一致。</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 甘特 -->
+      <section class="view" id="v-gantt">
+        <h2 class="vtitle">时间线甘特<span class="src src-s">student 线</span></h2>
+        <p class="vsub">按里程碑分组的任务甘特视图 · 逾期标红、今日竖线，快速看清排期</p>
+        <div class="gantt"><div class="gtable">
+          <div class="grow head"><div>任务 / 里程碑</div><div>11-16</div><div>11-17</div><div>11-18</div><div>11-19</div><div>11-20</div><div>11-21</div><div>11-22</div><div>11-23</div></div>
+          <div class="grow"><div class="gname"><b>◆ 里程碑：Alpha 版本</b><span>11-23 截止</span></div><div class="gcell"></div><div class="gcell"></div><div class="gcell"></div><div class="gcell"></div><div class="gcell"></div><div class="gcell"></div><div class="gcell"></div><div class="gcell"></div></div>
+          <div class="grow"><div class="gname">需求文档终稿<span>林晓彤</span></div><div class="gcell"><div class="gbar over" style="left:0;width:20%">逾期</div></div><div class="gcell"></div><div class="gcell"></div><div class="gcell"><div class="today-line"></div></div><div class="gcell"></div><div class="gcell"></div><div class="gcell"></div><div class="gcell"></div></div>
+          <div class="grow"><div class="gname">实现私聊与云文档<span>徐小龙</span></div><div class="gcell"><div class="gbar b" style="left:0;width:48%">开发中</div></div><div class="gcell"></div><div class="gcell"></div><div class="gcell"><div class="today-line"></div></div><div class="gcell"></div><div class="gcell"></div><div class="gcell"></div><div class="gcell"></div></div>
+          <div class="grow"><div class="gname">用户测试<span>林晓彤</span></div><div class="gcell"></div><div class="gcell"></div><div class="gcell"><div class="gbar a" style="left:25%;width:48%">测试中</div></div><div class="gcell"><div class="today-line"></div></div><div class="gcell"></div><div class="gcell"></div><div class="gcell"></div><div class="gcell"></div></div>
+          <div class="grow"><div class="gname">中期汇报 PPT<span>陈昱</span></div><div class="gcell"></div><div class="gcell"></div><div class="gcell"></div><div class="gcell"><div class="today-line"></div></div><div class="gcell"><div class="gbar c" style="left:0;width:50%">待开始</div></div><div class="gcell"></div><div class="gcell"></div><div class="gcell"></div></div>
+        </div></div>
+      </section>
+
+      <!-- 角色 -->
+      <section class="view" id="v-roles">
+        <h2 class="vtitle">成员与角色<span class="src src-s">student 线</span></h2>
+        <p class="vsub">整合后：平台三级角色（管理员/教师/学生）+ 团队内分工标签（负责人/组员），兼顾教学与协作</p>
+        <div class="role-grid">
+          <div class="role admin"><div class="ricon">🛡</div><h3>管理员</h3><div class="en">admin</div><ul><li>创建/加入团队</li><li>管理成员与角色</li><li>全部项目与设置</li><li>生成 Agent Token</li></ul></div>
+          <div class="role teacher"><div class="ricon">📋</div><h3>教师</h3><div class="en">teacher</div><ul><li>跨组查看全部进度</li><li>10 分钟汇总检查</li><li>下发里程碑与截止</li><li>只读任意项目看板</li></ul></div>
+          <div class="role student"><div class="ricon">🎓</div><h3>学生</h3><div class="en">student</div><ul><li>查看我参与的项目</li><li>创建/编辑自己任务</li><li>使用 AI 助手</li><li>登记资源占用</li></ul></div>
+        </div>
+        <div class="card" style="margin-top:18px"><h3>团队成员 · 敏捷校园</h3>
+          <table><thead><tr><th>成员</th><th>平台角色</th><th>团队分工</th><th>状态</th></tr></thead><tbody>
+            <tr><td>陈昱</td><td><span class="pill u">管理员</span></td><td>负责人（组长）</td><td style="color:var(--cyan)">● 在线</td></tr>
+            <tr><td>林晓彤</td><td><span class="pill f">学生</span></td><td>组员 · 设计</td><td style="color:var(--cyan)">● 在线</td></tr>
+            <tr><td>徐小龙</td><td><span class="pill f">学生</span></td><td>组员 · 后端</td><td style="color:var(--faint)">○ 离线</td></tr>
+            <tr><td>王敏华老师</td><td><span class="pill u">教师</span></td><td>指导教师</td><td style="color:var(--faint)">○ 离线</td></tr>
+          </tbody></table>
+        </div>
+      </section>
+
+      <!-- 集成 -->
+      <section class="view" id="v-integrations">
+        <h2 class="vtitle">集成设置<span class="src src-m">◆ 两线合并</span></h2>
+        <p class="vsub">把 student 线的飞书生态与 Agent 能力，接到 terry 线的自研会话体系上</p>
+        <div class="int-grid">
+          <div>
+            <div class="card"><h3>第三方登录</h3>
+              <div class="fs-box"><div class="fs-logo">飞</div><div><div style="font-size:13px;font-weight:600">飞书登录</div><div style="font-size:11px;color:var(--muted)">OAuth 授权 · 与账号系统打通</div></div><div class="sw on" onclick="this.classList.toggle('on');toast('飞书登录已切换')"></div></div>
+              <div class="fs-box"><div class="fs-logo" style="background:#2dd4a8">✉</div><div><div style="font-size:13px;font-weight:600">飞书卡片提醒</div><div style="font-size:11px;color:var(--muted)">任务截止推送到群</div></div><div class="sw on" onclick="this.classList.toggle('on');toast('卡片提醒已切换')"></div></div>
+              <div class="note">整合要点：terry 线原为自研 scrypt 会话，飞书 OAuth 作为并列入口，登录后签发同一套会话令牌，避免两套认证并存。</div>
+            </div>
+            <div class="card" style="margin-top:18px"><h3>Personal API Token <span class="src src-s">student 线</span></h3>
+              <div class="token-row"><code>aglive_8f2a••••••••4d91</code><span class="st">● 有效</span><button class="btn ghost" style="padding:5px 10px" onclick="toast('已撤销')">撤销</button></div>
+              <div class="token-row"><code>aglive_c41b••••••••7e03</code><span class="st">● 有效</span><button class="btn ghost" style="padding:5px 10px" onclick="toast('已撤销')">撤销</button></div>
+              <button class="btn" onclick="toast('已生成新 Token（仅显示一次）')">+ 生成 Token</button>
+            </div>
+          </div>
+          <div class="card"><h3>Agent 写入 API <span class="src src-s">student 线</span></h3>
+            <p style="font-size:12px;color:var(--muted);margin-bottom:14px">外部程序（如 Claude Code）携带本人 Token，即可按本人权限写入任务、完成状态与资源占用。</p>
+            <div class="code-block"><span class="c"># 添加任务</span><br><span class="k">curl</span> -X POST /api/agent/tasks \<br>  -H <span class="s">"Authorization: Bearer $TOKEN"</span> \<br>  -d <span class="s">'{"projectId":12,"title":"联调接口"}'</span><br><br><span class="c"># 填写完成情况</span><br><span class="k">curl</span> -X POST /api/agent/tasks/complete \<br>  -H <span class="s">"Authorization: Bearer $TOKEN"</span> \<br>  -d <span class="s">'{"taskId":31,"done":true}'</span><br><br><span class="c"># 登记资源占用</span><br><span class="k">curl</span> -X POST /api/agent/resource-usage \<br>  -H <span class="s">"Authorization: Bearer $TOKEN"</span> \<br>  -d <span class="s">'{"resource":"GPU-1","hours":2}'</span></div>
+            <div class="note">权限边界：Token 权限 = 持有人权限；管理员可全写，教师只读跨组，学生仅写自己参与的项目。所有写入留痕到活动记录。</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 资源 -->
+      <section class="view" id="v-resources">
+        <h2 class="vtitle">资源占用登记<span class="src src-s">student 线</span></h2>
+        <p class="vsub">团队共享资源（服务器 / 算力 / 设备）的占用登记与时长汇总 · 纯登记无审批</p>
+        <div class="card">
+          <table><thead><tr><th>资源</th><th>占用人</th><th>用途</th><th>时长</th><th>状态</th></tr></thead><tbody>
+            <tr><td><b>GPU 服务器 A</b></td><td>徐小龙</td><td>模型推理测试</td><td><div class="bar-mini"><i style="width:75%"></i></div> 6.0 h</td><td><span class="pill u">使用中</span></td></tr>
+            <tr><td><b>阿里云测试服</b></td><td>陈昱</td><td>部署验收</td><td><div class="bar-mini"><i style="width:40%"></i></div> 3.2 h</td><td><span class="pill u">使用中</span></td></tr>
+            <tr><td><b>会议室 302</b></td><td>林晓彤</td><td>用户访谈</td><td><div class="bar-mini"><i style="width:25%"></i></div> 2.0 h</td><td><span class="pill f">已释放</span></td></tr>
+            <tr><td><b>相机设备</b></td><td>李悦</td><td>汇报录制</td><td><div class="bar-mini"><i style="width:0%"></i></div> 0 h</td><td><span class="pill f">空闲</span></td></tr>
+          </tbody></table>
+          <div class="note" style="margin-top:14px">合计本周已登记 11.2 小时。数据来源：student 线 resourceUsages 表，整合后复用同一套 PostgreSQL。</div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast">✓ 操作成功</div>
+
+<script>
+const TITLES={home:['今日总览','AgileCampus · 敏捷校园'],board:['项目看板','敏捷校园 / Alpha 版本'],chat:['团队消息','飞书式私聊与群聊'],docs:['协作文档','项目知识库'],assistant:['AI 项目助手','对话式任务拆解'],gantt:['时间线甘特','任务排期视图'],roles:['成员与角色','三级角色 + 团队分工'],integrations:['集成设置','飞书生态与 Agent 能力'],resources:['资源占用登记','团队共享资源']};
+document.querySelectorAll('.navbtn').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.navbtn').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  document.getElementById('v-'+b.dataset.v).classList.add('on');
+  document.getElementById('ttl').textContent=TITLES[b.dataset.v][0];
+  document.getElementById('sub').textContent=TITLES[b.dataset.v][1];
+  window.scrollTo({top:0,behavior:'smooth'});
+}));
+function toast(m){const t=document.getElementById('toast');t.textContent='✓ '+m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2200)}
+// 生成月历：2026-11-01 是周日，周一起始补位 6 天
+(function(){const cal=document.getElementById('cal');['一','二','三','四','五','六','日'].forEach(w=>{const e=document.createElement('div');e.className='cal-wd';e.textContent=w;cal.appendChild(e)});
+const events={4:['ms'],10:['task'],13:['over'],19:['task','ms'],21:['task'],25:['task'],28:['ms']};
+for(let i=0;i<42;i++){const day=i-5;const c=document.createElement('div');c.className='cal-cell'+(day<1||day>30?' out':'')+(day===19?' today':'');if(day>=1&&day<=30){c.textContent=day;(events[day]||[]).forEach(k=>{const e=document.createElement('span');e.className='ev '+k;c.appendChild(e)})}cal.appendChild(c)}})();
+</script>
+</body>
+</html>
