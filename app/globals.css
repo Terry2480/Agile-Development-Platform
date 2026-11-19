@@ -713,3 +713,9 @@ html[data-theme="day"] .ws-avatar[data-av="4"]{background:#8a4710}
 .ws-cal-ev-main{font-size:12px;color:var(--ws-color-c6cbdb);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ws-cal-ev-main b{color:var(--ws-color-8fa9e6);margin-right:4px}
 .ws-cal-ev-main small{color:var(--ws-color-5d6273);margin-left:6px}
+
+/* 新手导引入口（terry/guide-entry）：顶栏按钮，独立于既有样式 */
+.ws-guide-entry{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 13px;border-radius:9px;border:1px solid var(--ws-color-304467, #304467);background:var(--ws-color-1d2436, #1d2436);color:var(--ws-color-c6cbdb, #c6cbdb);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+.ws-guide-entry:hover{background:var(--ws-color-2a3a5e, #2a3a5e);color:#fff;border-color:var(--ws-color-3d527f, #3d527f)}
+.ws-guide-q{width:17px;height:17px;border-radius:50%;background:var(--ws-color-8fa9e6, #8fa9e6);color:#141a2b;display:grid;place-items:center;font-size:12px;font-weight:700}
+@media(max-width:900px){.ws-guide-entry span:last-child{display:none}.ws-guide-entry{padding:0;width:34px;justify-content:center}}
