@@ -1,0 +1,109 @@
+/* ============================================================
+   动效 · 灵动层（motion-lively）
+   ------------------------------------------------------------
+   补齐统一动效层未覆盖的工作台交互元素，风格与首页一致：
+   只用 transform/opacity（GPU 合成）、180–280ms、低幅度、
+   错峰 ≤60ms，全部遵循 prefers-reduced-motion。
+   覆盖：Ctrl+K 面板 / 聊天与私信气泡 / 评论 / 徽标 /
+        输入聚焦 / 会话与评论列表 hover
+   ============================================================ */
+
+/* ------------------------------ Ctrl+K 命令面板：弹入 + 列表错峰 */
+.ws-cmdk {
+  animation: lv-pop 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.ws-cmdk-backdrop {
+  animation: lv-fade 0.18s ease both;
+}
+
+.ws-cmdk .ws-cmdk-list > * {
+  animation: lv-rise 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.ws-cmdk .ws-cmdk-list > *:nth-child(1) { animation-delay: 0.03s; }
+.ws-cmdk .ws-cmdk-list > *:nth-child(2) { animation-delay: 0.06s; }
+.ws-cmdk .ws-cmdk-list > *:nth-child(3) { animation-delay: 0.09s; }
+.ws-cmdk .ws-cmdk-list > *:nth-child(n + 4) { animation-delay: 0.12s; }
+
+/* ------------------------------ 聊天 / 私信气泡：浮现进场 */
+.ws-msg,
+.ws-dm-bubble {
+  animation: lv-rise 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* 气泡操作按钮（引用/表情）：hover 时平滑显形 */
+.ws-msg-actions {
+  opacity: 0.55;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.ws-msg:hover .ws-msg-actions {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+/* ------------------------------ 评论：入场 + 悬停 */
+.ws-comment,
+.ws-doc-comment {
+  transition: transform 0.16s ease, background-color 0.16s ease;
+}
+
+.ws-comment:hover,
+.ws-doc-comment:hover {
+  transform: translateX(3px);
+}
+
+/* ------------------------------ 徽标：出现时弹一下 */
+.ws-rail-badge {
+  animation: lv-badge 0.34s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* ------------------------------ 输入聚焦：柔光过渡 */
+.ws-chat-textarea,
+.ws-chat-input input,
+.ws-doc-comment-input textarea,
+.ws-cmdk input {
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+/* ------------------------------ 会话列表项：悬停轻推 */
+.ws-dm-item {
+  transition: transform 0.16s ease, background-color 0.16s ease;
+}
+
+.ws-dm-item:hover {
+  transform: translateX(3px);
+}
+
+/* ------------------------------ 关键帧 ------------------------------ */
+
+@keyframes lv-pop {
+  from { opacity: 0; transform: scale(0.97) translateY(6px); }
+}
+
+@keyframes lv-fade {
+  from { opacity: 0; }
+}
+
+@keyframes lv-rise {
+  from { opacity: 0; transform: translateY(8px); }
+}
+
+@keyframes lv-badge {
+  0% { opacity: 0; transform: scale(0.4); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* ------------------------------ 降低动态 ------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  .ws-cmdk,
+  .ws-cmdk-backdrop,
+  .ws-cmdk .ws-cmdk-list > *,
+  .ws-msg,
+  .ws-dm-bubble,
+  .ws-rail-badge {
+    animation: none;
+  }
+}
