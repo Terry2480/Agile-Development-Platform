@@ -81,6 +81,9 @@ export function IconRail() {
       <button className="ws-rail-btn" title="新手导引" aria-label="新手导引" onClick={() => router.push("/guide")}>
         <span style={{ fontSize: 19, fontWeight: 700, lineHeight: 1 }}>?</span>
       </button>
+      <button className="ws-rail-btn" title="插件商城" aria-label="插件商城" onClick={() => router.push("/plugins")}>
+        <Icon name="puzzle" size={17} />
+      </button>
       <button className="ws-rail-btn" title={theme === "night" ? "切换日间模式" : "切换夜间模式"} aria-label={theme === "night" ? "切换日间模式" : "切换夜间模式"} onClick={toggle}>
         <Icon name={theme === "night" ? "sun" : "moon"} size={18} />
       </button>
