@@ -3,19 +3,18 @@
 // 「今日」首页（飞书式）：一屏回答“今天该干什么”——
 // 截止提醒 / 进行中待办 / 未读私信 / 最近文档 四张卡片，点击直达对应内容
 import { useEffect, useState } from "react";
-import { api, dueInfo, type DocSummary, type TaskItem } from "@/lib/api-client";
+import { api, dayKey, dueInfo, type DocSummary, type TaskItem } from "@/lib/api-client";
 import { useWorkspace, Icon, Avatar } from "./shared";
 import { DailyReportCard } from "./DailyReportCard";
 import { HomeCalendar } from "./HomeCalendar";
 
+// 与 dueOn（东八区日期串）、后端日报口径一致：统一用 Asia/Hong_Kong 当天
 const dayKeyToday = () => {
   const d = new Date();
-  const tomorrow = new Date(d.getTime() + 86400000);
-  return { today: toKey(d), tomorrow: toKey(tomorrow) };
+  const today = dayKey(d.toISOString());
+  const tomorrow = dayKey(new Date(d.getTime() + 86400000).toISOString());
+  return { today, tomorrow };
 };
-function toKey(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
 
 export function TodayPanel() {
   const ws = useWorkspace();

@@ -1,0 +1,29 @@
+<Slide style={{ width: '1280px', height: '720px', background: '#F5F5F5', padding: '60px' }}>
+  <Box style={{ width: '100%', height: '100%', flexDirection: 'row', gap: 36 }}>
+    <Box style={{ width: 360, height: '100%', background: '#203988', padding: 32, flexDirection: 'column', justifyContent: 'space-between' }}>
+      <Text style={{ fontSize: 14, color: '#C9D4F5', letterSpacing: 3 }}>06 / 人物角色 B</Text>
+      <Box>
+        <Text style={{ fontSize: 150, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1 }}>昱</Text>
+        <Text style={{ fontSize: 30, fontWeight: 'bold', color: '#FFFFFF' }}>陈昱</Text>
+        <Text style={{ fontSize: 19, color: '#DCE4FA' }}>学生组长 · 组织者</Text>
+      </Box>
+      <Text style={{ fontSize: 15, color: '#AABBE8', lineHeight: 1.5 }}>初版假设 · 待访谈验证</Text>
+    </Box>
+    <Box style={{ flex: 1, height: '100%', flexDirection: 'column', justifyContent: 'space-between' }}>
+      <Box>
+        <Text style={{ fontSize: 34, fontWeight: 'bold', color: '#081F5C' }}>他需要一屏看清全组的进度</Text>
+        <Box style={{ height: 10, width: '100%', borderBottom: '1px solid #D4D7E0' }} />
+      </Box>
+      <Box style={{ gap: 14 }}>
+        <Text style={{ fontSize: 17, color: '#20346B', lineHeight: 1.6 }}><span style={{ fontWeight: 'bold', color: '#334EAC' }}>基本信息</span>　21 岁 · 大三 · 软件工程 · 同时带 2 个小组</Text>
+        <Text style={{ fontSize: 17, color: '#20346B', lineHeight: 1.6 }}><span style={{ fontWeight: 'bold', color: '#334EAC' }}>口头禅</span>　「大家进度发我一下，我汇总给老师。」</Text>
+        <Text style={{ fontSize: 17, color: '#20346B', lineHeight: 1.6 }}><span style={{ fontWeight: 'bold', color: '#334EAC' }}>性格坐标</span>　偏外向 · 责任感强 · 习惯自己兜底</Text>
+        <Text style={{ fontSize: 17, color: '#20346B', lineHeight: 1.6 }}><span style={{ fontWeight: 'bold', color: '#334EAC' }}>核心目标</span>　分工清楚、节奏可控、汇报材料不用临时拼</Text>
+        <Text style={{ fontSize: 17, color: '#20346B', lineHeight: 1.6 }}><span style={{ fontWeight: 'bold', color: '#334EAC' }}>常用 APP</span>　飞书 · 腾讯文档 · Excel · GitHub</Text>
+      </Box>
+      <Box style={{ background: '#ECECEC', padding: 18 }}>
+        <Text style={{ fontSize: 17, color: '#081F5C', lineHeight: 1.5 }}><span style={{ fontWeight: 'bold' }}>设计含义：</span>需要跨成员的聚合视图与批量操作，而不是逐个点开任务。</Text>
+      </Box>
+    </Box>
+  </Box>
+</Slide>

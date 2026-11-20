@@ -3,7 +3,7 @@
 // AI 日报卡片：「今日」首页的智能摘要——聚合项目动态 / 临近截止 / 提及与我 / 里程碑，
 // 由本地规则引擎（lib/home-report.ts）生成，30 秒轮询保持实时，页面后台时暂停。
 import { useCallback, useEffect, useState } from "react";
-import { api } from "@/lib/api-client";
+import { api, dayKey } from "@/lib/api-client";
 import { Icon } from "./shared";
 import type { DailyReport } from "@/lib/home-report";
 
@@ -12,10 +12,8 @@ export function DailyReportCard() {
   const [expanded, setExpanded] = useState(false);
   const [failed, setFailed] = useState("");
 
-  const localDateKey = () => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  };
+  // 与后端 /api/home/daily-report 缺省口径一致：统一用东八区（Asia/Hong_Kong）当天
+  const localDateKey = () => dayKey(new Date().toISOString());
 
   const load = useCallback(() => {
     api<{ report: DailyReport }>(`/api/home/daily-report?date=${localDateKey()}`)

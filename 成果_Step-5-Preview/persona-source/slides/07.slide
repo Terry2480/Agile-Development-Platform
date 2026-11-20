@@ -1,0 +1,27 @@
+<Slide style={{ width: '1280px', height: '720px', background: '#F5F5F5', padding: '60px' }}>
+  <Box style={{ width: '100%', height: '100%', flexDirection: 'column', justifyContent: 'space-between' }}>
+    <Box>
+      <Text style={{ fontSize: 14, color: '#2A5E96', letterSpacing: 3 }}>07 / 互动场景 B</Text>
+      <Text style={{ fontSize: 34, fontWeight: 'bold', color: '#081F5C' }}>昱的周三夜：手动汇总进度给老师</Text>
+      <Box style={{ height: 10, width: '100%', borderBottom: '1px solid #D4D7E0' }} />
+    </Box>
+    <Box style={{ width: '100%', height: 330, flexDirection: 'row', gap: 20 }}>
+      <Box style={{ width: 350, height: 330, background: '#ECECEC', padding: 24, flexDirection: 'column', justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 18, color: '#2A5E96', fontWeight: 'bold' }}>可视化瞬间</Text>
+        <Text style={{ fontSize: 19, color: '#20346B', lineHeight: 1.6 }}>他在三个窗口间来回切换：群聊问进度、表格复制粘贴、文档写周报。已经 23:40。</Text>
+        <Text style={{ fontSize: 15, color: '#737FA1' }}>接触点：通知 · 命令面板 · 看板</Text>
+      </Box>
+      <Box style={{ width: 430, height: 270, background: '#334EAC', padding: 24, flexDirection: 'column', justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 18, color: '#C9D4F5', fontWeight: 'bold' }}>意志力 / 认知负荷</Text>
+        <Text style={{ fontSize: 20, color: '#FFFFFF', lineHeight: 1.5 }}>高负荷、多任务切换；越接近截止，越容易凭印象填数字，而不是核对事实。</Text>
+      </Box>
+      <Box style={{ flex: 1, height: 210, background: '#ECECEC', padding: 24, flexDirection: 'column', justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 18, color: '#2A5E96', fontWeight: 'bold' }}>情绪 / 注意力</Text>
+        <Text style={{ fontSize: 18, color: '#20346B', lineHeight: 1.6 }}>截止前焦虑；注意力在「催人」与「整理」之间反复被切断。</Text>
+      </Box>
+    </Box>
+    <Box style={{ background: '#334EAC', padding: 18 }}>
+      <Text style={{ fontSize: 17, color: '#FFFFFF', lineHeight: 1.5 }}><span style={{ fontWeight: 'bold' }}>设计启示：</span>提供自动进度摘要与批量状态更新，把「催 + 抄 + 写」压缩成一次确认。</Text>
+    </Box>
+  </Box>
+</Slide>

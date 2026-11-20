@@ -7,7 +7,7 @@ import { randomUUID } from "node:crypto";
 import ts from "typescript";
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { config } from "dotenv";
 config({ path: ".env.local", quiet: true });
 const require = createRequire(import.meta.url);
@@ -18,7 +18,7 @@ function moduleAt(path, overrides = {}) {
   return exports;
 }
 const schema = moduleAt("../db/schema.ts");
-const { users, teams, teamMembers, projects, tasks, labels, taskLabels, comments, activities, notifications } = schema;
+const { users, teams, teamMembers, projects, tasks, labels, comments, activities, notifications } = schema;
 test("task writes roll back on activity or notification failure", async () => {
  const client = postgres(process.env.DATABASE_URL, { max: 1 });
  const database = drizzle(client); const rollback = new Error("rollback fixtures");

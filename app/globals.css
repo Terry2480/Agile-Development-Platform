@@ -675,6 +675,8 @@ html[data-theme="day"] .ws-avatar[data-av="4"]{background:#8a4710}
 .ws-cmdk-empty{padding:26px 14px;text-align:center;color:var(--ws-color-5d6273);font-size:12px}
 .ws-cmdk-foot{display:flex;gap:14px;padding:8px 14px;border-top:1px solid var(--ws-color-22242f);font-size:10px;color:var(--ws-color-5d6273)}
 
+
+
 /* ===== 今日首页扩展：任务进度条 / AI 日报 / 日历（功能/ai-home-dashboard） ===== */
 .ws-today-progress{display:flex;align-items:center;gap:12px;border:1px solid var(--ws-color-262a38);background:var(--ws-color-141722);border-radius:12px;padding:10px 16px;margin:0 0 14px;font-size:12px;color:var(--ws-color-9aa1b5)}
 .ws-progress-num{font-weight:600;color:var(--ws-color-e8eaf2);font-size:13px;white-space:nowrap}
@@ -711,3 +713,26 @@ html[data-theme="day"] .ws-avatar[data-av="4"]{background:#8a4710}
 .ws-cal-ev-main{font-size:12px;color:var(--ws-color-c6cbdb);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ws-cal-ev-main b{color:var(--ws-color-8fa9e6);margin-right:4px}
 .ws-cal-ev-main small{color:var(--ws-color-5d6273);margin-left:6px}
+
+/* 新手导引入口（terry/guide-entry）：顶栏按钮，独立于既有样式 */
+.ws-guide-entry{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 13px;border-radius:9px;border:1px solid var(--ws-color-304467, #304467);background:var(--ws-color-1d2436, #1d2436);color:var(--ws-color-c6cbdb, #c6cbdb);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+.ws-guide-entry:hover{background:var(--ws-color-2a3a5e, #2a3a5e);color:#fff;border-color:var(--ws-color-3d527f, #3d527f)}
+.ws-guide-q{width:17px;height:17px;border-radius:50%;background:var(--ws-color-8fa9e6, #8fa9e6);color:#141a2b;display:grid;place-items:center;font-size:12px;font-weight:700}
+@media(max-width:900px){.ws-guide-entry span:last-child{display:none}.ws-guide-entry{padding:0;width:34px;justify-content:center}}
+
+/* 找回密码流程（terry/password-recovery） */
+.auth-forgot-link{display:block;margin:14px auto 0;border:0;background:transparent;color:#294a78;font-size:13px;cursor:pointer;padding:4px}
+.auth-forgot-link:hover{text-decoration:underline}
+.auth-tabs .auth-forgot-tab{grid-column:1/-1;background:#294a78;color:#fff;font-weight:bold;cursor:default}
+.auth-devcode{background:#e8eef8;border:1px dashed #294a78;border-radius:9px;padding:12px 14px;text-align:center}
+.auth-devcode small{display:block;color:#687386;font-size:11px;margin-bottom:5px}
+.auth-devcode b{font:700 26px Georgia;letter-spacing:6px;color:#294a78}
+.auth-notice{margin:0 0 14px;color:#3f7a58;background:#e7f2e9;border-radius:7px;padding:10px 12px;font-size:13px}
+.auth-back{display:block;border:0;background:transparent;color:#687386;font-size:12px;cursor:pointer;padding:0 0 6px}
+.auth-back:hover{color:#294a78}
+
+/* 全局效率中心悬浮入口（terry/personal-suite） */
+.su-launcher{position:fixed;right:22px;bottom:22px;z-index:60;display:flex;align-items:center;gap:9px;height:48px;padding:0 18px 0 14px;border:0;border-radius:26px;background:linear-gradient(135deg,#294a78,#3d6ab5);color:#fff;box-shadow:0 8px 24px #294a7855;font-size:13px;font-weight:600;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.su-launcher:hover{transform:translateY(-2px);box-shadow:0 12px 30px #294a7877}
+.su-launcher:active{transform:translateY(0)}
+@media(max-width:600px){.su-launcher span{display:none}.su-launcher{padding:0;width:48px;justify-content:center}}

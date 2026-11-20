@@ -51,6 +51,10 @@ export function TopBar() {
           </div>
         )}
 
+        <button className="ws-guide-entry" title="新手导引：8 步快速上手平台" aria-label="打开新手导引" onClick={() => router.push("/guide")}>
+          <span className="ws-guide-q">?</span><span>新手导引</span>
+        </button>
+
         <div className="ws-bell-wrap">
           <button className="ws-rail-btn" style={{ width: 34, height: 34 }} title="通知" onClick={() => setShowNotif((v) => !v)}>
             <Icon name="bell" size={16} />

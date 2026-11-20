@@ -3,14 +3,12 @@
 // 首页日历卡片：月历网格（周一起始）+ 任务截止/里程碑事件点，
 // 点选日期查看当日安排；月份可前后切换；30 秒轮询保持实时。
 import { useCallback, useEffect, useState } from "react";
-import { api } from "@/lib/api-client";
+import { api, dayKey } from "@/lib/api-client";
 import { Icon } from "./shared";
 import { monthDays, groupEventsByDate, prevMonth, nextMonth, type CalendarEvent } from "@/lib/calendar-events";
 
-const localTodayKey = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-};
+// 与后端 /api/home/calendar 缺省口径一致：统一用东八区（Asia/Hong_Kong）当天
+const localTodayKey = () => dayKey(new Date().toISOString());
 const localMonthKey = () => localTodayKey().slice(0, 7);
 
 export function HomeCalendar() {
