@@ -50,7 +50,7 @@ const STEPS = [
   },
 ] as const;
 
-type Feature = { tag: string; title: string; desc: string; icon: ReactNode };
+type Feature = { tag: string; title: string; desc: string; icon: ReactNode; href: string };
 
 const FEATURES: Feature[] = [
   {
@@ -58,24 +58,28 @@ const FEATURES: Feature[] = [
     title: "任务看板",
     desc: "待开始 / 进行中 / 已完成三列流转，截止日、优先级与检查清单同步更新。",
     icon: <IconBoard />,
+    href: `${WORKSPACE_HREF}#tasks`,
   },
   {
     tag: "STANDUP",
     title: "每日站会",
     desc: "在项目频道完成站会，进展与阻塞自动汇总成当日摘要，不必再逐条追问。",
     icon: <IconChat />,
+    href: `${WORKSPACE_HREF}#chat`,
   },
   {
     tag: "MILESTONE",
     title: "里程碑",
     desc: "把答辩节点、交付物与参考资料挂到同一条时间线上，关键日期不再漏项。",
     icon: <IconFlag />,
+    href: `${WORKSPACE_HREF}#space`,
   },
   {
     tag: "DOCS",
     title: "文档协作",
     desc: "课程文档在线协作，版本留痕、评论可追溯，随时回到任意一稿。",
     icon: <IconDoc />,
+    href: `${WORKSPACE_HREF}#docs`,
   },
 ];
 
@@ -354,37 +358,37 @@ export default function HomePage() {
             </h2>
 
             <div className="ac-stats">
-              <div className="ac-stat">
+              <Link className="ac-stat ac-stat--link" href={`${WORKSPACE_HREF}#teams`} title="查看团队管理">
                 <span className="ac-stat__label">我的团队</span>
                 <span className="ac-stat__value">
                   {loading ? "—" : (overview?.teamCount ?? 0)}
                 </span>
                 <span className="ac-stat__meta">已加入的团队</span>
-              </div>
-              <div className="ac-stat">
+              </Link>
+              <Link className="ac-stat ac-stat--link" href={`${WORKSPACE_HREF}#projects`} title="查看项目管理">
                 <span className="ac-stat__label">进行中项目</span>
                 <span className="ac-stat__value">
                   {loading ? "—" : (overview?.projectCount ?? 0)}
                 </span>
                 <span className="ac-stat__meta">状态为 active</span>
-              </div>
-              <div className="ac-stat">
+              </Link>
+              <Link className="ac-stat ac-stat--link" href={`${WORKSPACE_HREF}#tasks`} title="查看任务看板">
                 <span className="ac-stat__label">任务完成</span>
                 <span className="ac-stat__value">
                   {loading ? "—" : (overview?.taskDone ?? 0)}
                   <small>/ {loading ? "—" : (overview?.taskTotal ?? 0)}</small>
                 </span>
                 <span className="ac-stat__meta">完成率 {loading ? "—" : `${doneRate}%`}</span>
-              </div>
-              <div className="ac-stat">
+              </Link>
+              <Link className="ac-stat ac-stat--link" href={`${WORKSPACE_HREF}#todos`} title="查看我的待办">
                 <span className="ac-stat__label">我的待办</span>
                 <span className="ac-stat__value">{loading ? "—" : (overview?.myTodo ?? 0)}</span>
                 <span className="ac-stat__meta">进行中 {loading ? "—" : (overview?.myDoing ?? 0)} 项</span>
-              </div>
+              </Link>
             </div>
 
             {!loading && overview && overview.taskTotal > 0 && (
-              <div className="ac-progress" role="group" aria-label="任务进度">
+              <Link className="ac-progress ac-progress--link" href={`${WORKSPACE_HREF}#tasks`} aria-label="去任务看板查看进度">
                 <span className="ac-progress__num">
                   任务进度 {overview.taskDone}/{overview.taskTotal}（{doneRate}%）
                 </span>
@@ -397,7 +401,7 @@ export default function HomePage() {
                 <span className="ac-progress__meta">
                   待办 {overview.myTodo} · 进行中 {overview.myDoing} · 已完成 {overview.taskDone}
                 </span>
-              </div>
+              </Link>
             )}
           </section>
         ) : (
@@ -443,6 +447,10 @@ export default function HomePage() {
                   AI 日报与日历
                 </h2>
               </div>
+              <Link className="ac-link" href={`${WORKSPACE_HREF}#tasks`}>
+                去工作台处理
+                <IconArrow />
+              </Link>
             </div>
 
             <div className="ac-dash">
@@ -462,7 +470,7 @@ export default function HomePage() {
                   进行中的项目
                 </h2>
               </div>
-              <Link className="ac-link" href={WORKSPACE_HREF}>
+              <Link className="ac-link" href={`${WORKSPACE_HREF}#projects`}>
                 查看全部
                 <IconArrow />
               </Link>
@@ -477,7 +485,7 @@ export default function HomePage() {
                     .filter(Boolean)
                     .join(" · ");
                   return (
-                    <article className="ac-project" key={project.id}>
+                    <Link className="ac-project ac-project--link" key={project.id} href={`${WORKSPACE_HREF}?project=${project.id}`} title={`进入 ${project.name} 工作台`}>
                       <span className="ac-project__badge" aria-hidden="true">
                         {(project.key || "AC").slice(0, 4).toUpperCase()}
                       </span>
@@ -525,7 +533,7 @@ export default function HomePage() {
                           </span>
                         )}
                       </div>
-                    </article>
+                    </Link>
                   );
                 })}
               </div>
@@ -556,12 +564,12 @@ export default function HomePage() {
 
           <div className="ac-features">
             {FEATURES.map((feature) => (
-              <article className="ac-feature" key={feature.tag}>
+              <Link className="ac-feature ac-feature--link" key={feature.tag} href={feature.href} title={`进入${feature.title}`}>
                 <span className="ac-feature__tag">{feature.tag}</span>
                 <span className="ac-feature__icon">{feature.icon}</span>
                 <h3>{feature.title}</h3>
                 <p>{feature.desc}</p>
-              </article>
+              </Link>
             ))}
           </div>
         </section>
@@ -581,7 +589,7 @@ export default function HomePage() {
             </span>
           </Link>
           <p className="ac-footer__note">面向高校学生团队的敏捷协作平台 · 课程项目管理工具</p>
-          <span className="ac-footer__ver">v6.2</span>
+          <span className="ac-footer__ver">v6.5</span>
         </div>
       </footer>
     </div>

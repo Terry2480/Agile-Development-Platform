@@ -83,6 +83,28 @@ export default function WorkspacePage() {
   const [loads, setLoads] = useState<Record<string, LoadState>>({});
   const [notice, setNotice] = useState("");
   useEffect(() => () => gate.cancel(), [gate]);
+
+  /* ---------- 首页深链：#hash 直达模块，?project=ID 直达项目 ---------- */
+  const deepProjectRef = useRef<number | null>(null);
+  useEffect(() => {
+    const viewMap: Record<string, { rail?: RailView; focus?: FocusSection }> = {
+      projects: { rail: "projectManagement" },
+      teams: { rail: "teamManagement" },
+      docs: { rail: "docs" },
+      tasks: { rail: "projects", focus: "tasks" },
+      chat: { rail: "projects", focus: "chat" },
+      space: { rail: "projects", focus: "space" },
+      todos: { rail: "todos" },
+      messages: { rail: "messages" },
+      notifications: { rail: "notifications" },
+    };
+    const hit = viewMap[decodeURIComponent(window.location.hash.slice(1))];
+    if (hit?.rail) setRailView(hit.rail);
+    if (hit?.focus) setFocusSection(hit.focus);
+    const pid = Number(new URLSearchParams(window.location.search).get("project"));
+    if (Number.isInteger(pid) && pid > 0) deepProjectRef.current = pid;
+  }, []);
+
   const selectProject = useCallback((id: number | null) => {
     gate.cancel(["notificationNavigation"]);
     if (selectedIdRef.current === id) return;
@@ -122,7 +144,10 @@ export default function WorkspacePage() {
     await loadResource<{ projects: ProjectSummary[] }>("projects", "/api/projects", (d) => {
       setProjects(d.projects);
       const cur = selectedIdRef.current;
-      if (cur === null || !d.projects.some((p) => p.id === cur)) selectProject(d.projects[0]?.id ?? null);
+      const deep = deepProjectRef.current;
+      deepProjectRef.current = null;
+      if (deep !== null && d.projects.some((p) => p.id === deep)) selectProject(deep);
+      else if (cur === null || !d.projects.some((p) => p.id === cur)) selectProject(d.projects[0]?.id ?? null);
     });
   }, [loadResource, selectProject]);
   const refreshTeams = useCallback(() => loadResource<{ teams: Team[] }>("teams", "/api/teams", (d) => setTeams(d.teams)), [loadResource]);

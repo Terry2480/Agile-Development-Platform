@@ -1512,3 +1512,33 @@ html[data-theme="day"] .ac-features > .ac-feature:nth-child(4) .ac-feature__icon
 .ac-home .ws-today-card {
   box-shadow: none;
 }
+
+/* ------------------------------ 可点击元素接线：统计卡/进度条/项目卡/能力卡 */
+a.ac-stat--link,
+a.ac-progress--link,
+a.ac-project--link,
+a.ac-feature--link {
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+a.ac-stat--link:hover,
+a.ac-progress--link:hover {
+  transform: translateY(-2px);
+  border-color: var(--ac-line-2);
+  box-shadow: 0 10px 28px -18px rgba(0, 0, 0, 0.45);
+}
+
+a.ac-project--link:hover,
+a.ac-feature--link:hover {
+  transform: translateY(-3px);
+  border-color: var(--ac-line-2);
+  box-shadow: 0 14px 34px -20px rgba(0, 0, 0, 0.5);
+}
+
+a.ac-stat--link:hover .ac-stat__label,
+a.ac-project--link:hover .ac-project__title,
+a.ac-feature--link:hover h3 {
+  color: var(--ac-text);
+}
