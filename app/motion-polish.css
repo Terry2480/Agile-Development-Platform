@@ -1,0 +1,195 @@
+/* ==========================================================================
+   AgileCampus 动效增强层 · 第二轮（terry/motion-polish）
+   --------------------------------------------------------------------------
+   与 motion.css 的关系：纯追加，不修改其任何一行，复用其 token 变量。
+   motion.css 管「进场节奏」，本层补它没做的「交互手感」。
+
+   关键技术点（避免两套动画打架）：
+   1. motion.css 用 `animation: motion-enter ... both` 把元素的 transform 锁定为
+      none，且用 `html[data-theme] .xxx` 高特异性声明了 transition。
+      若本层再用 transform 或低特异性 transition，都会被覆盖而失效。
+      → 全部改用 CSS 独立的 translate / scale 属性（与 transform 互不干扰）；
+      → 卡片的 transition 规则带上同样的 html[data-theme] 前缀，并把主题切换
+        所需的 background/color/border/box-shadow 一并合入，不破坏原有效果。
+   2. 不再给已有 stagger 动画的元素叠加 animation-name；只用 @starting-style
+      + translate 过渡做「复合进场」，不破坏原有错峰与淡入。
+   3. 只动 translate / scale / opacity / 颜色，不触碰布局属性，避免重排抖动。
+   4. 选择器全部带前缀或限定范围；reduced-motion 一次兜底。
+   ========================================================================== */
+
+/* ---- 1. 卡片 hover：轻上浮 + 阴影呼吸 ----
+   选择器与 motion.css 的主题过渡规则同构（含 html[data-theme] 前缀），
+   本文件在 layout 中后加载，故同特异性下由本规则生效；属性已全部合入。 */
+html[data-theme] .ws-today-card,
+html[data-theme] .ws-board-card,
+html[data-theme] .ws-task-card,
+html[data-theme] .su-note,
+html[data-theme] .project-card,
+html[data-theme] .task-card,
+html[data-theme] .ac-feature,
+html[data-theme] .ac-project,
+html[data-theme] .settings-card,
+html[data-theme] .auth-card {
+  transition: background-color var(--motion-slow) var(--motion-ease),
+              color var(--motion-slow) var(--motion-ease),
+              border-color var(--motion-fast) var(--motion-ease),
+              box-shadow var(--motion-base) var(--motion-ease),
+              translate var(--motion-base) var(--motion-ease-spring);
+}
+.ws-today-card:hover,
+.ws-board-card:hover,
+.ws-task-card:hover,
+.su-note:hover,
+.project-card:hover,
+.task-card:hover,
+.ac-feature:hover,
+.ac-project:hover {
+  translate: 0 -3px;
+  box-shadow: 0 12px 28px rgba(20, 28, 48, .16);
+}
+/* 日间主题用更柔和的蓝调阴影，避免发黑 */
+html[data-theme="day"] .ws-today-card:hover,
+html[data-theme="day"] .ws-board-card:hover,
+html[data-theme="day"] .project-card:hover,
+html[data-theme="day"] .task-card:hover,
+html[data-theme="day"] .ac-feature:hover,
+html[data-theme="day"] .ac-project:hover,
+html[data-theme="day"] .settings-card:hover {
+  box-shadow: 0 12px 28px rgba(41, 74, 120, .14);
+}
+
+/* ---- 2. 图标按钮：hover 时图标轻移（避开 transform）---- */
+.ws-rail-btn svg,
+.ws-icon-btn svg,
+.ws-tool-btn svg,
+.su-icon-btn svg,
+.ac-btn svg {
+  transition: translate var(--motion-fast) var(--motion-ease-spring);
+}
+.ws-rail-btn:hover svg,
+.ws-icon-btn:hover svg,
+.ws-tool-btn:hover svg,
+.su-icon-btn:hover svg,
+.ac-btn:hover svg { translate: 0 -1px; }
+
+/* ---- 3. 侧栏选中态：一道平滑滑入的强调线（伪元素，不占布局）---- */
+.ws-rail-btn { position: relative; }
+.ws-rail-btn::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 22%;
+  width: 3px;
+  height: 56%;
+  border-radius: 0 3px 3px 0;
+  background: var(--ws-color-6f9bff, #6f9bff);
+  opacity: 0;
+  scale: 0 1;
+  transform-origin: left center;
+  transition: opacity var(--motion-fast) var(--motion-ease),
+              scale var(--motion-base) var(--motion-ease-spring);
+  pointer-events: none;
+}
+.ws-rail-btn.active::before { opacity: 1; scale: 1 1; }
+
+/* ---- 4. 新增/重建的列表项：复合进场（不覆盖已有 animation-name）----
+   motion.css 的 motion-enter 负责淡入，本层补一层极轻的上滑；
+   @starting-style 只在元素首次渲染时提供起点，不支持则直接显示。 */
+html[data-theme] .su-todo-list li,
+html[data-theme] .su-notes-grid > .su-note {
+  transition: translate var(--motion-base) var(--motion-ease-out),
+              opacity var(--motion-base) var(--motion-ease),
+              color var(--motion-base) var(--motion-ease);
+}
+@starting-style {
+  .su-todo-list li,
+  .su-notes-grid > .su-note { translate: 0 5px; }
+}
+
+/* ---- 5. 勾选完成：状态与位置平滑过渡，不再瞬间跳变 ---- */
+.su-check,
+.su-todo-body {
+  transition: opacity var(--motion-base) var(--motion-ease),
+              color var(--motion-base) var(--motion-ease),
+              background-color var(--motion-fast) var(--motion-ease);
+}
+.su-todo-list li.done .su-todo-body { opacity: .55; }
+.su-todo-list li.done { translate: 0 1px; }
+
+/* ---- 6. 滚动：稳定 gutter 防横向抖动 + 细滚动条 ----
+   scrollbar-gutter 让滚动容器始终预留滚动条宽度，列表增删时内容不会左右跳。 */
+@supports (scrollbar-gutter: stable) {
+  html { scrollbar-gutter: stable; }
+}
+html { overscroll-behavior-y: contain; }
+.ws-center,
+.ws-sidebar,
+.su-panel,
+.ws-drawer,
+.ws-main,
+.ws-notification-list {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(127, 140, 170, .45) transparent;
+}
+.ws-center::-webkit-scrollbar,
+.ws-sidebar::-webkit-scrollbar,
+.su-panel::-webkit-scrollbar,
+.ws-drawer::-webkit-scrollbar,
+.ws-main::-webkit-scrollbar { width: 8px; height: 8px; }
+.ws-center::-webkit-scrollbar-thumb,
+.ws-sidebar::-webkit-scrollbar-thumb,
+.su-panel::-webkit-scrollbar-thumb,
+.ws-drawer::-webkit-scrollbar-thumb,
+.ws-main::-webkit-scrollbar-thumb {
+  background: rgba(127, 140, 170, .4);
+  border-radius: 8px;
+}
+.ws-center::-webkit-scrollbar-thumb:hover,
+.ws-sidebar::-webkit-scrollbar-thumb:hover,
+.su-panel::-webkit-scrollbar-thumb:hover,
+.ws-drawer::-webkit-scrollbar-thumb:hover,
+.ws-main::-webkit-scrollbar-thumb:hover { background: rgba(127, 140, 170, .65); }
+
+/* ---- 7. 页面级导航：View Transitions 渐进增强 ----
+   对整页跳转/刷新自动交叉淡入淡出；SPA 客户端路由不触发（Next.js 限制），
+   不支持该 API 的浏览器完全忽略，无任何副作用。 */
+@view-transition { navigation: auto; }
+::view-transition-old(root) { animation: motion-vt-out var(--motion-fast) var(--motion-ease) both; }
+::view-transition-new(root) { animation: motion-vt-in var(--motion-base) var(--motion-ease-out) both; }
+@keyframes motion-vt-out { to { opacity: 0; } }
+@keyframes motion-vt-in { from { opacity: 0; } }
+
+/* ---- 8. 输入框聚焦：柔和的边框与焦点环过渡 ---- */
+:where(input, textarea, select):focus-visible {
+  transition: outline-offset var(--motion-fast) var(--motion-ease),
+              border-color var(--motion-fast) var(--motion-ease),
+              box-shadow var(--motion-base) var(--motion-ease);
+}
+
+/* ---- 9. 无障碍：一次兜底关掉本层引入的全部动效 ---- */
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme] .ws-today-card, html[data-theme] .ws-board-card,
+  html[data-theme] .ws-task-card, html[data-theme] .su-note,
+  html[data-theme] .project-card, html[data-theme] .task-card,
+  html[data-theme] .ac-feature, html[data-theme] .ac-project,
+  html[data-theme] .settings-card, html[data-theme] .auth-card,
+  html[data-theme] .su-todo-list li,
+  html[data-theme] .su-notes-grid > .su-note,
+  .ws-rail-btn::before, .ws-rail-btn svg, .ws-icon-btn svg,
+  .ws-tool-btn svg, .su-icon-btn svg, .ac-btn svg,
+  .su-check, .su-todo-body,
+  :where(input, textarea, select):focus-visible {
+    transition: none !important;
+  }
+  .ws-today-card:hover, .ws-board-card:hover, .ws-task-card:hover,
+  .su-note:hover, .project-card:hover, .task-card:hover,
+  .ac-feature:hover, .ac-project:hover,
+  .ws-rail-btn:hover svg, .ws-icon-btn:hover svg,
+  .ws-tool-btn:hover svg, .su-icon-btn:hover svg, .ac-btn:hover svg,
+  .su-todo-list li.done {
+    translate: none !important;
+    box-shadow: none !important;
+  }
+  .ws-rail-btn::before { display: none !important; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none !important; }
+}

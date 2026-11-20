@@ -1,0 +1,29 @@
+<Slide style={{ width: '1280px', height: '720px', background: '#F5F5F5', padding: '60px' }}>
+  <Box style={{ width: '100%', height: '100%', flexDirection: 'row', gap: 36 }}>
+    <Box style={{ width: 360, height: '100%', background: '#27707F', padding: 32, flexDirection: 'column', justifyContent: 'space-between' }}>
+      <Text style={{ fontSize: 14, color: '#B9DBDF', letterSpacing: 3 }}>08 / 人物角色 C</Text>
+      <Box>
+        <Text style={{ fontSize: 150, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1 }}>敏</Text>
+        <Text style={{ fontSize: 30, fontWeight: 'bold', color: '#FFFFFF' }}>王敏华老师</Text>
+        <Text style={{ fontSize: 19, color: '#DCE4FA' }}>课程指导教师 · 监督者</Text>
+      </Box>
+      <Text style={{ fontSize: 15, color: '#B9DBDF', lineHeight: 1.5 }}>初版假设 · 待访谈验证</Text>
+    </Box>
+    <Box style={{ flex: 1, height: '100%', flexDirection: 'column', justifyContent: 'space-between' }}>
+      <Box>
+        <Text style={{ fontSize: 34, fontWeight: 'bold', color: '#081F5C' }}>她要的是免安装、只读、一屏结论</Text>
+        <Box style={{ height: 10, width: '100%', borderBottom: '1px solid #D4D7E0' }} />
+      </Box>
+      <Box style={{ gap: 14 }}>
+        <Text style={{ fontSize: 17, color: '#20346B', lineHeight: 1.6 }}><span style={{ fontWeight: 'bold', color: '#27707F' }}>基本信息</span>　38 岁 · 高校讲师 · 同时指导 8 组课程项目</Text>
+        <Text style={{ fontSize: 17, color: '#20346B', lineHeight: 1.6 }}><span style={{ fontWeight: 'bold', color: '#27707F' }}>口头禅</span>　「哪组有风险？进度到哪一步了？」</Text>
+        <Text style={{ fontSize: 17, color: '#20346B', lineHeight: 1.6 }}><span style={{ fontWeight: 'bold', color: '#27707F' }}>性格坐标</span>　严谨 · 时间碎片化 · 偏好简洁结论</Text>
+        <Text style={{ fontSize: 17, color: '#20346B', lineHeight: 1.6 }}><span style={{ fontWeight: 'bold', color: '#27707F' }}>核心目标</span>　跨组快速检查、定位落后组、给出反馈</Text>
+        <Text style={{ fontSize: 17, color: '#20346B', lineHeight: 1.6 }}><span style={{ fontWeight: 'bold', color: '#27707F' }}>常用 APP</span>　微信 · 邮件 · 教务系统 · 投影/教室电脑</Text>
+      </Box>
+      <Box style={{ background: '#ECECEC', padding: 18 }}>
+        <Text style={{ fontSize: 17, color: '#081F5C', lineHeight: 1.5 }}><span style={{ fontWeight: 'bold' }}>设计含义：</span>教师视图默认只读、可投屏，突出「异常组」而非全部细节。</Text>
+      </Box>
+    </Box>
+  </Box>
+</Slide>

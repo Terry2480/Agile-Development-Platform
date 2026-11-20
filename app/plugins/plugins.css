@@ -1,0 +1,109 @@
+/* 插件商城 + 多语言切换器样式（plg- / i18n- 前缀，昼夜主题跟随 ws 令牌） */
+
+.plg-page {
+  min-height: 100vh;
+  padding: 40px clamp(20px, 6vw, 72px) 72px;
+  background: var(--ws-color-0a0b10, #0a0b10);
+  color: var(--ws-color-e8eaf2, #e8eaf2);
+}
+
+.plg-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--ws-color-262a38, #262a38);
+}
+
+.plg-head h1 { margin: 0 0 6px; font-size: 26px; }
+.plg-head p { margin: 0; font-size: 13px; opacity: 0.72; }
+.plg-back {
+  border: 1px solid var(--ws-color-262a38, #262a38);
+  background: transparent; color: inherit; border-radius: 9px;
+  padding: 8px 16px; font-size: 13px; cursor: pointer;
+}
+.plg-back:hover { border-color: var(--ws-color-4a4f60, #4a4f60); }
+
+.plg-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 18px; margin-top: 26px;
+}
+
+.plg-card {
+  display: flex; flex-direction: column; gap: 12px;
+  border: 1px solid var(--ws-color-262a38, #262a38);
+  border-radius: 14px; padding: 18px 18px 14px;
+  background: var(--ws-color-141722, #141722);
+  transition: border-color 0.16s ease, transform 0.16s ease;
+}
+.plg-card:hover { transform: translateY(-2px); border-color: var(--ws-color-4a4f60, #4a4f60); }
+.plg-card--on { border-color: rgba(111, 155, 255, 0.45); }
+
+.plg-card__head { display: flex; align-items: center; gap: 12px; }
+.plg-card__head h2 { margin: 0; font-size: 16px; }
+.plg-card__icon {
+  display: grid; place-items: center; width: 42px; height: 42px;
+  border-radius: 11px; font-size: 22px;
+  background: var(--ws-color-1d2030, #1d2030);
+}
+.plg-card__meta { font-size: 11px; opacity: 0.62; }
+.plg-badge {
+  margin-left: auto; font-size: 11px; padding: 3px 10px; border-radius: 999px;
+  border: 1px solid var(--ws-color-262a38, #262a38); opacity: 0.75;
+}
+.plg-badge--on { border-color: #6f9bff; color: #8fa9e6; opacity: 1; }
+
+.plg-card__desc { margin: 0; font-size: 13px; line-height: 1.65; opacity: 0.85; }
+
+.plg-card__perms { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.plg-card__perms-label { font-size: 11px; opacity: 0.6; margin-right: 2px; }
+.plg-card__perms code {
+  font-size: 11px; padding: 2px 8px; border-radius: 6px;
+  border: 1px dashed var(--ws-color-262a38, #262a38); opacity: 0.85;
+}
+
+.plg-card__foot { display: flex; justify-content: flex-end; margin-top: auto; }
+.plg-toggle {
+  min-width: 84px; border-radius: 9px; padding: 8px 18px; font-size: 13px; cursor: pointer;
+  border: 1px solid var(--ws-color-262a38, #262a38);
+  background: transparent; color: inherit;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.plg-toggle--on { background: #3b6ef5; border-color: #3b6ef5; color: #fff; }
+.plg-toggle--on:hover { background: #3563dd; }
+.plg-toggle:not(.plg-toggle--on):hover { border-color: var(--ws-color-4a4f60, #4a4f60); }
+
+.plg-empty { grid-column: 1 / -1; text-align: center; opacity: 0.6; padding: 40px 0; }
+.plg-foot { margin-top: 30px; font-size: 12px; opacity: 0.55; }
+.plg-foot code { opacity: 0.9; }
+
+/* ---------------- 多语言切换器（插件挂载，左下角，避开右下角效率中心） ---------------- */
+
+.i18n-switcher { position: fixed; left: 22px; bottom: 22px; z-index: 61; }
+.i18n-switcher__btn {
+  width: 48px; height: 48px; border-radius: 50%; border: 0; cursor: pointer; font-size: 22px;
+  background: var(--ws-color-22242f, #22242f);
+  color: var(--ws-color-e8eaf2, #e8eaf2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  transition: transform 0.15s ease;
+}
+.i18n-switcher__btn:hover { transform: translateY(-2px); }
+.i18n-switcher__menu {
+  position: absolute; left: 0; bottom: 58px; min-width: 150px;
+  display: flex; flex-direction: column; padding: 6px; border-radius: 12px;
+  background: var(--ws-color-22242f, #22242f);
+  border: 1px solid var(--ws-color-262a38, #262a38);
+  box-shadow: 0 14px 38px -12px rgba(0, 0, 0, 0.55);
+}
+.i18n-switcher__menu[hidden] { display: none; }
+.i18n-switcher__opt {
+  border: 0; background: transparent; color: inherit; text-align: left;
+  padding: 9px 12px; border-radius: 8px; font-size: 13px; cursor: pointer;
+}
+.i18n-switcher__opt:hover { background: var(--ws-color-1d2030, #1d2030); }
+.i18n-switcher__opt.active { color: #6f9bff; font-weight: 600; }
+
+@media (max-width: 600px) {
+  .i18n-switcher { left: 14px; bottom: 14px; }
+}

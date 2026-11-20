@@ -1,0 +1,355 @@
+// 前端统一请求封装 + 业务类型定义（与后端 docs/API.md 一一对应）
+// 用法：api<T>(path, { json: {...} }) 自动带 JSON 头；失败抛 Error(中文提示)
+import { MAX_UPLOAD_BYTES, UPLOAD_LIMIT_MESSAGE } from "./upload-limits";
+
+export class ApiError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+  }
+}
+
+async function requestJson<T>(path: string, init: RequestInit): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(path, init);
+  } catch (e) {
+    if (init.signal?.aborted) throw e;
+    throw new Error("无法连接服务器，请检查网络后重试");
+  }
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    const fallback = res.status === 401 ? "登录已过期，请重新登录" : res.status === 403 ? "你没有执行此操作的权限" : res.status >= 500 ? "服务器暂时无法处理请求，请稍后重试" : "请求失败，请重试";
+    throw new ApiError(res.status, data?.error ?? fallback);
+  }
+  if (data === null) throw new Error("服务器返回的数据异常，请重试");
+  return data as T;
+}
+
+export async function api<T>(path: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
+  const { json, ...rest } = init;
+  return requestJson<T>(path, {
+    ...rest,
+    headers: {
+      ...(json !== undefined ? { "Content-Type": "application/json" } : {}),
+      ...(rest.headers ?? {}),
+    },
+    body: json !== undefined ? JSON.stringify(json) : rest.body,
+  });
+}
+
+export async function uploadFile<T>(path: string, file: File, taskId?: number, milestoneId?: number, extra?: Record<string, string>): Promise<T> {
+  if (file.size > MAX_UPLOAD_BYTES) throw new Error(UPLOAD_LIMIT_MESSAGE);
+  if (file.size === 0) throw new Error("文件为空");
+  const form = new FormData();
+  form.append("file", file);
+  if (taskId) form.append("taskId", String(taskId));
+  if (milestoneId) form.append("milestoneId", String(milestoneId));
+  for (const [key, value] of Object.entries(extra ?? {})) form.append(key, value);
+  return requestJson<T>(path, { method: "POST", body: form });
+}
+
+/* ---------- 类型 ---------- */
+
+export type Me = {
+  id: number;
+  email: string;
+  name: string | null;
+  studentId: string;
+  gender: string | null;
+  region: string | null;
+  bio: string | null;
+  role: string;
+};
+
+export type Team = {
+  id: number;
+  name: string;
+  description: string | null;
+  role: string;
+  memberCount: number;
+  projectCount: number;
+};
+
+export type TaskCounts = { total: number; todo: number; doing: number; done: number };
+
+export type SprintBrief = { id: number; name: string; endsOn: string | null; goal: string | null } | null;
+
+export type ProjectSummary = {
+  id: number;
+  teamId: number;
+  teamName: string;
+  name: string;
+  key: string;
+  description: string | null;
+  courseName: string | null;
+  status: string;
+  starred: boolean;
+  taskCounts: TaskCounts;
+  activeSprint: SprintBrief;
+  members: { userId: number; name: string }[];
+};
+
+export type Sprint = {
+  id: number;
+  projectId: number;
+  name: string;
+  goal: string | null;
+  startsOn: string | null;
+  endsOn: string | null;
+  status: "planned" | "active" | "completed";
+  createdAt: string;
+};
+
+export type Label = { id: number; name: string; color: string };
+
+export type ProjectMember = {
+  duty: string | null;
+  duties: string[] | null;
+  userId: number;
+  name: string | null;
+  studentId: string;
+  email: string;
+  role: string;
+  displayName: string;
+  online: boolean; // 5 分钟内有活跃会话
+};
+
+export type ProjectDetail = {
+  project: { id: number; teamId: number; name: string; key: string; description: string | null; courseName: string | null; status: string };
+  team: { id: number; name: string; description: string | null };
+  myRole: string;
+  members: ProjectMember[];
+  sprints: Sprint[];
+  labels: Label[];
+  taskCounts: TaskCounts;
+  starred: boolean;
+};
+
+export type TaskAssignee = { id: number | null; name: string | null; studentId: string | null; displayName: string } | null;
+
+export type TaskItem = {
+  collaborators: { id: number; displayName: string }[];
+  id: number;
+  projectId: number;
+  projectName?: string;
+  sprintId: number | null;
+  number: number;
+  code: string;
+  title: string;
+  description: string | null;
+  status: "todo" | "doing" | "done";
+  priority: "low" | "medium" | "high";
+  assigneeId: number | null;
+  assignee: TaskAssignee;
+  dueOn: string | null;
+  labels: Label[];
+  commentCount: number;
+  referencedDocs?: { id: number; title: string }[]; // 文档里用 [[编号]] 引用了本任务的文章
+  attachmentCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TaskComment = {
+  id: number;
+  content: string;
+  createdAt: string;
+  authorId: number;
+  authorDisplayName: string;
+};
+
+export type ChatMessage = {
+  id: number;
+  content: string;
+  pinned: boolean;
+  recalled: boolean;
+  taskId: number | null;
+  replyToId: number | null;
+  createdAt: string;
+  author: { id: number; displayName: string };
+  reactions: { emoji: string; count: number; mine: boolean }[];
+  replyTo: { id: number; content: string; authorName: string } | null;
+  task: { id: number; code: string; title: string; status: string } | null;
+  attachment: { id: number; name: string; size: number } | null;
+};
+
+export type ActivityItem = {
+  id: number;
+  action: string;
+  detail: string;
+  taskId: number | null;
+  createdAt: string;
+  actorName: string | null;
+  actorStudentId: string;
+};
+
+export type FileItem = {
+  id: number;
+  uploaderId: number;
+  taskId: number | null;
+  originalName: string;
+  mimeType: string | null;
+  size: number;
+  createdAt: string;
+  uploaderName: string | null;
+  uploaderStudentId: string;
+};
+
+export type NotificationItem = {
+  id: number;
+  type: "assigned" | "mention" | "comment" | "deadline" | "dm";
+  title: string;
+  entityType: string | null;
+  entityId: number | null;
+  read: boolean;
+  createdAt: string;
+};
+
+export type DmMessage = {
+  id: number;
+  conversationId: number;
+  senderId: number;
+  senderName: string;
+  mine: boolean;
+  content: string;
+  recalled: boolean;
+  replyTo: { id: number; content: string; mine: boolean } | null;
+  attachment: { id: number; name: string; size: number; mimeType: string | null } | null;
+  readAt: string | null;
+  createdAt: string;
+};
+
+export type DmConversation = {
+  id: number;
+  partner: { userId: number; displayName: string; online: boolean };
+  lastMessage: { content: string; senderId: number; createdAt: string } | null;
+  unreadCount: number;
+  pinned: boolean;
+  muted: boolean;
+};
+
+export type DmContact = {
+  userId: number;
+  displayName: string;
+  teamName: string | null;
+  teamCount: number;
+  online: boolean;
+};
+
+export type DocSummary = {
+  id: number;
+  projectId: number;
+  projectName: string;
+  title: string;
+  folder: string | null;
+  excerpt: string;
+  updatedByName: string | null;
+  updatedAt: string;
+  canDelete: boolean;
+};
+
+export type DocDetail = DocSummary & {
+  content: string;
+  createdByName: string | null;
+  createdAt: string;
+  canEdit: boolean;
+};
+
+export type DocComment = {
+  id: number;
+  quote: string | null;
+  content: string;
+  createdAt: string;
+  author: { id: number; displayName: string };
+  mine: boolean;
+};
+
+export type DocVersion = {
+  id: number;
+  title: string;
+  excerpt: string;
+  content: string;
+  editorName: string | null;
+  createdAt: string;
+};
+
+export type Overview = {
+  teamCount: number;
+  projectCount: number;
+  taskTotal: number;
+  taskDone: number;
+  myTodo: number;
+  myDoing: number;
+};
+
+/* ---------- 展示工具 ---------- */
+
+export const STATUS_TEXT: Record<string, string> = { todo: "待开始", doing: "进行中", done: "已完成" };
+export const PRIORITY_TEXT: Record<string, string> = { high: "高", medium: "中", low: "低" };
+
+// 头像底色（方案 A）：夜间为品牌蓝阶，日间为暖橙棕阶——实际颜色在 CSS 里按主题渲染
+// （.ws-avatar[data-av]），这里只负责按 id 稳定取“色档”0-4，保证同人永远同档
+const AVATAR_BLUES = ["#3b6ef5", "#2f5cd8", "#5b8cff", "#6f9bff", "#24407a"];
+export function avatarColor(key?: number | string): string {
+  if (typeof key === "number" && Number.isInteger(key) && key > 0) {
+    return AVATAR_BLUES[(key - 1) % AVATAR_BLUES.length];
+  }
+  return AVATAR_BLUES[0];
+}
+
+// 色档：数字 id 直接取模；字符串按字符散列（供少数只有名字的场合），未提供回落 0
+export function avatarHue(key?: number | string): number {
+  if (typeof key === "number" && Number.isInteger(key) && key > 0) {
+    return (key - 1) % AVATAR_BLUES.length;
+  }
+  if (typeof key === "string" && key.trim()) {
+    let hash = 0;
+    for (const ch of key) hash = (hash * 31 + (ch.codePointAt(0) ?? 0)) % 9973;
+    return hash % AVATAR_BLUES.length;
+  }
+  return 0;
+}
+
+export function initials(name: string): string {
+  const trimmed = name.trim();
+  return trimmed ? trimmed.slice(0, 1).toUpperCase() : "?";
+}
+
+export function fmtSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+export function fmtTime(iso: string): string {
+  return new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Hong_Kong", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(iso));
+}
+
+export function fmtDateShort(iso: string): string {
+  const parts = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Hong_Kong", month: "numeric", day: "numeric" }).formatToParts(new Date(iso));
+  return `${parts.find((p) => p.type === "month")!.value}月${parts.find((p) => p.type === "day")!.value}日`;
+}
+
+export function dayKey(iso: string): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Hong_Kong", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(iso));
+}
+
+// 截止日展示：今天 / 明天 / 后天 / M月D日；逾期标红
+export function dueInfo(dueOn: string): { text: string; overdue: boolean; soon: boolean } {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(dueOn + "T00:00:00");
+  const diff = Math.round((due.getTime() - today.getTime()) / 86400000);
+  if (diff < 0) return { text: `逾期 ${-diff} 天`, overdue: true, soon: false };
+  if (diff === 0) return { text: "今天截止", overdue: false, soon: true };
+  if (diff === 1) return { text: "明天截止", overdue: false, soon: true };
+  if (diff === 2) return { text: "后天截止", overdue: false, soon: false };
+  return { text: `${due.getMonth() + 1}月${due.getDate()}日截止`, overdue: false, soon: false };
+}
+
+// Sprint 剩余天数
+export function daysUntil(dateStr: string): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((new Date(dateStr + "T00:00:00").getTime() - today.getTime()) / 86400000);
+}

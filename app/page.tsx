@@ -1,64 +1,727 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+/**
+ * AgileCampus · 首页
+ * ------------------------------------------------------------------
+ * 设计：发布会级深色版面 + 浅蓝 → 紫 → 浅粉 光谱（深空冷黑底 + 极细分割线）
+ * 结构：品牌首屏 → 我的数据 / 三步开始 → 进行中的项目 → 能力矩阵
+ * 数据：全部复用现有接口（/api/auth/me、/api/overview、/api/projects），
+ *       未登录时不请求业务数据，直接按访客态展示，不阻塞首屏。
+ * 迁移：原工作台页面需移动到 app/workspace/page.tsx，
+ *       本文件替换 app/page.tsx（详见 README）。
+ */
 
-type Task = { id: number; title: string; status: "todo" | "doing" | "done"; priority: "高" | "中" | "低" };
-type Project = { id: number; name: string; description: string; tasks: Task[] };
-type Team = { id: number; name: string; members: number; projects: Project[] };
-type User = { id: number; name: string | null; studentId: string; role: string };
+import Link from "next/link";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
-const initialTeams: Team[] = [{ id: 1, name: "敏捷校园研发组", members: 6, projects: [{ id: 1, name: "AgileCampus 平台", description: "高校团队项目协作平台", tasks: [{ id: 1, title: "完成需求分析", status: "done", priority: "高" }, { id: 2, title: "设计任务看板", status: "doing", priority: "高" }, { id: 3, title: "建立数据库模型", status: "todo", priority: "中" }] }] }];
+import { api, type Me, type Overview, type ProjectSummary } from "@/lib/api-client";
+import { useTheme } from "@/components/ws/ThemeProvider";
+import { DailyReportCard } from "@/components/ws/DailyReportCard";
+import { HomeCalendar } from "@/components/ws/HomeCalendar";
 
-export default function Home() {
-  const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);   // 登录态加载中
-  const [showMenu, setShowMenu] = useState(false);         // 右上角头像菜单（微信/QQ 式下拉）
-  const [teams, setTeams] = useState(initialTeams);
-  const [teamId, setTeamId] = useState(1);
-  const [projectId, setProjectId] = useState(1);
-  const [view, setView] = useState<"overview" | "projects" | "tasks">("overview");
-  const [showTeam, setShowTeam] = useState(false);
-  const [showProject, setShowProject] = useState(false);
-  const [showTask, setShowTask] = useState(false);
+import "./home.css";
 
-  // 登录检查：未登录一律送回登录页；登录后头像菜单显示本人姓名
-  useEffect(() => {
-    fetch("/api/auth/me").then(async (res) => {
-      if (!res.ok) { router.replace("/login"); return; }
-      const data = await res.json();
-      setUser(data.user);
-    }).finally(() => setAuthLoading(false));
-  }, [router]);
+/** 工作台路由：原 app/page.tsx 移动后的地址 */
+const WORKSPACE_HREF = "/workspace";
+const LOGIN_HREF = "/login";
 
-  // 退出用户：删除会话后回登录页，之后才能登录新用户
-  async function logout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.replace("/login");
-  }
+const NAV = [
+  { label: "首页", href: "/", active: true },
+  { label: "工作台", href: WORKSPACE_HREF, active: false },
+  { label: "项目", href: `${WORKSPACE_HREF}#projects`, active: false },
+  { label: "团队", href: `${WORKSPACE_HREF}#teams`, active: false },
+  { label: "文档", href: `${WORKSPACE_HREF}#docs`, active: false },
+] as const;
 
-  const team = teams.find((item) => item.id === teamId) ?? teams[0];
-  const project = team?.projects.find((item) => item.id === projectId) ?? team?.projects[0];
-  const allTasks = useMemo(() => team?.projects.flatMap((item) => item.tasks) ?? [], [team]);
+const CHIPS = ["开箱即用，无需额外配置", "多人实时协作", "面向高校课程项目"] as const;
 
-  function addTeam(name: string) { if (!name.trim()) return; const id = Date.now(); setTeams([...teams, { id, name, members: 1, projects: [] }]); setTeamId(id); setView("projects"); setShowTeam(false); }
-  function addProject(name: string, description: string) { if (!name.trim() || !team) return; const id = Date.now(); setTeams(teams.map((item) => item.id === team.id ? { ...item, projects: [...item.projects, { id, name, description, tasks: [] }] } : item)); setProjectId(id); setView("tasks"); setShowProject(false); }
-  function addTask(title: string, priority: Task["priority"]) { if (!title.trim() || !team || !project) return; const task: Task = { id: Date.now(), title, priority, status: "todo" }; setTeams(teams.map((item) => item.id === team.id ? { ...item, projects: item.projects.map((p) => p.id === project.id ? { ...p, tasks: [...p.tasks, task] } : p) } : item)); setShowTask(false); }
-  function updateTask(id: number, status: Task["status"]) { if (!team || !project) return; setTeams(teams.map((item) => item.id === team.id ? { ...item, projects: item.projects.map((p) => p.id === project.id ? { ...p, tasks: p.tasks.map((task) => task.id === id ? { ...task, status } : task) } : p) } : item)); }
+const STEPS = [
+  {
+    title: "创建或加入团队",
+    desc: "用学校邮箱注册，按学号加入课程团队，或用邀请码组建新团队。",
+  },
+  {
+    title: "建立项目与迭代",
+    desc: "选择课程、设定迭代周期，任务创建后直接进入看板。",
+  },
+  {
+    title: "邀请成员开始协作",
+    desc: "分工、站会、文档与里程碑在同一处同步，进度肉眼可见。",
+  },
+] as const;
 
-  // 登录态确认前先不渲染工作台，避免未登录用户看到内容闪一下
-  if (authLoading || !user) return null;
+type Feature = { tag: string; title: string; desc: string; icon: ReactNode; href: string };
 
-  // 展示名称：未设置名称时回落显示学工号（注册不强制实名）
-  const displayName = user.name || user.studentId;
+const FEATURES: Feature[] = [
+  {
+    tag: "BOARD",
+    title: "任务看板",
+    desc: "待开始 / 进行中 / 已完成三列流转，截止日、优先级与检查清单同步更新。",
+    icon: <IconBoard />,
+    href: `${WORKSPACE_HREF}#tasks`,
+  },
+  {
+    tag: "STANDUP",
+    title: "每日站会",
+    desc: "在项目频道完成站会，进展与阻塞自动汇总成当日摘要，不必再逐条追问。",
+    icon: <IconChat />,
+    href: `${WORKSPACE_HREF}#chat`,
+  },
+  {
+    tag: "MILESTONE",
+    title: "里程碑",
+    desc: "把答辩节点、交付物与参考资料挂到同一条时间线上，关键日期不再漏项。",
+    icon: <IconFlag />,
+    href: `${WORKSPACE_HREF}#space`,
+  },
+  {
+    tag: "DOCS",
+    title: "文档协作",
+    desc: "课程文档在线协作，版本留痕、评论可追溯，随时回到任意一稿。",
+    icon: <IconDoc />,
+    href: `${WORKSPACE_HREF}#docs`,
+  },
+];
 
-  return <main className="workspace"><aside className="sidebar"><div className="app-brand"><span>A</span><div><b>AgileCampus</b><small>敏捷项目工作台</small></div></div><button className="team-switcher" onClick={() => setShowTeam(true)}><span className="team-avatar">{team?.name[0] ?? "T"}</span><span>{team?.name ?? "选择团队"}</span><b>⌄</b></button><nav><button className={view === "overview" ? "active" : ""} onClick={() => setView("overview")}>⌂　工作概览</button><button className={view === "projects" ? "active" : ""} onClick={() => setView("projects")}>▦　项目管理</button><button className={view === "tasks" ? "active" : ""} onClick={() => setView("tasks")}>✓　我的任务</button></nav><div className="sidebar-bottom"><button onClick={() => setShowTeam(true)}>＋ 新建团队</button><span>当前用户<br /><b>{displayName}　{user.role === "admin" ? "管理员" : "成员"}</b></span></div></aside><section className="content"><header><div><span className="breadcrumb">{team?.name}　/　{view === "tasks" ? project?.name : view === "projects" ? "项目管理" : "工作概览"}</span><h1>{view === "overview" ? "工作概览" : view === "projects" ? "项目管理" : project?.name ?? "任务管理"}</h1></div><div className="header-actions"><span className="bell">♧</span><div className="avatar-wrap">{showMenu && <div className="menu-backdrop" onClick={() => setShowMenu(false)} />}<button className="user-avatar" title={displayName} onClick={() => setShowMenu(!showMenu)}>{displayName[0]}</button><div className="avatar-name">{displayName}</div>{showMenu && <div className="avatar-menu"><div className="menu-header"><b>{displayName}</b><small>{user.role === "admin" ? "项目管理员" : "项目成员"}</small></div><button onClick={() => router.push("/settings")}>⚙　个人设置</button><button onClick={logout}>⏻　退出用户</button></div>}</div></div></header>{view === "overview" && <Overview team={team} tasks={allTasks} onProject={() => setView("projects")} onTask={() => setView("tasks")} />} {view === "projects" && <Projects team={team} onSelect={(id) => { setProjectId(id); setView("tasks"); }} onCreate={() => setShowProject(true)} />} {view === "tasks" && project && <Tasks project={project} onCreate={() => setShowTask(true)} onUpdate={updateTask} />}</section>{showTeam && <Modal title="新建团队" onClose={() => setShowTeam(false)}><Form onSubmit={(v) => addTeam(v.name)} fields={[{ name: "name", label: "团队名称", placeholder: "例如：产品设计组" }]} submit="创建团队" /></Modal>}{showProject && <Modal title="新建项目" onClose={() => setShowProject(false)}><Form onSubmit={(v) => addProject(v.name, v.description)} fields={[{ name: "name", label: "项目名称", placeholder: "例如：实验室预约系统" }, { name: "description", label: "项目描述", placeholder: "简要描述项目目标" }]} submit="创建项目" /></Modal>}{showTask && <Modal title="新建任务" onClose={() => setShowTask(false)}><Form onSubmit={(v) => addTask(v.name, v.priority as Task["priority"])} fields={[{ name: "name", label: "任务名称", placeholder: "例如：完成登录页面" }, { name: "priority", label: "优先级", placeholder: "高 / 中 / 低" }]} submit="创建任务" /></Modal>}</main>;
+type HomeState = {
+  loading: boolean;
+  user: Me | null;
+  overview: Overview | null;
+  projects: ProjectSummary[];
+};
+
+const INITIAL: HomeState = { loading: true, user: null, overview: null, projects: [] };
+
+/* ------------------------------------------------------------------ 工具 */
+
+function greetingWord(hour: number): string {
+  if (hour < 5) return "夜深了";
+  if (hour < 11) return "早上好";
+  if (hour < 14) return "中午好";
+  if (hour < 18) return "下午好";
+  return "晚上好";
 }
 
-function Overview({ team, tasks, onProject, onTask }: { team: Team; tasks: Task[]; onProject: () => void; onTask: () => void }) { const done = tasks.filter((t) => t.status === "done").length; return <><div className="welcome"><div><span className="eyebrow">GOOD MORNING</span><h2>今天也一起推进项目吧。</h2><p>这里是 {team.name} 的协作空间，快速查看团队项目和任务进度。</p></div><span className="welcome-icon">✦</span></div><div className="stats-row"><div><small>项目总数</small><strong>{team.projects.length}</strong><span>个项目</span></div><div><small>任务总数</small><strong>{tasks.length}</strong><span>项任务</span></div><div><small>已完成</small><strong>{done}</strong><span>项任务</span></div><div><small>团队成员</small><strong>{team.members}</strong><span>位成员</span></div></div><div className="section-title"><h2>最近项目</h2><button onClick={onProject}>查看全部 →</button></div><div className="project-grid">{team.projects.slice(0, 3).map((p) => <ProjectCard key={p.id} project={p} onClick={() => onTask()} />)}<button className="add-card" onClick={onProject}>＋<span>管理项目</span></button></div></> }
-function Projects({ team, onSelect, onCreate }: { team: Team; onSelect: (id: number) => void; onCreate: () => void }) { return <><div className="page-toolbar"><p>管理团队中的项目，进入项目后即可维护任务。</p><button className="primary" onClick={onCreate}>＋ 新建项目</button></div><div className="project-list">{team.projects.map((p) => <ProjectCard key={p.id} project={p} onClick={() => onSelect(p.id)} />)}{team.projects.length === 0 && <div className="empty">还没有项目，先创建一个项目吧。</div>}</div></> }
-function ProjectCard({ project, onClick }: { project: Project; onClick: () => void }) { const done = project.tasks.filter((t) => t.status === "done").length; const percent = project.tasks.length ? Math.round(done / project.tasks.length * 100) : 0; return <button className="project-card" onClick={onClick}><div className="card-top"><span className="project-icon">▦</span><span className="more">•••</span></div><h3>{project.name}</h3><p>{project.description}</p><div className="card-meta"><span>{project.tasks.length} 项任务</span><b>{percent}%</b></div><div className="progress"><i style={{ width: `${percent}%` }} /></div></button> }
-function Tasks({ project, onCreate, onUpdate }: { project: Project; onCreate: () => void; onUpdate: (id: number, status: Task["status"]) => void }) { const groups: [Task["status"], string][] = [["todo", "待处理"], ["doing", "进行中"], ["done", "已完成"]]; return <><div className="page-toolbar"><p>{project.description}</p><button className="primary" onClick={onCreate}>＋ 新建任务</button></div><div className="board">{groups.map(([status, label]) => <div className="column" key={status}><div className="column-title"><b>{label}</b><span>{project.tasks.filter((t) => t.status === status).length}</span></div>{project.tasks.filter((t) => t.status === status).map((task) => <article className="task-card" key={task.id}><div><span className={`priority ${task.priority === "高" ? "high" : task.priority === "中" ? "medium" : "low"}`}>{task.priority}优先级</span><span className="task-menu">•••</span></div><h3>{task.title}</h3><small>指派给　未分配</small><select value={task.status} onChange={(e) => onUpdate(task.id, e.target.value as Task["status"])} aria-label="任务状态"><option value="todo">移动到：待处理</option><option value="doing">移动到：进行中</option><option value="done">移动到：已完成</option></select></article>)}</div>)}</div></> }
-function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) { return <div className="modal-backdrop"><div className="modal"><button className="close" onClick={onClose}>×</button><h2>{title}</h2>{children}</div></div> }
-function Form({ fields, onSubmit, submit }: { fields: { name: string; label: string; placeholder: string }[]; onSubmit: (v: Record<string, string>) => void; submit: string }) { const [values, setValues] = useState<Record<string, string>>({}); return <form onSubmit={(e) => { e.preventDefault(); onSubmit(values); }}><div className="form-fields">{fields.map((field) => <label key={field.name}>{field.label}<input required value={values[field.name] ?? ""} placeholder={field.placeholder} onChange={(e) => setValues({ ...values, [field.name]: e.target.value })} /></label>)}</div><button className="primary full" type="submit">{submit}</button></form> }
+function initialsOf(name: string): string {
+  const trimmed = name.trim();
+  return trimmed ? trimmed.slice(0, 1).toUpperCase() : "?";
+}
+
+function displayNameOf(user: Me): string {
+  const name = user.name?.trim();
+  if (name) return name;
+  const mail = user.email.split("@")[0];
+  return mail || "同学";
+}
+
+/** 兼容 "2026-11-30" 与完整 ISO 两种写法 */
+function daysLeft(iso?: string | null): number | null {
+  if (!iso) return null;
+  const target = new Date(iso.length <= 10 ? `${iso}T00:00:00` : iso);
+  if (Number.isNaN(target.getTime())) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((target.getTime() - today.getTime()) / 86_400_000);
+}
+
+function percentOf(project: ProjectSummary): number {
+  const total = project.taskCounts?.total ?? 0;
+  if (!total) return 0;
+  return Math.round(((project.taskCounts?.done ?? 0) / total) * 100);
+}
+
+/* ------------------------------------------------------------------ 页面 */
+
+export default function HomePage() {
+  const [state, setState] = useState<HomeState>(INITIAL);
+  const [hour, setHour] = useState<number | null>(null);
+  const { theme, toggle } = useTheme();
+
+  // 问候语由客户端计算，服务端首帧固定渲染“你好”，避免水合不一致；
+  // rAF 延迟到首帧绘制后，避免 effect 内同步 setState 触发级联渲染
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setHour(new Date().getHours()));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+
+    const run = async () => {
+      let user: Me | null = null;
+      try {
+        const data = await api<{ user: Me }>("/api/auth/me");
+        user = data.user;
+      } catch {
+        user = null; // 未登录：按访客态展示，不视为错误
+      }
+      if (!alive) return;
+      setState((prev) => ({ ...prev, user, loading: false }));
+      if (!user) return;
+
+      const [overviewRes, projectsRes] = await Promise.all([
+        api<{ overview: Overview }>("/api/overview").catch(() => null),
+        api<{ projects: ProjectSummary[] }>("/api/projects").catch(() => null),
+      ]);
+      if (!alive) return;
+      setState((prev) => ({
+        ...prev,
+        overview: overviewRes?.overview ?? prev.overview,
+        projects: projectsRes?.projects ?? prev.projects,
+      }));
+    };
+
+    void run();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const { user, overview, projects, loading } = state;
+  const name = user ? displayNameOf(user) : "";
+  const greetWord = hour === null ? "你好" : greetingWord(hour);
+
+  const activeProjects = useMemo(
+    () =>
+      [...projects]
+        .sort(
+          (a, b) =>
+            Number(b.starred) - Number(a.starred) ||
+            (b.taskCounts?.total ?? 0) - (a.taskCounts?.total ?? 0),
+        )
+        .slice(0, 4),
+    [projects],
+  );
+
+  const doneRate =
+    overview && overview.taskTotal > 0
+      ? Math.round((overview.taskDone / overview.taskTotal) * 100)
+      : 0;
+
+  const myOpen = (overview?.myTodo ?? 0) + (overview?.myDoing ?? 0);
+
+  return (
+    <div className="ac-home">
+      {/* ------------------------------------------------------------ 导航 */}
+      <header className="ac-nav">
+        <div className="ac-nav__inner">
+          <Link className="ac-brand" href="/" aria-label="AgileCampus 首页">
+            <span className="ac-brand__mark" aria-hidden="true">
+              <IconLogo />
+            </span>
+            <span className="ac-brand__text">
+              <strong>AgileCampus</strong>
+              <i aria-hidden="true" />
+              <span>敏捷校园</span>
+            </span>
+          </Link>
+
+          <nav className="ac-nav__links" aria-label="主导航">
+            {NAV.map((item) => (
+              <Link
+                key={item.label}
+                href={item.href}
+                className={`ac-nav__link${item.active ? " ac-nav__link--active" : ""}`}
+                aria-current={item.active ? "page" : undefined}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+
+          <div className="ac-nav__actions">
+            <button
+              type="button"
+              className="ac-theme-btn"
+              onClick={toggle}
+              aria-label={theme === "night" ? "切换日间模式" : "切换夜间模式"}
+              title={theme === "night" ? "切换日间模式" : "切换夜间模式"}
+            >
+              {theme === "night" ? <IconSun /> : <IconMoon />}
+            </button>
+            {user ? (
+              <span className="ac-user">
+                <span className="ac-user__avatar" aria-hidden="true">
+                  {initialsOf(name)}
+                </span>
+                <span>{name}</span>
+              </span>
+            ) : (
+              <Link className="ac-btn ac-btn--ghost" href={LOGIN_HREF}>
+                登录
+              </Link>
+            )}
+            <Link className="ac-btn ac-btn--primary" href={WORKSPACE_HREF}>
+              进入工作台
+              <IconArrow />
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        {/* ---------------------------------------------------------- 首屏 */}
+        <section className="ac-hero">
+          <div className="ac-hero__copy">
+            <span className="ac-eyebrow">
+              <i aria-hidden="true" />
+              Agile · 校园敏捷协作平台
+            </span>
+
+            <h1 className="ac-title">
+              把课程项目
+              <br />
+              做得<em>清晰而漂亮</em>
+            </h1>
+
+            <p className="ac-lead">
+              分工、看板、站会、文档与里程碑，收进同一个工作台。
+              <br className="ac-lead__br" />
+              从开学第一周到结课答辩，团队的节奏始终清晰。
+            </p>
+
+            <div className="ac-cta">
+              <Link
+                className="ac-btn ac-btn--primary ac-btn--lg"
+                href={user ? WORKSPACE_HREF : LOGIN_HREF}
+              >
+                {user ? "进入工作台" : "登录并开始"}
+                <IconArrow />
+              </Link>
+              <a className="ac-btn ac-btn--ghost ac-btn--lg" href="#features">
+                看看它能做什么
+              </a>
+            </div>
+
+            <ul className="ac-chips">
+              {CHIPS.map((text) => (
+                <li className="ac-chip" key={text}>
+                  <IconCheck />
+                  {text}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* 视觉：一个数据焦点，其余留白 */}
+          <div className="ac-art" aria-hidden="true">
+            <div className="ac-art__stage">
+              <div className="ac-art__glow" />
+              <div className="ac-art__guide" />
+              <div className="ac-art__guide ac-art__guide--inner" />
+              <div className="ac-art__ring" />
+              <div className="ac-art__orbit" />
+
+              <div className="ac-art__core">
+                <span className="ac-art__num">
+                  68<span>%</span>
+                </span>
+                <span className="ac-art__cap">本迭代完成度</span>
+              </div>
+
+              <div className="ac-art__tag ac-art__tag--top">
+                <i />
+                Sprint 14 · 进行中
+              </div>
+              <div className="ac-art__tag ac-art__tag--bottom">
+                剩余 9 天 <span aria-hidden="true">·</span> 4 位成员
+              </div>
+            </div>
+
+            <ul className="ac-art__legend">
+              <li>
+                <em />
+                <b>12</b> 已完成
+              </li>
+              <li>
+                <em />
+                <b>4</b> 进行中
+              </li>
+              <li>
+                <em />
+                <b>2</b> 待开始
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        {/* -------------------------------------------- 已登录：我的概览 */}
+        {user ? (
+          <section className="ac-section" aria-labelledby="ac-overview">
+            <h2 className="ac-greet" id="ac-overview">
+              {greetWord}，{name}
+              <span>
+                {myOpen > 0
+                  ? `今天有 ${myOpen} 项任务需要推进`
+                  : "今天没有待办，可以去看看里程碑"}
+              </span>
+            </h2>
+
+            <div className="ac-stats">
+              <Link className="ac-stat ac-stat--link" href={`${WORKSPACE_HREF}#teams`} title="查看团队管理">
+                <span className="ac-stat__label">我的团队</span>
+                <span className="ac-stat__value">
+                  {loading ? "—" : (overview?.teamCount ?? 0)}
+                </span>
+                <span className="ac-stat__meta">已加入的团队</span>
+              </Link>
+              <Link className="ac-stat ac-stat--link" href={`${WORKSPACE_HREF}#projects`} title="查看项目管理">
+                <span className="ac-stat__label">进行中项目</span>
+                <span className="ac-stat__value">
+                  {loading ? "—" : (overview?.projectCount ?? 0)}
+                </span>
+                <span className="ac-stat__meta">状态为 active</span>
+              </Link>
+              <Link className="ac-stat ac-stat--link" href={`${WORKSPACE_HREF}#tasks`} title="查看任务看板">
+                <span className="ac-stat__label">任务完成</span>
+                <span className="ac-stat__value">
+                  {loading ? "—" : (overview?.taskDone ?? 0)}
+                  <small>/ {loading ? "—" : (overview?.taskTotal ?? 0)}</small>
+                </span>
+                <span className="ac-stat__meta">完成率 {loading ? "—" : `${doneRate}%`}</span>
+              </Link>
+              <Link className="ac-stat ac-stat--link" href={`${WORKSPACE_HREF}#todos`} title="查看我的待办">
+                <span className="ac-stat__label">我的待办</span>
+                <span className="ac-stat__value">{loading ? "—" : (overview?.myTodo ?? 0)}</span>
+                <span className="ac-stat__meta">进行中 {loading ? "—" : (overview?.myDoing ?? 0)} 项</span>
+              </Link>
+            </div>
+
+            {!loading && overview && overview.taskTotal > 0 && (
+              <Link className="ac-progress ac-progress--link" href={`${WORKSPACE_HREF}#tasks`} aria-label="去任务看板查看进度">
+                <span className="ac-progress__num">
+                  任务进度 {overview.taskDone}/{overview.taskTotal}（{doneRate}%）
+                </span>
+                <div className="ac-progress__track" aria-hidden="true">
+                  <div
+                    className={`ac-progress__fill${doneRate >= 100 ? " full" : ""}`}
+                    style={{ width: `${doneRate}%` }}
+                  />
+                </div>
+                <span className="ac-progress__meta">
+                  待办 {overview.myTodo} · 进行中 {overview.myDoing} · 已完成 {overview.taskDone}
+                </span>
+              </Link>
+            )}
+          </section>
+        ) : (
+          /* ------------------------------------------ 访客：三步开始 */
+          <section className="ac-section">
+            <div className="ac-start">
+              <div className="ac-start__body">
+                <span className="ac-kicker">Get started</span>
+                <h2 className="ac-h2">三步，开始你的第一个敏捷项目</h2>
+                <p className="ac-section__desc">
+                  用学校邮箱注册，加入课程团队，剩下的交给工作台。第一次使用大约需要两分钟。
+                </p>
+                <Link className="ac-btn ac-btn--primary ac-btn--lg" href={LOGIN_HREF}>
+                  登录 / 注册
+                  <IconArrow />
+                </Link>
+              </div>
+
+              <ol className="ac-steps">
+                {STEPS.map((step, index) => (
+                  <li className="ac-step" key={step.title}>
+                    <span className="ac-step__n">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <div>
+                      <b>{step.title}</b>
+                      <p>{step.desc}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </section>
+        )}
+
+        {/* -------------------------------------- 已登录：AI 日报与日历 */}
+        {user && (
+          <section className="ac-section" aria-labelledby="ac-daily">
+            <div className="ac-section__head">
+              <div>
+                <span className="ac-kicker">Today</span>
+                <h2 className="ac-h2" id="ac-daily">
+                  AI 日报与日历
+                </h2>
+              </div>
+              <Link className="ac-link" href={`${WORKSPACE_HREF}#tasks`}>
+                去工作台处理
+                <IconArrow />
+              </Link>
+            </div>
+
+            <div className="ac-dash">
+              <DailyReportCard />
+              <HomeCalendar />
+            </div>
+          </section>
+        )}
+
+        {/* ------------------------------------------ 已登录：进行中的项目 */}
+        {user && (
+          <section className="ac-section" aria-labelledby="ac-projects">
+            <div className="ac-section__head">
+              <div>
+                <span className="ac-kicker">Workspace</span>
+                <h2 className="ac-h2" id="ac-projects">
+                  进行中的项目
+                </h2>
+              </div>
+              <Link className="ac-link" href={`${WORKSPACE_HREF}#projects`}>
+                查看全部
+                <IconArrow />
+              </Link>
+            </div>
+
+            {activeProjects.length > 0 ? (
+              <div className="ac-projects">
+                {activeProjects.map((project) => {
+                  const percent = percentOf(project);
+                  const remaining = daysLeft(project.activeSprint?.endsOn);
+                  const meta = [project.courseName, project.teamName]
+                    .filter(Boolean)
+                    .join(" · ");
+                  return (
+                    <Link className="ac-project ac-project--link" key={project.id} href={`${WORKSPACE_HREF}?project=${project.id}`} title={`进入 ${project.name} 工作台`}>
+                      <span className="ac-project__badge" aria-hidden="true">
+                        {(project.key || "AC").slice(0, 4).toUpperCase()}
+                      </span>
+
+                      <div>
+                        <div className="ac-project__title">
+                          {project.name}
+                          <em>
+                            {project.starred ? "已收藏" : "项目"} ·{" "}
+                            {project.activeSprint?.name ?? "暂无迭代"}
+                          </em>
+                        </div>
+                        <div className="ac-project__meta">
+                          {meta || "未填写课程与团队"}
+                          {remaining !== null && (
+                            <>
+                              {" · "}
+                              {remaining >= 0 ? `迭代剩余 ${remaining} 天` : `迭代已超期 ${-remaining} 天`}
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="ac-project__progress">
+                        <span className="ac-bar" aria-hidden="true">
+                          <i style={{ width: `${percent}%` }} />
+                        </span>
+                        <span>{percent}%</span>
+                      </div>
+
+                      <div className="ac-avatars ac-project__people">
+                        {project.members.slice(0, 4).map((member) => (
+                          <span
+                            className="ac-avatar"
+                            key={member.userId}
+                            title={member.name}
+                            aria-label={member.name}
+                          >
+                            {initialsOf(member.name)}
+                          </span>
+                        ))}
+                        {project.members.length > 4 && (
+                          <span className="ac-avatar ac-avatar--more">
+                            +{project.members.length - 4}
+                          </span>
+                        )}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="ac-empty">
+                <p>还没有进行中的项目。先在团队里创建一个，任务就会出现在工作台。</p>
+                <Link className="ac-btn ac-btn--ghost" href={WORKSPACE_HREF}>
+                  去工作台创建
+                  <IconArrow />
+                </Link>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* -------------------------------------------------------- 能力矩阵 */}
+        <section className="ac-section" id="features" aria-labelledby="ac-features">
+          <div className="ac-section__head ac-section__head--center">
+            <span className="ac-kicker">Capabilities</span>
+            <h2 className="ac-h2" id="ac-features">
+              一个工作台，覆盖课程项目全流程
+            </h2>
+            <p className="ac-section__desc">
+              分工、进度、沟通与文档不再散落在五个工具里。每个环节都有明确的位置，
+              团队只需要关心一件事：把事情做完。
+            </p>
+          </div>
+
+          <div className="ac-features">
+            {FEATURES.map((feature) => (
+              <Link className="ac-feature ac-feature--link" key={feature.tag} href={feature.href} title={`进入${feature.title}`}>
+                <span className="ac-feature__tag">{feature.tag}</span>
+                <span className="ac-feature__icon">{feature.icon}</span>
+                <h3>{feature.title}</h3>
+                <p>{feature.desc}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      </main>
+
+      {/* -------------------------------------------------------------- 页脚 */}
+      <footer className="ac-footer">
+        <div className="ac-footer__inner">
+          <Link className="ac-brand" href="/">
+            <span className="ac-brand__mark" aria-hidden="true">
+              <IconLogo />
+            </span>
+            <span className="ac-brand__text">
+              <strong>AgileCampus</strong>
+              <i aria-hidden="true" />
+              <span>敏捷校园</span>
+            </span>
+          </Link>
+          <p className="ac-footer__note">面向高校学生团队的敏捷协作平台 · 课程项目管理工具</p>
+          <span className="ac-footer__ver">v7.0</span>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ 图标 */
+
+function IconLogo() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M5.6 18.4 12 5.6l6.4 12.8M8.8 13.6h6.4"
+        stroke="currentColor"
+        strokeWidth="2.1"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function IconArrow() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path
+        d="M4 10h11M11 5.5 15.5 10 11 14.5"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function IconSun() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <circle cx="10" cy="10" r="3.4" stroke="currentColor" strokeWidth="1.6" />
+      <path
+        d="M10 2.6v1.8M10 15.6v1.8M2.6 10h1.8M15.6 10h1.8M4.8 4.8l1.3 1.3M13.9 13.9l1.3 1.3M15.2 4.8l-1.3 1.3M6.1 13.9l-1.3 1.3"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function IconMoon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path
+        d="M15.4 12.4A6.4 6.4 0 0 1 7.6 4.6a6.4 6.4 0 1 0 7.8 7.8Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function IconCheck() {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="8" cy="8" r="6.2" stroke="currentColor" strokeWidth="1.2" opacity=".45" />
+      <path
+        d="m5.4 8.2 1.8 1.8 3.4-3.8"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function IconBoard() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="3.5" y="4.5" width="5" height="15" rx="1.6" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="9.5" y="4.5" width="5" height="9.5" rx="1.6" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="15.5" y="4.5" width="5" height="12" rx="1.6" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+function IconChat() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M20.5 12.4c0 3.9-3.8 7-8.5 7-1 0-2-.1-2.9-.4L4.2 20.4l1.3-3.3A6.6 6.6 0 0 1 3.5 12.4c0-3.9 3.8-7 8.5-7s8.5 3.1 8.5 7Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path d="M8.6 12h6.8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconFlag() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M6 20.5V4.2M6 5h9.4l-1.6 3.3 1.6 3.3H6"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function IconDoc() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M13.8 3.5H7.2c-.9 0-1.6.7-1.6 1.6v13.8c0 .9.7 1.6 1.6 1.6h9.6c.9 0 1.6-.7 1.6-1.6V8.2l-4.6-4.7Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M13.6 4v4.2h4.4M9 12.6h6M9 16h4.2"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

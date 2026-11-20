@@ -1,0 +1,212 @@
+/* ==========================================================================
+   AgileCampus 动效层（terry/smooth-motion）
+   --------------------------------------------------------------------------
+   设计原则（经 grill-me 拷问后确定）：
+   1. 先立 token：统一缓动曲线与时长，解决"各写各的、节奏不一致"的根源问题
+   2. 只动 transform / opacity / 颜色，不触碰布局属性，避免重排抖动（丝滑）
+   3. 纯追加，不覆盖任何已有样式规则；所有选择器都带前缀或限定范围
+   4. 全局 prefers-reduced-motion 兜底，尊重无障碍设置
+   5. 尊重系统"减少动态效果"，且不影响既有零散的 reduced-motion 规则
+   ========================================================================== */
+
+:root {
+  /* 统一节奏：短/中/长三档 + 两条曲线 */
+  --motion-fast: 140ms;
+  --motion-base: 220ms;
+  --motion-slow: 360ms;
+  --motion-ease: cubic-bezier(.22, .7, .2, 1);      /* 通用：自然减速，进出都顺 */
+  --motion-ease-out: cubic-bezier(.16, 1, .3, 1);   /* 进场：快起慢停，不拖沓 */
+  --motion-ease-spring: cubic-bezier(.34, 1.4, .5, 1); /* 反馈：轻微回弹 */
+}
+
+/* ---- 1. 主题切换：颜色平滑过渡（变量本身不能过渡，作用在消费它的元素上）----
+   只列出承载大面积底色的容器，避免给所有元素加 transition 造成性能负担。 */
+html[data-theme] body,
+html[data-theme] .ws-app,
+html[data-theme] .ws-rail,
+html[data-theme] .ws-sidebar,
+html[data-theme] .ws-main,
+html[data-theme] .ws-topbar,
+html[data-theme] .ws-statusbar,
+html[data-theme] .ws-modal,
+html[data-theme] .ws-pop,
+html[data-theme] .ws-user-menu,
+html[data-theme] .ws-backdrop,
+html[data-theme] .ws-drawer,
+html[data-theme] .settings-page,
+html[data-theme] .auth-page,
+html[data-theme] .ws-today-card,
+html[data-theme] .ws-board-card,
+html[data-theme] .ws-board-column,
+html[data-theme] .su-wrap,
+html[data-theme] .su-head,
+html[data-theme] .su-panel,
+html[data-theme] .ac-home {
+  transition: background-color var(--motion-slow) var(--motion-ease),
+              color var(--motion-slow) var(--motion-ease),
+              border-color var(--motion-slow) var(--motion-ease),
+              box-shadow var(--motion-slow) var(--motion-ease);
+}
+
+/* ---- 2. 交互反馈：统一按钮 / 可点击元素的 hover 与按下 ---- */
+.ws-rail-btn,
+.ws-icon-btn,
+.ws-btn,
+.ws-filter-chip,
+.ws-view-switch button,
+.ws-top-menu button,
+.ws-tab,
+.su-icon-btn,
+.su-primary,
+.su-today-btn,
+.su-tabs button,
+.su-check,
+.su-color,
+.su-pin,
+.ac-btn,
+.ac-theme-btn,
+.primary,
+.auth-tabs button {
+  transition: background-color var(--motion-fast) var(--motion-ease),
+              color var(--motion-fast) var(--motion-ease),
+              border-color var(--motion-fast) var(--motion-ease),
+              transform var(--motion-fast) var(--motion-ease-spring),
+              box-shadow var(--motion-base) var(--motion-ease),
+              opacity var(--motion-fast) var(--motion-ease);
+}
+/* 按下时轻微收缩，给出明确的"已点击"触感；hover 轻微上浮只用于胶囊按钮 */
+.ws-rail-btn:active,
+.ws-icon-btn:active,
+.ws-btn:active,
+.su-icon-btn:active,
+.su-primary:active,
+.primary:active,
+.ac-btn:active { transform: scale(.94); }
+.su-launcher:active { transform: translateY(0) scale(.95); }
+
+/* ---- 3. 视图 / 面板切换：进场不再硬切 ----
+   工作台主内容区、效率中心面板、设置卡片、登录卡片等挂载时淡入上移。 */
+@keyframes motion-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes motion-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes motion-pop {
+  from { opacity: 0; transform: translateY(10px) scale(.985); }
+  to   { opacity: 1; transform: none; }
+}
+.ws-center > *,
+.su-panel,
+.settings-card,
+.auth-card {
+  animation: motion-enter var(--motion-base) var(--motion-ease-out) both;
+}
+/* 弹层用更轻的 pop，遮罩淡入 */
+.ws-backdrop { animation: motion-fade var(--motion-fast) var(--motion-ease) both; }
+.ws-modal,
+.ws-pop,
+.ws-user-menu { animation: motion-pop var(--motion-base) var(--motion-ease-out) both; }
+
+/* ---- 4. 卡片 / 列表：错峰进场（stagger），避免整屏一起弹 ---- */
+.ws-today-card,
+.ws-board-card,
+.su-note,
+.su-todo-list li,
+.ac-feature,
+.ac-project {
+  animation: motion-enter var(--motion-base) var(--motion-ease-out) both;
+}
+.ws-today-grid > .ws-today-card:nth-child(1),
+.ws-board-column:nth-child(1) .ws-board-card { animation-delay: 0ms; }
+.ws-today-grid > .ws-today-card:nth-child(2),
+.ws-board-column:nth-child(2) .ws-board-card { animation-delay: 45ms; }
+.ws-today-grid > .ws-today-card:nth-child(3),
+.ws-board-column:nth-child(3) .ws-board-card { animation-delay: 90ms; }
+.ws-today-grid > .ws-today-card:nth-child(4) { animation-delay: 135ms; }
+/* 列表项按顺序轻微错峰，最多覆盖前 8 项 */
+.su-todo-list li:nth-child(1),
+.su-notes-grid > .su-note:nth-child(1) { animation-delay: 0ms; }
+.su-todo-list li:nth-child(2),
+.su-notes-grid > .su-note:nth-child(2) { animation-delay: 30ms; }
+.su-todo-list li:nth-child(3),
+.su-notes-grid > .su-note:nth-child(3) { animation-delay: 60ms; }
+.su-todo-list li:nth-child(4),
+.su-notes-grid > .su-note:nth-child(4) { animation-delay: 90ms; }
+.su-todo-list li:nth-child(5),
+.su-notes-grid > .su-note:nth-child(5) { animation-delay: 120ms; }
+.su-todo-list li:nth-child(6),
+.su-notes-grid > .su-note:nth-child(6) { animation-delay: 150ms; }
+.su-todo-list li:nth-child(7),
+.su-notes-grid > .su-note:nth-child(7) { animation-delay: 180ms; }
+.su-todo-list li:nth-child(8),
+.su-notes-grid > .su-note:nth-child(8) { animation-delay: 210ms; }
+
+/* ---- 5. 主题按钮 / 悬浮入口：平滑的位移与阴影 ---- */
+.su-launcher {
+  transition: transform var(--motion-base) var(--motion-ease-spring),
+              box-shadow var(--motion-base) var(--motion-ease);
+}
+.ac-theme-btn { transition: transform var(--motion-base) var(--motion-ease),
+                            background-color var(--motion-fast) var(--motion-ease); }
+.ac-theme-btn:hover { transform: rotate(18deg); }
+
+/* ---- 6. 进度条 / 数字变化：宽度平滑 ---- */
+.ws-progress-fill,
+.ac-bar > i,
+.su-check { transition: width var(--motion-slow) var(--motion-ease),
+                        background-color var(--motion-base) var(--motion-ease); }
+
+/* ---- 7. 焦点可见性：柔和的焦点环 ---- */
+:where(button, a, input, textarea, select, [tabindex]):focus-visible {
+  outline-color: var(--ws-color-6f9bff, #6f9bff);
+  outline-offset: 2px;
+  transition: outline-offset var(--motion-fast) var(--motion-ease);
+}
+
+/* ---- 8. 无障碍：一次兜底关掉本层所有动画/过渡 ----
+   已有的零散 reduced-motion 规则继续生效，这里只负责本文件引入的部分。 */
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme] body,
+  html[data-theme] .ws-app,
+  html[data-theme] .ws-rail,
+  html[data-theme] .ws-sidebar,
+  html[data-theme] .ws-main,
+  html[data-theme] .ws-topbar,
+  html[data-theme] .ws-statusbar,
+  html[data-theme] .ws-modal,
+  html[data-theme] .ws-pop,
+  html[data-theme] .ws-user-menu,
+  html[data-theme] .ws-backdrop,
+  html[data-theme] .ws-drawer,
+  html[data-theme] .settings-page,
+  html[data-theme] .auth-page,
+  html[data-theme] .ws-today-card,
+  html[data-theme] .ws-board-card,
+  html[data-theme] .ws-board-column,
+  html[data-theme] .su-wrap,
+  html[data-theme] .su-head,
+  html[data-theme] .su-panel,
+  html[data-theme] .ac-home,
+  .ws-rail-btn, .ws-icon-btn, .ws-btn, .ws-filter-chip,
+  .ws-view-switch button, .ws-top-menu button, .ws-tab,
+  .su-icon-btn, .su-primary, .su-today-btn, .su-tabs button,
+  .su-check, .su-color, .su-pin, .ac-btn, .ac-theme-btn,
+  .primary, .auth-tabs button, .su-launcher,
+  .ws-progress-fill, .ac-bar > i {
+    transition: none !important;
+  }
+  .ws-center > *, .su-panel, .settings-card, .auth-card,
+  .su-notes-grid > .su-note, .ws-backdrop, .ws-modal, .ws-pop,
+  .ws-user-menu, .ws-today-card, .ws-board-card, .su-note,
+  .su-todo-list li, .ac-feature, .ac-project {
+    animation: none !important;
+  }
+  .ws-rail-btn:active, .ws-icon-btn:active, .ws-btn:active,
+  .su-icon-btn:active, .su-primary:active, .primary:active,
+  .ac-btn:active, .su-launcher:active, .ac-theme-btn:hover {
+    transform: none !important;
+  }
+}
