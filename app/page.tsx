@@ -130,37 +130,6 @@ function percentOf(project: ProjectSummary): number {
   return Math.round(((project.taskCounts?.done ?? 0) / total) * 100);
 }
 
-/* ------------------------------------------------------------- 数字滚动 */
-function useCountUp(target: number | null, duration = 900) {
-  const [n, setN] = useState(0);
-  useEffect(() => {
-    if (target === null) return;
-    let raf = 0;
-    const t0 = performance.now();
-    // 全部 setState 都发生在 rAF 回调里，避免 effect 内同步 setState
-    const tick = (t: number) => {
-      const p = Math.min(1, (t - t0) / duration);
-      setN(Math.round(target * (1 - Math.pow(1 - p, 3))));
-      if (p < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [target, duration]);
-  return target === null ? 0 : n;
-}
-
-function StatValue({ value, loading }: { value: number | null; loading: boolean }) {
-  const ready = !loading && typeof value === "number";
-  const n = useCountUp(ready ? value : null);
-  if (!ready) return <>—</>;
-  return <>{n}</>;
-}
-
-function HeroPercent() {
-  const n = useCountUp(68, 1200);
-  return <>{n}<span>%</span></>;
-}
-
 /* ------------------------------------------------------------------ 页面 */
 
 export default function HomePage() {
@@ -345,7 +314,7 @@ export default function HomePage() {
 
               <div className="ac-art__core">
                 <span className="ac-art__num">
-                  <HeroPercent />
+                  68<span>%</span>
                 </span>
                 <span className="ac-art__cap">本迭代完成度</span>
               </div>
@@ -392,28 +361,28 @@ export default function HomePage() {
               <Link className="ac-stat ac-stat--link" href={`${WORKSPACE_HREF}#teams`} title="查看团队管理">
                 <span className="ac-stat__label">我的团队</span>
                 <span className="ac-stat__value">
-                  <StatValue value={overview?.teamCount ?? null} loading={loading} />
+                  {loading ? "—" : (overview?.teamCount ?? 0)}
                 </span>
                 <span className="ac-stat__meta">已加入的团队</span>
               </Link>
               <Link className="ac-stat ac-stat--link" href={`${WORKSPACE_HREF}#projects`} title="查看项目管理">
                 <span className="ac-stat__label">进行中项目</span>
                 <span className="ac-stat__value">
-                  <StatValue value={overview?.projectCount ?? null} loading={loading} />
+                  {loading ? "—" : (overview?.projectCount ?? 0)}
                 </span>
                 <span className="ac-stat__meta">状态为 active</span>
               </Link>
               <Link className="ac-stat ac-stat--link" href={`${WORKSPACE_HREF}#tasks`} title="查看任务看板">
                 <span className="ac-stat__label">任务完成</span>
                 <span className="ac-stat__value">
-                  <StatValue value={overview?.taskDone ?? null} loading={loading} />
+                  {loading ? "—" : (overview?.taskDone ?? 0)}
                   <small>/ {loading ? "—" : (overview?.taskTotal ?? 0)}</small>
                 </span>
                 <span className="ac-stat__meta">完成率 {loading ? "—" : `${doneRate}%`}</span>
               </Link>
               <Link className="ac-stat ac-stat--link" href={`${WORKSPACE_HREF}#todos`} title="查看我的待办">
                 <span className="ac-stat__label">我的待办</span>
-                <span className="ac-stat__value"><StatValue value={overview?.myTodo ?? null} loading={loading} /></span>
+                <span className="ac-stat__value">{loading ? "—" : (overview?.myTodo ?? 0)}</span>
                 <span className="ac-stat__meta">进行中 {loading ? "—" : (overview?.myDoing ?? 0)} 项</span>
               </Link>
             </div>
