@@ -1542,3 +1542,72 @@ a.ac-project--link:hover .ac-project__title,
 a.ac-feature--link:hover h3 {
   color: var(--ac-text);
 }
+
+/* ------------------------------ 动效层：圆环扫描 / 进度条生长与流光 / 统计卡入场 */
+@property --ac-p {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+/* 首屏圆环：加载时从 0 扫到 68%，与中心数字滚动同步 */
+.ac-art__ring {
+  animation: ac-ring-sweep 1.2s cubic-bezier(0.25, 0.8, 0.35, 1) 0.25s both;
+}
+
+@keyframes ac-ring-sweep {
+  from { --ac-p: 0; }
+  to { --ac-p: 68; }
+}
+
+/* 任务进度条：生长进场 + 常驻流光（低幅度，远看是呼吸感） */
+.ac-progress__fill {
+  position: relative;
+  overflow: hidden;
+  animation: ac-fill-grow 1s cubic-bezier(0.22, 1, 0.36, 1) 0.35s both;
+}
+
+@keyframes ac-fill-grow {
+  from { width: 0; }
+}
+
+.ac-progress__fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 32%, rgba(255, 255, 255, 0.32) 50%, transparent 68%);
+  transform: translateX(-100%);
+  animation: ac-shimmer 2.6s ease-in-out 1.5s infinite;
+}
+
+@keyframes ac-shimmer {
+  to { transform: translateX(100%); }
+}
+
+/* 统计卡：错峰浮入（terry 动效层已覆盖项目/能力卡，这里补统计卡） */
+.ac-stat--link {
+  animation: ac-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.ac-stats .ac-stat--link:nth-child(1) { animation-delay: 0.05s; }
+.ac-stats .ac-stat--link:nth-child(2) { animation-delay: 0.12s; }
+.ac-stats .ac-stat--link:nth-child(3) { animation-delay: 0.19s; }
+.ac-stats .ac-stat--link:nth-child(4) { animation-delay: 0.26s; }
+
+@keyframes ac-rise {
+  from { opacity: 0; transform: translateY(12px); }
+}
+
+/* 主题按钮图标：悬停回弹旋转 */
+.ac-theme-btn svg {
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.ac-theme-btn:hover svg {
+  transform: rotate(24deg) scale(1.08);
+}
+
+/* 按钮按压反馈 */
+.ac-btn:active {
+  transform: scale(0.97);
+}

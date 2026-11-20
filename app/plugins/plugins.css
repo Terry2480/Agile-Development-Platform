@@ -107,3 +107,41 @@
 @media (max-width: 600px) {
   .i18n-switcher { left: 14px; bottom: 14px; }
 }
+
+/* ------------------------------ 动效：商城卡错峰浮入 / 按压反馈 / 菜单弹出 */
+.plg-card {
+  animation: plg-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.plg-grid .plg-card:nth-child(1) { animation-delay: 0.04s; }
+.plg-grid .plg-card:nth-child(2) { animation-delay: 0.1s; }
+.plg-grid .plg-card:nth-child(3) { animation-delay: 0.16s; }
+.plg-grid .plg-card:nth-child(4) { animation-delay: 0.22s; }
+
+@keyframes plg-rise {
+  from { opacity: 0; transform: translateY(12px); }
+}
+
+.plg-toggle:active,
+.plg-back:active {
+  transform: scale(0.96);
+}
+
+.i18n-switcher__btn:active {
+  transform: scale(0.92);
+}
+
+.i18n-switcher__menu:not([hidden]) {
+  animation: plg-pop 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes plg-pop {
+  from { opacity: 0; transform: translateY(6px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plg-card,
+  .i18n-switcher__menu {
+    animation: none;
+  }
+}
