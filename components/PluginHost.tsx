@@ -7,7 +7,7 @@ import { api } from "@/lib/api-client";
 import type { PluginContext } from "@/lib/plugins/types";
 import { builtinPlugins, enabledIds, subscribePlugins } from "./../lib/plugins/registry";
 
-const HOST_VERSION = "6.5.0";
+const HOST_VERSION = "7.0.0";
 const activePlugins = new Set<string>();
 
 function contextFor(id: string): PluginContext {
