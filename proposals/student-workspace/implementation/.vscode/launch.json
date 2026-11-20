@@ -1,0 +1,23 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Next.js: debug server",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run dev -- -p 3001",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "NEXT_TELEMETRY_DISABLED": "1"
+      }
+    },
+    {
+      "name": "Next.js: debug browser",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:3001",
+      "webRoot": "${workspaceFolder}",
+      "sourceMaps": true
+    }
+  ]
+}
