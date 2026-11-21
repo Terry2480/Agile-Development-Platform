@@ -736,3 +736,18 @@ html[data-theme="day"] .ws-avatar[data-av="4"]{background:#8a4710}
 .su-launcher:hover{transform:translateY(-2px);box-shadow:0 12px 30px #294a7877}
 .su-launcher:active{transform:translateY(0)}
 @media(max-width:600px){.su-launcher span{display:none}.su-launcher{padding:0;width:48px;justify-content:center}}
+
+/* ===== 全局新手导引入口（功能/global-guide-entry）：与效率中心悬浮按钮堆叠 ===== */
+.guide-launcher-wrap{position:fixed;right:22px;bottom:80px;z-index:60;display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+.su-launcher.guide-launcher{position:static;flex:none;background:linear-gradient(135deg,#8a5a20,#c98a3a);box-shadow:0 8px 24px #c98a3a55}
+.su-launcher.guide-launcher:hover{box-shadow:0 12px 30px #c98a3a77}
+.guide-nudge{max-width:300px;padding:12px 14px;border-radius:14px;background:#1d2333;color:#e8eaf2;border:1px solid #3a4562;box-shadow:0 12px 32px #00000066;display:flex;flex-direction:column;gap:8px;animation:guide-nudge-in .35s ease}
+.guide-nudge-body{display:flex;flex-direction:column;gap:3px;font-size:12px;line-height:1.5;color:#c6cbdb}
+.guide-nudge-body b{font-size:13px;color:#fff}
+.guide-nudge-actions{display:flex;align-items:center;gap:8px}
+.guide-nudge-go{flex:1;border:0;border-radius:9px;padding:8px 12px;background:linear-gradient(135deg,#8a5a20,#c98a3a);color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+.guide-nudge-go:hover{filter:brightness(1.1)}
+.guide-nudge-close{border:0;background:transparent;color:#7c8194;font-size:12px;cursor:pointer;padding:4px 6px;border-radius:6px;font-family:inherit}
+.guide-nudge-close:hover{background:#2a2f45;color:#e8eaf2}
+@keyframes guide-nudge-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:600px){.guide-launcher-wrap{right:14px;bottom:76px}.guide-nudge{max-width:calc(100vw - 90px)}}

@@ -2,10 +2,11 @@
 
 // 个人效率中心 /suite —— 日历 / 待办 / 记事 三合一（对标 Google Calendar + Tasks + Keep）
 // 独立页面，数据按用户隔离；日历聚合「项目任务截止 + 里程碑 + 个人待办截止日」。
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError, dayKey } from "@/lib/api-client";
 import { monthDays, groupEventsByDate, prevMonth, nextMonth, type CalendarEvent } from "@/lib/calendar-events";
+import { parseIcsEvents } from "@/lib/ics";
 import "./suite.css";
 
 type Tab = "calendar" | "todos" | "notes";
@@ -103,6 +104,33 @@ export default function SuitePage() {
     if (tab === "calendar") loadCalendar();
   }
 
+  /* ---- 日历导入（.ics）：把外部日历事件转入个人待办，截止日自动上日历 ---- */
+  const icsRef = useRef<HTMLInputElement>(null);
+  const [importMsg, setImportMsg] = useState("");
+  const [importing, setImporting] = useState(false);
+  async function importIcs(file: File) {
+    setImporting(true);
+    setImportMsg("解析中…");
+    try {
+      const { events, skipped } = parseIcsEvents(await file.text());
+      if (events.length === 0) { setImportMsg("没有解析到带日期的事件，请确认是日历导出的 .ics 文件"); return; }
+      let ok = 0;
+      for (const ev of events.slice(0, 200)) { // 课程场景上限，防误导入超大文件
+        try {
+          await api("/api/suite/todos", { method: "POST", json: { title: ev.title.slice(0, 200), dueOn: ev.dateKey, note: "来自日历导入" } });
+          ok += 1;
+        } catch { /* 单条失败不中断整体导入 */ }
+      }
+      setImportMsg(`已导入 ${ok} 条到待办${skipped ? `，跳过 ${skipped} 条（缺少日期）` : ""}`);
+      loadTodos();
+      if (tab === "calendar") loadCalendar();
+    } catch (e) {
+      setImportMsg(`导入失败：${(e as Error).message}`);
+    } finally {
+      setImporting(false);
+    }
+  }
+
   /* ---- 记事操作 ---- */
   async function addNote() {
     setBusyNote(true);
@@ -195,7 +223,14 @@ export default function SuitePage() {
         {/* ============ 待办 ============ */}
         {tab === "todos" && (
           <section className="su-panel">
-            <div className="su-panel-head"><h1>待办</h1><span className="su-count">{todos.filter((t) => !t.done).length} 项未完成</span></div>
+            <div className="su-panel-head">
+              <h1>待办</h1><span className="su-count">{todos.filter((t) => !t.done).length} 项未完成</span>
+              <button type="button" className="su-import" disabled={importing} onClick={() => icsRef.current?.click()} title="导入 Google 日历 / 手机系统日历导出的 .ics 文件">
+                <Svg name="cal" size={14} />{importing ? "导入中…" : "导入日历 .ics"}
+              </button>
+              <input ref={icsRef} type="file" accept=".ics,text/calendar" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) void importIcs(f); e.target.value = ""; }} />
+            </div>
+            {importMsg && <div className="su-import-msg" role="status">{importMsg}</div>}
             <form className="su-add" onSubmit={addTodo}>
               <input value={todoTitle} onChange={(e) => setTodoTitle(e.target.value)} placeholder="添加一项待办，回车即可…" aria-label="待办标题" />
               <input type="date" value={todoDue} onChange={(e) => setTodoDue(e.target.value)} aria-label="截止日期" />

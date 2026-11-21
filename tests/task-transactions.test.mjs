@@ -40,6 +40,7 @@ test("task writes roll back on activity or notification failure", async () => {
    const common={"@/db":{db},"@/db/schema":schema,"@/lib/auth":{getSessionUser:async()=>actor}};
    common["@/lib/api"]=moduleAt("../lib/api.ts",common);
    common["@/lib/activity"]=moduleAt("../lib/activity.ts",common);
+  common["./dm"]=moduleAt("../lib/dm.ts",common); // notify.ts 依赖 ./dm：vm 转译模块的相对导入按测试目录解析，必须显式映射
    common["@/lib/notify"]=moduleAt("../lib/notify.ts",common);
    common["@/lib/task-collaborators"]=moduleAt("../lib/task-collaborators.ts", {...common, "./api": common["@/lib/api"], "./notify": common["@/lib/notify"]});
    return {create:moduleAt("../app/api/tasks/route.ts",common).POST,

@@ -5,6 +5,7 @@
 // 聊天记录搜索（分类）+ 结果跳转上下文高亮、加载更早消息、今日要点摘要
 import { useEffect, useRef, useState } from "react";
 import { api, STATUS_TEXT, dayKey, fmtDateShort, fmtSize, fmtTime, type ChatMessage } from "@/lib/api-client";
+import { buildChatMarkdown, exportFileName } from "@/lib/chat-export";
 import { useWorkspace, Icon, Avatar, Modal } from "./shared";
 import { renderMentions } from "./helpers";
 import { toast } from "@/lib/toast";
@@ -112,6 +113,35 @@ export function ChatPanel() {
     setSearchAuthor(null);
     setHits(null);
     setSearchErr("");
+  }
+
+  // 导出聊天记录：afterId 升序分页拉全量 → 组装 Markdown → 触发下载归档
+  async function exportChat() {
+    const proj = project;
+    if (!proj || !projectId) return;
+    try {
+      const all: ChatMessage[] = [];
+      let afterId = 0;
+      for (let page = 0; page < 200; page++) { // 200 页 × 200 条 = 4 万条上限，课程场景足够
+        const d = await api<{ messages: ChatMessage[] }>(`/api/projects/${projectId}/chat?afterId=${afterId}`);
+        if (d.messages.length === 0) break;
+        all.push(...d.messages);
+        afterId = d.messages[d.messages.length - 1].id;
+        if (d.messages.length < 200) break;
+      }
+      if (all.length === 0) { toast("还没有可导出的聊天记录"); return; }
+      const md = buildChatMarkdown(proj.name, all);
+      const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = exportFileName(proj.name);
+      a.click();
+      URL.revokeObjectURL(url);
+      toast(`已导出 ${all.length} 条消息（Markdown）`);
+    } catch (e) {
+      toast(`导出失败：${(e as Error).message}`, "error");
+    }
   }
 
   // 定位并高亮一条消息（搜索跳转）；DOM 提交有延迟，轻量重试
@@ -241,7 +271,14 @@ export function ChatPanel() {
         <Icon name="message" size={15} />
         <b>#{project.name}</b>
         <span>· {ws.detail?.members.length ?? project.members.length} 位成员</span>
-        <button className="ws-icon-btn" style={{ marginLeft: "auto" }} title="今日要点" aria-label="今日要点" onClick={() => void openSummary()}>
+        <button
+          className="ws-icon-btn" style={{ marginLeft: "auto" }}
+          title="导出聊天记录（Markdown 归档）" aria-label="导出聊天记录"
+          onClick={() => void exportChat()}
+        >
+          <Icon name="download" size={14} />
+        </button>
+        <button className="ws-icon-btn" title="今日要点" aria-label="今日要点" onClick={() => void openSummary()}>
           <Icon name="list" size={14} />
         </button>
         <button className="ws-icon-btn" title="搜索聊天记录" aria-label="搜索聊天记录"
