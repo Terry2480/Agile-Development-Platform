@@ -17,6 +17,10 @@ export function TeamPanel({ teamId }: { teamId: number }) {
   const [detail, setDetail] = useState<TeamDetail | null>(null);
   const [error, setError] = useState("");
   const [inviting, setInviting] = useState(false);
+  // 计划外新增（真实使用刚需）：管理员生成一次性临时密码重置成员密码（平台未接邮件服务）
+  const [resetTarget, setResetTarget] = useState<ProjectMember | null>(null);
+  const [tempPassword, setTempPassword] = useState("");
+  const [resetBusy, setResetBusy] = useState(false);
   const refresh = useCallback(async () => {
     const data = await api<TeamDetail>(`/api/teams/${teamId}`);
     setDetail(data); setError("");
@@ -29,10 +33,28 @@ export function TeamPanel({ teamId }: { teamId: number }) {
   }, [teamId]);
   if (!detail) return <div className="ws-empty">{error || "正在加载团队…"}{error && <button className="ws-btn" onClick={() => refresh().catch((e: Error) => setError(e.message))}>重试</button>}</div>;
   const canInvite = detail.myRole === "owner" || detail.myRole === "admin";
+  const canResetPassword = detail.myRole === "owner" || detail.myRole === "admin";
   const online = detail.members.filter((m) => m.online).length;
   const me = detail.members.find((m) => m.userId === ws.me.id);
   const canAssign = me ? canManageDuties(me) : detail.myRole === "owner";
   const choices = [...new Set([...DEFAULT_DUTIES, ...detail.members.flatMap(memberDuties)])];
+
+  async function resetPassword() {
+    if (!resetTarget || resetBusy) return;
+    setResetBusy(true);
+    setError("");
+    try {
+      const d = await api<{ ok: boolean; tempPassword: string }>(
+        `/api/teams/${teamId}/members/${resetTarget.userId}/reset-password`,
+        { method: "POST", json: {} },
+      );
+      setTempPassword(d.tempPassword);
+      setResetTarget(null);
+    } catch (e) {
+      setError((e as Error).message);
+      setResetTarget(null);
+    } finally { setResetBusy(false); }
+  }
 
   return (
     <section className="ws-team">
@@ -67,12 +89,45 @@ export function TeamPanel({ teamId }: { teamId: number }) {
                 <Icon name="message" size={13} /> 私信
               </button>
             )}
+            {canResetPassword && m.role !== "owner" && (
+              <button className="ws-btn" style={{ padding: "6px 12px", fontSize: 12, flexShrink: 0 }}
+                title="生成一次性临时密码并使其登录全部失效；请线下告知本人"
+                onClick={() => setResetTarget(m)}>
+                重置密码
+              </button>
+            )}
             <span className="ws-role-tag">{ROLE_TEXT[m.role] ?? m.role}</span>
           </article>
         ))}
       </div>
       {editing && <DutyModal member={editing} choices={choices} teamId={detail.team.id} onSaved={refresh} onClose={() => setEditing(null)} />}
       {inviting && <InviteModal teamId={teamId} onInvited={refresh} onClose={() => setInviting(false)} />}
+      {resetTarget && (
+        <Modal title={`重置 ${resetTarget.displayName} 的密码`} onClose={() => setResetTarget(null)}>
+          <p style={{ fontSize: 13, lineHeight: 1.7, margin: "0 0 14px" }}>
+            将生成一个一次性临时密码，并使该成员的所有登录失效（强制重新登录）。请把临时密码线下告知本人，
+            其登录后应在「个人设置 → 修改密码」自行修改。
+          </p>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="ws-btn primary" disabled={resetBusy} onClick={() => void resetPassword()}>
+              {resetBusy ? "生成中…" : "确认生成临时密码"}
+            </button>
+            <button className="ws-btn" onClick={() => setResetTarget(null)}>取消</button>
+          </div>
+        </Modal>
+      )}
+      {tempPassword && (
+        <Modal title="临时密码已生成（仅显示一次）" onClose={() => setTempPassword("")}>
+          <p style={{ fontSize: 13, margin: "0 0 10px" }}>请把以下临时密码线下告知成员，其登录后应在「个人设置」自行修改：</p>
+          <p style={{ fontSize: 24, fontWeight: 700, letterSpacing: 3, margin: "10px 0 16px", fontFamily: "monospace" }}>{tempPassword}</p>
+          <button
+            className="ws-btn primary"
+            onClick={() => { void navigator.clipboard?.writeText(tempPassword).catch(() => {}); setTempPassword(""); }}
+          >
+            复制并关闭
+          </button>
+        </Modal>
+      )}
     </section>
   );
 }
