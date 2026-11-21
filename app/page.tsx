@@ -589,7 +589,7 @@ export default function HomePage() {
             </span>
           </Link>
           <p className="ac-footer__note">面向高校学生团队的敏捷协作平台 · 课程项目管理工具</p>
-          <span className="ac-footer__ver">v7.1</span>
+          <span className="ac-footer__ver">v7.2</span>
         </div>
       </footer>
     </div>
