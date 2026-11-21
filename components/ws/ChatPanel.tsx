@@ -5,6 +5,7 @@
 // 聊天记录搜索（分类）+ 结果跳转上下文高亮、加载更早消息、今日要点摘要
 import { useEffect, useRef, useState } from "react";
 import { api, STATUS_TEXT, dayKey, fmtDateShort, fmtSize, fmtTime, type ChatMessage } from "@/lib/api-client";
+import { buildChatMarkdown, exportFileName } from "@/lib/chat-export";
 import { useWorkspace, Icon, Avatar, Modal } from "./shared";
 import { renderMentions } from "./helpers";
 import { toast } from "@/lib/toast";
@@ -51,6 +52,7 @@ export function ChatPanel() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const stickToBottom = useRef(true);
 
   // 展示的消息 = 本地翻页前缀 + store 最新窗口；轮询刷新时窗口仍来自 store，前缀保留
   const storeMessages = ws.chat;
@@ -62,10 +64,15 @@ export function ChatPanel() {
   const memberNames = ws.detail?.members.map((m) => m.displayName) ?? [];
   const projectId = project?.id ?? null;
 
-  // 新消息自动滚到底
+  // 切换项目：重新贴底（ref 不能在渲染期写；先于下方滚动 effect 声明，保证同批先执行）
+  useEffect(() => {
+    stickToBottom.current = true;
+  }, [project?.id]);
+
+  // 新消息自动滚到底；用户上滚翻看历史时不打断（与私信面板同一守卫）
   useEffect(() => {
     const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (el && stickToBottom.current) el.scrollTop = el.scrollHeight;
   }, [storeMessages.length, project?.id]);
 
   // 切换项目时清空输入与翻页状态（渲染期对齐，避免级联 effect）
@@ -114,6 +121,35 @@ export function ChatPanel() {
     setSearchErr("");
   }
 
+  // 导出聊天记录：afterId 升序分页拉全量 → 组装 Markdown → 触发下载归档
+  async function exportChat() {
+    const proj = project;
+    if (!proj || !projectId) return;
+    try {
+      const all: ChatMessage[] = [];
+      let afterId = 0;
+      for (let page = 0; page < 200; page++) { // 200 页 × 200 条 = 4 万条上限，课程场景足够
+        const d = await api<{ messages: ChatMessage[] }>(`/api/projects/${projectId}/chat?afterId=${afterId}`);
+        if (d.messages.length === 0) break;
+        all.push(...d.messages);
+        afterId = d.messages[d.messages.length - 1].id;
+        if (d.messages.length < 200) break;
+      }
+      if (all.length === 0) { toast("还没有可导出的聊天记录"); return; }
+      const md = buildChatMarkdown(proj.name, all);
+      const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = exportFileName(proj.name);
+      a.click();
+      URL.revokeObjectURL(url);
+      toast(`已导出 ${all.length} 条消息（Markdown）`);
+    } catch (e) {
+      toast(`导出失败：${(e as Error).message}`, "error");
+    }
+  }
+
   // 定位并高亮一条消息（搜索跳转）；DOM 提交有延迟，轻量重试
   function flashMessage(id: number, tries = 0) {
     const el = document.getElementById(`chat-m-${id}`);
@@ -135,8 +171,12 @@ export function ChatPanel() {
       try {
         const d = await api<{ messages: ChatMessage[] }>(`/api/projects/${projectId}/chat?beforeId=${cursor}`);
         if (d.messages.length === 0) { setNoMoreOlder(true); toast("该消息已无法加载"); return; }
-        const prefix = olderMessages ? [...d.messages, ...olderMessages.filter((o) => !d.messages.some((n) => n.id === o.id))] : d.messages;
-        setOlderMessages(prefix);
+        // 函数式更新：循环内不能引用过期的 olderMessages，否则逐页跳转时会覆盖掉已加载的页
+        setOlderMessages((prev) => {
+          const older = prev ?? [];
+          const seen = new Set(older.map((o) => o.id));
+          return [...d.messages.filter((m) => !seen.has(m.id)), ...older];
+        });
         if (d.messages.length < 50) setNoMoreOlder(true);
         if (d.messages.some((m) => m.id === id)) { flashMessage(id); return; }
         if (d.messages.length < 50) { toast("已加载全部历史，未找到该消息"); return; }
@@ -161,7 +201,7 @@ export function ChatPanel() {
       const el = scrollRef.current;
       const prevHeight = el?.scrollHeight ?? 0;
       const prevTop = el?.scrollTop ?? 0;
-      setOlderMessages(olderMessages ? [...d.messages, ...olderMessages] : d.messages);
+      setOlderMessages((prev) => (prev ? [...d.messages, ...prev] : d.messages));
       setTimeout(() => {
         const el2 = scrollRef.current;
         if (el2) el2.scrollTop = el2.scrollHeight - prevHeight + prevTop;
@@ -220,6 +260,7 @@ export function ChatPanel() {
     setBusy(true);
     try {
       await ws.sendChat(content, { replyToId: replyTo?.id });
+      stickToBottom.current = true; // 自己发消息后重新贴底
       setText("");
       setReplyTo(null);
     } catch (e) {
@@ -241,7 +282,14 @@ export function ChatPanel() {
         <Icon name="message" size={15} />
         <b>#{project.name}</b>
         <span>· {ws.detail?.members.length ?? project.members.length} 位成员</span>
-        <button className="ws-icon-btn" style={{ marginLeft: "auto" }} title="今日要点" aria-label="今日要点" onClick={() => void openSummary()}>
+        <button
+          className="ws-icon-btn" style={{ marginLeft: "auto" }}
+          title="导出聊天记录（Markdown 归档）" aria-label="导出聊天记录"
+          onClick={() => void exportChat()}
+        >
+          <Icon name="download" size={14} />
+        </button>
+        <button className="ws-icon-btn" title="今日要点" aria-label="今日要点" onClick={() => void openSummary()}>
           <Icon name="list" size={14} />
         </button>
         <button className="ws-icon-btn" title="搜索聊天记录" aria-label="搜索聊天记录"
@@ -314,7 +362,14 @@ export function ChatPanel() {
           ))}
         </div>
       ) : (
-        <div className="ws-chat-scroll" ref={scrollRef}>
+        <div
+          className="ws-chat-scroll"
+          ref={scrollRef}
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+          }}
+        >
           {!noMoreOlder && messages.length > 0 && (
             <button className="ws-load-older" disabled={loadingOlder} onClick={() => void loadOlder()}>
               {loadingOlder ? "加载中…" : "加载更早的消息"}
@@ -455,7 +510,8 @@ export function ChatPanel() {
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
+              // isComposing：输入法选词回车不发送
+              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
                 e.preventDefault();
                 send();
               }

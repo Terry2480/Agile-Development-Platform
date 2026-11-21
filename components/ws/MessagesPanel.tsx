@@ -224,14 +224,20 @@ function DmThread({ conversationId }: { conversationId: number }) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const stickToBottom = useRef(true);
+  // 计划 3.2 私聊文件拖拽传输：把文件拖进会话区即可发送（复用 sendFile）
+  const [fileDragging, setFileDragging] = useState(false);
+  const dragDepth = useRef(0);
   const markingRead = useRef(false);
+  const loadSeq = useRef(0);
 
   const partner = conversation?.partner;
 
   const load = useCallback(() => {
+    // 请求序号：过期的轮询响应不得覆盖新状态（例如刚发出的消息）
+    const seq = ++loadSeq.current;
     api<{ messages: DmMessage[] }>(`/api/dm/${conversationId}/messages`)
-      .then((d) => { setMessages(d.messages); setFailed(false); })
-      .catch((e: Error) => { setFailed(true); setHint(e.message); });
+      .then((d) => { if (loadSeq.current === seq) { setMessages(d.messages); setFailed(false); } })
+      .catch((e: Error) => { if (loadSeq.current === seq) { setFailed(true); setHint(e.message); } });
   }, [conversationId]);
 
   // 首次加载 + 轮询（页面切到后台时暂停，避免无谓请求）
@@ -274,6 +280,7 @@ function DmThread({ conversationId }: { conversationId: number }) {
         method: "POST", json: { content, replyToId: dmReply?.id ?? null },
       });
       stickToBottom.current = true;
+      loadSeq.current++; // 使在途的旧轮询响应失效，防止把刚发出的消息覆盖掉
       setMessages((items) => [...items, d.message]);
       setText("");
       setDmReply(null);
@@ -294,6 +301,7 @@ function DmThread({ conversationId }: { conversationId: number }) {
     try {
       const d = await uploadFile<{ message: DmMessage }>(`/api/dm/${conversationId}/files`, file);
       stickToBottom.current = true;
+      loadSeq.current++; // 同上：防止过期轮询响应覆盖刚上传的文件消息
       setMessages((items) => [...items, d.message]);
       void ws.refreshDms().catch(() => {});
       toast(`已发送「${file.name}」`);
@@ -358,8 +366,12 @@ function DmThread({ conversationId }: { conversationId: number }) {
       try {
         const d = await api<{ messages: DmMessage[] }>(`/api/dm/${conversationId}/messages?beforeId=${cursor}`);
         if (d.messages.length === 0) { setNoMoreOlder(true); toast("该消息已无法加载"); return; }
-        const prefix = olderMessages ? [...d.messages, ...olderMessages.filter((o) => !d.messages.some((n) => n.id === o.id))] : d.messages;
-        setOlderMessages(prefix);
+        // 函数式更新：循环内不能引用过期的 olderMessages，否则逐页跳转时会覆盖掉已加载的页
+        setOlderMessages((prev) => {
+          const older = prev ?? [];
+          const seen = new Set(older.map((o) => o.id));
+          return [...d.messages.filter((m) => !seen.has(m.id)), ...older];
+        });
         if (d.messages.length < 80) setNoMoreOlder(true);
         if (d.messages.some((m) => m.id === id)) { flashMessage(id); return; }
         if (d.messages.length < 80) { toast("已加载全部历史，未找到该消息"); return; }
@@ -471,7 +483,20 @@ function DmThread({ conversationId }: { conversationId: number }) {
           const el = e.currentTarget;
           stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
         }}
+        onDragEnter={(e) => { e.preventDefault(); dragDepth.current += 1; if (Array.from(e.dataTransfer.types ?? []).includes("Files")) setFileDragging(true); }}
+        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; }}
+        onDragLeave={() => { dragDepth.current -= 1; if (dragDepth.current <= 0) { dragDepth.current = 0; setFileDragging(false); } }}
+        onDrop={(e) => {
+          e.preventDefault();
+          dragDepth.current = 0;
+          setFileDragging(false);
+          const files = Array.from(e.dataTransfer.files ?? []);
+          if (files.length === 0) return;
+          if (searchOpen) { toast("请先关闭搜索再发送文件"); return; }
+          for (const f of files.slice(0, 5)) void sendFile(f);
+        }}
       >
+        {fileDragging && <div className="ws-dm-dropzone" role="status">松开鼠标，发送文件给 {partner?.displayName ?? "对方"}</div>}
         {searchOpen ? (
           <>
             {searchErr && <div className="ws-error" role="alert" style={{ margin: 12 }}>{searchErr}</div>}
@@ -593,7 +618,8 @@ function DmThread({ conversationId }: { conversationId: number }) {
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
+              // isComposing：输入法选词回车不发送
+              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
                 e.preventDefault();
                 void send();
               }

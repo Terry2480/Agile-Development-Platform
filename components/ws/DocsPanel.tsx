@@ -9,6 +9,7 @@ import {
   type DocDetail, type DocSummary, type DocVersion, type DocComment, type TaskItem,
 } from "@/lib/api-client";
 import { renderMarkdown, extractToc } from "@/lib/markdown";
+import { extractDocSummary, formatDocSummary, type DocSummary as DocAiSummary } from "@/lib/doc-summary";
 import { useWorkspace, Icon, Modal } from "./shared";
 import { DocListSkeleton } from "./LoadingSkeleton";
 import { toast } from "@/lib/toast";
@@ -23,14 +24,18 @@ export function DocsPanel() {
   const [creating, setCreating] = useState(false);
   const [openingId, setOpeningId] = useState<number | null>(null);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
-  // 命令面板跳转：docTargetId 变化（含本面板未挂载时设置的值）即拉取详情并打开
-  const docTargetId = ws.docTargetId;
+  // 计划 3.3 文档目录拖拽变化：把文档卡片拖到目标分组即移动分组（未分组 → folder: null）
+  const dragDocRef = useRef<DocSummary | null>(null);
+  const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
+  // 命令面板跳转：docTarget 变化（含本面板未挂载时设置的值，n 序号保证重复点
+  // 击同一篇也能再次触发）即拉取详情并打开
+  const docTarget = ws.docTarget;
   useEffect(() => {
-    if (docTargetId === null) return;
-    api<{ doc: DocDetail }>(`/api/docs/${docTargetId}`)
+    if (docTarget === null) return;
+    api<{ doc: DocDetail }>(`/api/docs/${docTarget.id}`)
       .then((d) => { setOpenDoc(d.doc); })
       .catch((e: Error) => { setError(e.message); });
-  }, [docTargetId]);
+  }, [docTarget]);
 
   const refresh = useCallback(() => {
     api<{ docs: DocSummary[] }>("/api/docs")
@@ -39,6 +44,19 @@ export function DocsPanel() {
   }, []);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  // 拖拽移动分组：PUT /api/docs/[id] 的 folder 字段是 optional，可单独更新
+  async function moveDocToFolder(doc: DocSummary, folder: string) {
+    const nextFolder = folder === "未分组" ? null : folder;
+    if ((doc.folder ?? null) === nextFolder) return;
+    try {
+      await api(`/api/docs/${doc.id}`, { method: "PUT", json: { folder: nextFolder } });
+      toast(`「${doc.title}」已移至${folder === "未分组" ? "未分组" : `「${folder}」`}`);
+      refresh();
+    } catch (e) {
+      toast(`移动失败：${(e as Error).message}`, "error");
+    }
+  }
 
   const filtered = (docs ?? []).filter((doc) => {
     if (projectFilter !== "all" && doc.projectId !== projectFilter) return false;
@@ -108,7 +126,22 @@ export function DocsPanel() {
       {orderedGroups.map(([folder, items]) => {
         const collapsed = collapsedFolders.has(folder);
         return (
-          <div key={folder} className="ws-doc-group">
+          <div
+            key={folder}
+            className={`ws-doc-group ${dragOverFolder === folder ? "drag-over" : ""}`}
+            onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; if (dragDocRef.current) setDragOverFolder(folder); }}
+            onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverFolder((cur) => cur === folder ? null : cur); }}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOverFolder(null);
+              const id = Number(e.dataTransfer.getData("text/plain"));
+              const dragged = dragDocRef.current;
+              const doc = dragged && dragged.id === id ? dragged : (docs ?? []).find((d) => d.id === id);
+              dragDocRef.current = null;
+              if (!doc) return;
+              void moveDocToFolder(doc, folder);
+            }}
+          >
             {folder !== "未分组" && (
               <button className="ws-doc-group-head" aria-expanded={!collapsed}
                 onClick={() => setCollapsedFolders((prev) => {
@@ -122,7 +155,15 @@ export function DocsPanel() {
               </button>
             )}
             {!collapsed && items.map((doc) => (
-              <button key={doc.id} className="ws-doc-row" disabled={openingId !== null} onClick={() => openDocById(doc.id)}>
+              <button
+                key={doc.id}
+                className="ws-doc-row"
+                disabled={openingId !== null}
+                draggable
+                onDragStart={(e) => { dragDocRef.current = doc; e.dataTransfer.setData("text/plain", String(doc.id)); e.dataTransfer.effectAllowed = "move"; }}
+                onDragEnd={() => { dragDocRef.current = null; setDragOverFolder(null); }}
+                onClick={() => openDocById(doc.id)}
+              >
                 <span className="ws-doc-ic"><Icon name="book" size={14} /></span>
                 <span className="ws-doc-main">
                   <span className="ws-doc-title">{openingId === doc.id ? "正在打开…" : doc.title}</span>
@@ -237,12 +278,16 @@ function DocEditor({ initial, allFolders, onExit }: { initial: DocDetail; allFol
   const [showVersions, setShowVersions] = useState(false);
   const [deleting, setDeleting] = useState<"idle" | "confirm" | "busy">("idle");
   const [commentsOpen, setCommentsOpen] = useState(false);
+  // AI 要点：本地规则引擎提取（结构/要点/任务引用/链接），不依赖外部服务
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [summary, setSummary] = useState<DocAiSummary | null>(null);
   const [comments, setComments] = useState<DocComment[] | null>(null);
   const [commentText, setCommentText] = useState("");
   const [pendingQuote, setPendingQuote] = useState("");
   const [commentBusy, setCommentBusy] = useState(false);
   const [taskMap, setTaskMap] = useState<Map<string, TaskItem>>(new Map());
   const savingRef = useRef(false);
+  const savePromise = useRef<Promise<boolean>>(Promise.resolve(false)); // 占位，仅当无在途保存时不会被读到
   const previewRef = useRef<HTMLDivElement>(null);
   const toc = extractToc(content);
   const dirty = title.trim() !== savedSnapshot.title || content !== savedSnapshot.content || folder.trim() !== savedSnapshot.folder;
@@ -264,36 +309,45 @@ function DocEditor({ initial, allFolders, onExit }: { initial: DocDetail; allFol
     if (commentsOpen && comments === null) loadComments();
   }, [commentsOpen, comments, loadComments]);
 
-  const save = useCallback(async () => {
-    if (savingRef.current) return;
+  // 保存：返回 true=已保存成功，false=失败。已在保存中时返回在途保存的
+  // Promise（调用方等待其结果），避免并发提交，也让退出前能等保存落地。
+  const save = useCallback(async (): Promise<boolean> => {
+    if (savingRef.current) return savePromise.current;
     const nextTitle = title.trim();
-    if (!nextTitle) { setPhase("error"); setSaveError("标题不能为空"); return; }
+    if (!nextTitle) { setPhase("error"); setSaveError("标题不能为空"); return false; }
     savingRef.current = true;
     setPhase("saving");
-    try {
-      const d = await api<{ doc: DocDetail }>(`/api/docs/${initial.id}`, {
-        method: "PUT", json: { title: nextTitle, content, folder: folder.trim() || null },
-      });
-      setSavedSnapshot({ title: d.doc.title, content: d.doc.content, folder: d.doc.folder ?? "" });
-      setFolder(d.doc.folder ?? "");
-      setSavedAt(d.doc.updatedAt);
-      setPhase("saved");
-      setSaveError("");
-    } catch (e) {
-      setPhase("error");
-      setSaveError((e as Error).message);
-      toast(`文档保存失败：${(e as Error).message}`, "error");
-    } finally {
-      savingRef.current = false;
-    }
+    const p = (async () => {
+      try {
+        const d = await api<{ doc: DocDetail }>(`/api/docs/${initial.id}`, {
+          method: "PUT", json: { title: nextTitle, content, folder: folder.trim() || null },
+        });
+        setSavedSnapshot({ title: d.doc.title, content: d.doc.content, folder: d.doc.folder ?? "" });
+        setFolder(d.doc.folder ?? "");
+        setSavedAt(d.doc.updatedAt);
+        setPhase("saved");
+        setSaveError("");
+        return true;
+      } catch (e) {
+        setPhase("error");
+        setSaveError((e as Error).message);
+        toast(`文档保存失败：${(e as Error).message}`, "error");
+        return false;
+      } finally {
+        savingRef.current = false;
+      }
+    })();
+    savePromise.current = p;
+    return p;
   }, [title, content, folder, initial.id]);
 
-  // 自动保存：停止输入 1.2 秒后触发（是否“有改动”在渲染中推导，不在 effect 里改状态）
+  // 自动保存：停止输入 1.2 秒后触发（是否“有改动”在渲染中推导，不在 effect 里改状态）。
+  // 快照/保存时间入依赖：定时器恰逢在途保存而早退时，保存完成会重新排队，改动不会卡死
   useEffect(() => {
     if (!dirty) return;
     const timer = setTimeout(() => { void save(); }, 1200);
     return () => clearTimeout(timer);
-  }, [dirty, save]);
+  }, [dirty, save, savedSnapshot, savedAt]);
 
   // 有未保存内容时拦截误关页面
   useEffect(() => {
@@ -352,7 +406,15 @@ function DocEditor({ initial, allFolders, onExit }: { initial: DocDetail; allFol
   }
 
   async function exit() {
-    if (dirty || phase === "saving") await save();
+    // 保存失败（或标题为空）时留在编辑器，错误已提示；绝不静默丢弃未保存内容
+    if (dirty || savingRef.current) {
+      const ok = await save(); // 在保存中时会等待在途保存并返回其结果
+      if (!ok) return;
+      if (dirty) {             // 等待期间可能又有输入，再保存一次
+        const ok2 = await save();
+        if (!ok2) return;
+      }
+    }
     onExit();
   }
 
@@ -404,6 +466,25 @@ function DocEditor({ initial, allFolders, onExit }: { initial: DocDetail; allFol
         <button className="ws-btn" style={{ padding: "6px 12px", fontSize: 12 }} title="文档评论"
           onClick={() => setCommentsOpen((v) => !v)}>
           💬{comments !== null && comments.length > 0 ? ` ${comments.length}` : ""}
+        </button>
+        <button className="ws-btn" style={{ padding: "6px 12px", fontSize: 12 }}
+          title="AI 要点提取（本地规则引擎：结构 / 要点 / 任务引用 / 链接）"
+          onClick={() => { setSummary(extractDocSummary(content)); setSummaryOpen(true); }}>
+          <Icon name="sparkles" size={13} /> AI 要点
+        </button>
+        <button className="ws-btn" style={{ padding: "6px 12px", fontSize: 12 }}
+          title="导出为 Markdown 文件"
+          onClick={() => {
+            const blob = new Blob([`# ${title.trim() || initial.title}\n\n${content}`], { type: "text/markdown;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `${(title.trim() || initial.title).replace(/[\\/:*?"<>|]/g, "_")}.md`;
+            a.click();
+            URL.revokeObjectURL(url);
+            toast("已导出 Markdown 文件");
+          }}>
+          <Icon name="download" size={13} /> 导出
         </button>
         <button className="ws-btn" style={{ padding: "6px 12px", fontSize: 12 }} onClick={() => setShowVersions(true)}><Icon name="list" size={13} /> 历史版本</button>
         {initial.canDelete && (
@@ -493,6 +574,18 @@ function DocEditor({ initial, allFolders, onExit }: { initial: DocDetail; allFol
         )}
       </div>
 
+      {summaryOpen && summary && (
+        <Modal title="AI 要点（本地规则引擎提取）" onClose={() => setSummaryOpen(false)}>
+          <div className="ws-summary">
+            {formatDocSummary(summary).map((line, i) => (
+              <p key={i} className="ws-summary-line" style={{ margin: "6px 0", fontSize: 13, lineHeight: 1.7 }}>{line}</p>
+            ))}
+            <p className="ws-summary-foot" style={{ marginTop: 12, fontSize: 11, opacity: 0.65 }}>
+              由本地规则引擎基于文档结构实时提取，内容不出本机；后续可切换为 LLM 增强实现。
+            </p>
+          </div>
+        </Modal>
+      )}
       {showVersions && (
         <VersionsModal
           docId={initial.id}

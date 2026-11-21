@@ -2,10 +2,12 @@
 
 // 个人效率中心 /suite —— 日历 / 待办 / 记事 三合一（对标 Google Calendar + Tasks + Keep）
 // 独立页面，数据按用户隔离；日历聚合「项目任务截止 + 里程碑 + 个人待办截止日」。
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError, dayKey } from "@/lib/api-client";
 import { monthDays, groupEventsByDate, prevMonth, nextMonth, type CalendarEvent } from "@/lib/calendar-events";
+import { parseIcsEvents } from "@/lib/ics";
+import { buildIcs, icsFileName } from "@/lib/ics-export";
 import "./suite.css";
 
 type Tab = "calendar" | "todos" | "notes";
@@ -53,6 +55,7 @@ export default function SuitePage() {
   const [month, setMonth] = useState(localToday().slice(0, 7));
   const [events, setEvents] = useState<CalendarEvent[] | null>(null);
   const [selected, setSelected] = useState(localToday());
+  const [calMsg, setCalMsg] = useState(""); // 日历页导出提示
 
   useEffect(() => {
     api<{ user: { id: number } }>("/api/auth/me").then(() => setAuthed(true))
@@ -78,6 +81,23 @@ export default function SuitePage() {
   }, [month]);
 
   useEffect(() => { if (authed) { loadTodos(); loadNotes(); } }, [authed, loadTodos, loadNotes]);
+
+  // 日历导出 .ics：当月项目任务 + 里程碑 + 个人待办，可被 Google 日历 / 手机系统日历导入
+  function exportMonthIcs() {
+    const icsEvents = (events ?? []).map((e) => ({
+      dateKey: e.date,
+      title: e.code ? `${e.code} ${e.title}` : e.title,
+      kind: e.projectId === 0 ? "personal" as const : e.kind,
+    }));
+    if (icsEvents.length === 0) { setCalMsg("当月没有可导出的事件"); return; }
+    const blob = new Blob([buildIcs(icsEvents, `敏捷校园 · ${month}`)], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = icsFileName(`敏捷校园-${month}`);
+    a.click();
+    URL.revokeObjectURL(url);
+  }
   useEffect(() => { if (authed && tab === "calendar") loadCalendar(); }, [authed, tab, loadCalendar]);
 
   /* ---- 待办操作 ---- */
@@ -101,6 +121,33 @@ export default function SuitePage() {
     try { await api(`/api/suite/todos?id=${id}`, { method: "DELETE" }); }
     catch { loadTodos(); }
     if (tab === "calendar") loadCalendar();
+  }
+
+  /* ---- 日历导入（.ics）：把外部日历事件转入个人待办，截止日自动上日历 ---- */
+  const icsRef = useRef<HTMLInputElement>(null);
+  const [importMsg, setImportMsg] = useState("");
+  const [importing, setImporting] = useState(false);
+  async function importIcs(file: File) {
+    setImporting(true);
+    setImportMsg("解析中…");
+    try {
+      const { events, skipped } = parseIcsEvents(await file.text());
+      if (events.length === 0) { setImportMsg("没有解析到带日期的事件，请确认是日历导出的 .ics 文件"); return; }
+      let ok = 0;
+      for (const ev of events.slice(0, 200)) { // 课程场景上限，防误导入超大文件
+        try {
+          await api("/api/suite/todos", { method: "POST", json: { title: ev.title.slice(0, 200), dueOn: ev.dateKey, note: "来自日历导入" } });
+          ok += 1;
+        } catch { /* 单条失败不中断整体导入 */ }
+      }
+      setImportMsg(`已导入 ${ok} 条到待办${skipped ? `，跳过 ${skipped} 条（缺少日期）` : ""}`);
+      loadTodos();
+      if (tab === "calendar") loadCalendar();
+    } catch (e) {
+      setImportMsg(`导入失败：${(e as Error).message}`);
+    } finally {
+      setImporting(false);
+    }
   }
 
   /* ---- 记事操作 ---- */
@@ -158,9 +205,11 @@ export default function SuitePage() {
                 <button className="su-icon-btn" title="上个月" onClick={() => setMonth(prevMonth(month))}><Svg name="chevL" size={16} /></button>
                 <b>{yearStr} 年 {Number(monthStr)} 月</b>
                 <button className="su-icon-btn" title="下个月" onClick={() => setMonth(nextMonth(month))}><Svg name="chevR" size={16} /></button>
+                <button className="su-today-btn" onClick={exportMonthIcs} title="把当月事件导出为 .ics，可导入 Google 日历 / 手机系统日历">导出 .ics</button>
                 <button className="su-today-btn" onClick={() => { setMonth(localToday().slice(0, 7)); setSelected(localToday()); }}>今天</button>
               </div>
             </div>
+            {calMsg && <div className="su-import-msg" role="status">{calMsg}</div>}
             <div className="su-cal-shell">
               <div className="su-cal">
                 <div className="su-cal-week">{weekdays.map((w) => <span key={w}>{w}</span>)}</div>
@@ -195,7 +244,14 @@ export default function SuitePage() {
         {/* ============ 待办 ============ */}
         {tab === "todos" && (
           <section className="su-panel">
-            <div className="su-panel-head"><h1>待办</h1><span className="su-count">{todos.filter((t) => !t.done).length} 项未完成</span></div>
+            <div className="su-panel-head">
+              <h1>待办</h1><span className="su-count">{todos.filter((t) => !t.done).length} 项未完成</span>
+              <button type="button" className="su-import" disabled={importing} onClick={() => icsRef.current?.click()} title="导入 Google 日历 / 手机系统日历导出的 .ics 文件">
+                <Svg name="cal" size={14} />{importing ? "导入中…" : "导入日历 .ics"}
+              </button>
+              <input ref={icsRef} type="file" accept=".ics,text/calendar" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) void importIcs(f); e.target.value = ""; }} />
+            </div>
+            {importMsg && <div className="su-import-msg" role="status">{importMsg}</div>}
             <form className="su-add" onSubmit={addTodo}>
               <input value={todoTitle} onChange={(e) => setTodoTitle(e.target.value)} placeholder="添加一项待办，回车即可…" aria-label="待办标题" />
               <input type="date" value={todoDue} onChange={(e) => setTodoDue(e.target.value)} aria-label="截止日期" />

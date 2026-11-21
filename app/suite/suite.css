@@ -94,3 +94,13 @@
   .su-add{flex-wrap:wrap}
   .su-main{padding:16px}
 }
+
+/* ===== 紧凑模式（优化/suite-compact）：单页尽量一屏放下，减少下拉长度 ===== */
+.su-panel{min-height:auto;padding:20px 22px}
+.su-cal-day{aspect-ratio:auto;min-height:56px;padding:4px 2px;gap:2px}
+.su-cal-num{font-size:12px}
+.su-cal-dots{height:4px;gap:3px}
+.su-cal-dots i{width:5px;height:5px}
+.su-cal-grid{gap:3px}
+.su-panel-head{margin-bottom:14px}
+.su-cal-side{max-height:52vh;overflow-y:auto}

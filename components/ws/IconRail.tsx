@@ -23,6 +23,16 @@ export function IconRail() {
       >
         <Icon name="home" size={17} />
       </button>
+      {/* 今日视图（AI 日报 / 日历 / 任务进度）在 v6.4 后没有图标栏入口，成为隐藏功能——补回 */}
+      <button
+        className={`ws-rail-btn ws-rail-management ${ws.railView === "today" ? "active" : ""}`}
+        title="今日 · 进度 / AI 日报 / 日历"
+        aria-label="今日"
+        onClick={() => ws.setRailView("today")}
+      >
+        <Icon name="calendar" size={17} />
+        <small>今日</small>
+      </button>
       <button className={`ws-rail-btn ws-rail-management ${ws.railView === "projectManagement" ? "active" : ""}`} title="项目管理" aria-label="项目管理" onClick={() => ws.setRailView("projectManagement")}><Icon name="file" size={17} /><small>项目管理</small></button>
       <button className={`ws-rail-btn ws-rail-management ${ws.railView === "teamManagement" ? "active" : ""}`} title="团队管理" aria-label="团队管理" onClick={() => ws.setRailView("teamManagement")}><Icon name="users" size={17} /><small>团队管理</small></button>
       <button
