@@ -9,6 +9,7 @@ import {
   type DocDetail, type DocSummary, type DocVersion, type DocComment, type TaskItem,
 } from "@/lib/api-client";
 import { renderMarkdown, extractToc } from "@/lib/markdown";
+import { extractDocSummary, formatDocSummary, type DocSummary } from "@/lib/doc-summary";
 import { useWorkspace, Icon, Modal } from "./shared";
 import { DocListSkeleton } from "./LoadingSkeleton";
 import { toast } from "@/lib/toast";
@@ -277,6 +278,9 @@ function DocEditor({ initial, allFolders, onExit }: { initial: DocDetail; allFol
   const [showVersions, setShowVersions] = useState(false);
   const [deleting, setDeleting] = useState<"idle" | "confirm" | "busy">("idle");
   const [commentsOpen, setCommentsOpen] = useState(false);
+  // AI 要点：本地规则引擎提取（结构/要点/任务引用/链接），不依赖外部服务
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [summary, setSummary] = useState<DocSummary | null>(null);
   const [comments, setComments] = useState<DocComment[] | null>(null);
   const [commentText, setCommentText] = useState("");
   const [pendingQuote, setPendingQuote] = useState("");
@@ -463,6 +467,25 @@ function DocEditor({ initial, allFolders, onExit }: { initial: DocDetail; allFol
           onClick={() => setCommentsOpen((v) => !v)}>
           💬{comments !== null && comments.length > 0 ? ` ${comments.length}` : ""}
         </button>
+        <button className="ws-btn" style={{ padding: "6px 12px", fontSize: 12 }}
+          title="AI 要点提取（本地规则引擎：结构 / 要点 / 任务引用 / 链接）"
+          onClick={() => { setSummary(extractDocSummary(content)); setSummaryOpen(true); }}>
+          <Icon name="sparkles" size={13} /> AI 要点
+        </button>
+        <button className="ws-btn" style={{ padding: "6px 12px", fontSize: 12 }}
+          title="导出为 Markdown 文件"
+          onClick={() => {
+            const blob = new Blob([`# ${title.trim() || initial.title}\n\n${content}`], { type: "text/markdown;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `${(title.trim() || initial.title).replace(/[\\/:*?"<>|]/g, "_")}.md`;
+            a.click();
+            URL.revokeObjectURL(url);
+            toast("已导出 Markdown 文件");
+          }}>
+          <Icon name="download" size={13} /> 导出
+        </button>
         <button className="ws-btn" style={{ padding: "6px 12px", fontSize: 12 }} onClick={() => setShowVersions(true)}><Icon name="list" size={13} /> 历史版本</button>
         {initial.canDelete && (
           <button className={`ws-btn ${deleting === "confirm" ? "danger" : ""}`} style={{ padding: "6px 12px", fontSize: 12 }} disabled={deleting === "busy"}
@@ -551,6 +574,18 @@ function DocEditor({ initial, allFolders, onExit }: { initial: DocDetail; allFol
         )}
       </div>
 
+      {summaryOpen && summary && (
+        <Modal title="AI 要点（本地规则引擎提取）" onClose={() => setSummaryOpen(false)}>
+          <div className="ws-summary">
+            {formatDocSummary(summary).map((line, i) => (
+              <p key={i} className="ws-summary-line" style={{ margin: "6px 0", fontSize: 13, lineHeight: 1.7 }}>{line}</p>
+            ))}
+            <p className="ws-summary-foot" style={{ marginTop: 12, fontSize: 11, opacity: 0.65 }}>
+              由本地规则引擎基于文档结构实时提取，内容不出本机；后续可切换为 LLM 增强实现。
+            </p>
+          </div>
+        </Modal>
+      )}
       {showVersions && (
         <VersionsModal
           docId={initial.id}

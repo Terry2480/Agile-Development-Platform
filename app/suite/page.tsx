@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { api, ApiError, dayKey } from "@/lib/api-client";
 import { monthDays, groupEventsByDate, prevMonth, nextMonth, type CalendarEvent } from "@/lib/calendar-events";
 import { parseIcsEvents } from "@/lib/ics";
+import { buildIcs, icsFileName } from "@/lib/ics-export";
 import "./suite.css";
 
 type Tab = "calendar" | "todos" | "notes";
@@ -54,6 +55,7 @@ export default function SuitePage() {
   const [month, setMonth] = useState(localToday().slice(0, 7));
   const [events, setEvents] = useState<CalendarEvent[] | null>(null);
   const [selected, setSelected] = useState(localToday());
+  const [calMsg, setCalMsg] = useState(""); // 日历页导出提示
 
   useEffect(() => {
     api<{ user: { id: number } }>("/api/auth/me").then(() => setAuthed(true))
@@ -79,6 +81,23 @@ export default function SuitePage() {
   }, [month]);
 
   useEffect(() => { if (authed) { loadTodos(); loadNotes(); } }, [authed, loadTodos, loadNotes]);
+
+  // 日历导出 .ics：当月项目任务 + 里程碑 + 个人待办，可被 Google 日历 / 手机系统日历导入
+  function exportMonthIcs() {
+    const icsEvents = (events ?? []).map((e) => ({
+      dateKey: e.date,
+      title: e.code ? `${e.code} ${e.title}` : e.title,
+      kind: e.projectId === 0 ? "personal" as const : e.kind,
+    }));
+    if (icsEvents.length === 0) { setCalMsg("当月没有可导出的事件"); return; }
+    const blob = new Blob([buildIcs(icsEvents, `敏捷校园 · ${month}`)], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = icsFileName(`敏捷校园-${month}`);
+    a.click();
+    URL.revokeObjectURL(url);
+  }
   useEffect(() => { if (authed && tab === "calendar") loadCalendar(); }, [authed, tab, loadCalendar]);
 
   /* ---- 待办操作 ---- */
@@ -186,9 +205,11 @@ export default function SuitePage() {
                 <button className="su-icon-btn" title="上个月" onClick={() => setMonth(prevMonth(month))}><Svg name="chevL" size={16} /></button>
                 <b>{yearStr} 年 {Number(monthStr)} 月</b>
                 <button className="su-icon-btn" title="下个月" onClick={() => setMonth(nextMonth(month))}><Svg name="chevR" size={16} /></button>
+                <button className="su-today-btn" onClick={exportMonthIcs} title="把当月事件导出为 .ics，可导入 Google 日历 / 手机系统日历">导出 .ics</button>
                 <button className="su-today-btn" onClick={() => { setMonth(localToday().slice(0, 7)); setSelected(localToday()); }}>今天</button>
               </div>
             </div>
+            {calMsg && <div className="su-import-msg" role="status">{calMsg}</div>}
             <div className="su-cal-shell">
               <div className="su-cal">
                 <div className="su-cal-week">{weekdays.map((w) => <span key={w}>{w}</span>)}</div>
