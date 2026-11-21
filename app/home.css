@@ -1596,3 +1596,16 @@ a.ac-project--link:hover .ac-project__title,
 a.ac-feature--link:hover h3 {
   color: var(--ac-text);
 }
+
+/* 首页右上角身份胶囊：可点进个人设置 */
+a.ac-user--link {
+  cursor: pointer;
+  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+
+a.ac-user--link:hover {
+  transform: translateY(-1px);
+  border-color: var(--ac-line-2);
+  background: var(--ac-surface-2);
+  color: var(--ac-text);
+}

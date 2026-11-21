@@ -240,12 +240,12 @@ export default function HomePage() {
               {theme === "night" ? <IconSun /> : <IconMoon />}
             </button>
             {user ? (
-              <span className="ac-user">
+              <Link className="ac-user ac-user--link" href="/settings" title="个人设置" aria-label={`进入个人设置（${name}）`}>
                 <span className="ac-user__avatar" aria-hidden="true">
                   {initialsOf(name)}
                 </span>
                 <span>{name}</span>
-              </span>
+              </Link>
             ) : (
               <Link className="ac-btn ac-btn--ghost" href={LOGIN_HREF}>
                 登录
