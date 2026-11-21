@@ -2,7 +2,7 @@
    AgileCampus · 首页样式
    ----------------------------------------------------------------------------
    设计语言：发布会级深色版面 + 工作台同源蓝阶（夜）／暖橙（日）
-     · 深空冷黑底（#0D0E14）+ 单一蓝强调（#8AB4FF → #6F9BFF → #3B6EF5）
+     · 深空冷黑底（#0D0E14）+ 极光蓝强调（#7EC8FF → #6F9BFF → #3B6EF5）
      · 大字号中文标题、克制的发光、留白优先，避免多彩色块
      · 数据用等宽数字突出，视觉焦点只有一个 68% 圆环
    工程约束：
@@ -26,7 +26,7 @@
   --ac-brand-2: #6f9bff; /* 亮蓝 */
   --ac-brand-soft: rgba(59, 110, 245, 0.16);
   --ac-pink: #8fa9e6; /* 次级蓝（替代原粉） */
-  --ac-spectrum: linear-gradient(96deg, #a8c4ff 0%, #6f9bff 48%, #3b6ef5 100%);
+  --ac-spectrum: linear-gradient(96deg, #7ec8ff 0%, #6f9bff 46%, #3b6ef5 100%);
 
   /* — 尺寸令牌 — */
   --ac-max: 1220px;
@@ -220,7 +220,7 @@
   bottom: -1px;
   height: 2px;
   border-radius: 2px;
-  background: linear-gradient(90deg, #8ab4ff, #6f9bff 55%, #3b6ef5);
+  background: linear-gradient(90deg, #7ec8ff, #6f9bff 55%, #3b6ef5);
   box-shadow: 0 0 12px rgba(59, 110, 245, 0.6);
 }
 
@@ -316,7 +316,7 @@
 }
 
 .ac-btn--primary {
-  background: linear-gradient(135deg, #2f5cd8 0%, #3b6ef5 100%);
+  background: linear-gradient(135deg, #4f7cff 0%, #2f5cd8 100%);
   color: #fff;
   box-shadow:
     0 10px 26px -12px rgba(59, 110, 245, 0.85),
@@ -486,7 +486,7 @@
   border-radius: 50%;
   background: conic-gradient(
     from 212deg,
-    #8ab4ff 0deg,
+    #7ec8ff 0deg,
     #6f9bff 152deg,
     #3b6ef5 calc(var(--ac-p, 68) * 3.6deg),
     rgba(255, 255, 255, 0.07) 0
@@ -877,7 +877,7 @@
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #8ab4ff, #6f9bff 62%, #3b6ef5);
+  background: linear-gradient(90deg, #7ec8ff, #6f9bff 62%, #3b6ef5);
 }
 
 .ac-avatars {
@@ -1250,14 +1250,14 @@ html[data-theme="day"] .ac-avatar {
 }
 
 html[data-theme="day"] .ac-title em {
-  background: linear-gradient(96deg, #e07b26 0%, #c96212 46%, #a24f1a 100%);
+  background: linear-gradient(96deg, #ed8128 0%, #c96212 46%, #a24f1a 100%);
   -webkit-background-clip: text;
   background-clip: text;
 }
 
 html[data-theme="day"] .ac-nav__link--active::after {
-  background: linear-gradient(90deg, #e07b26, #c96212 55%, #a24f1a);
-  box-shadow: 0 0 10px rgba(201, 98, 18, 0.32);
+  background: linear-gradient(90deg, #ffa447, #ed8128 55%, #c96212);
+  box-shadow: 0 0 10px rgba(237, 129, 40, 0.35);
 }
 
 html[data-theme="day"] .ac-features > .ac-feature:nth-child(1) .ac-feature__icon {
@@ -1297,7 +1297,7 @@ html[data-theme="day"] .ac-user__avatar {
 }
 
 html[data-theme="day"] .ac-btn--primary {
-  background: linear-gradient(135deg, #e07b26 0%, #c96212 100%);
+  background: linear-gradient(135deg, #f08a2e 0%, #c96212 100%);
   box-shadow:
     0 10px 26px -12px rgba(201, 98, 18, 0.7),
     inset 0 1px 0 rgba(255, 255, 255, 0.28);
@@ -1517,7 +1517,7 @@ html[data-theme="day"] .ac-art__orbit::before {
 .ac-progress__fill {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #8ab4ff, #6f9bff 55%, #3b6ef5);
+  background: linear-gradient(90deg, #7ec8ff, #6f9bff 55%, #3b6ef5);
   transition: width 0.4s ease;
 }
 

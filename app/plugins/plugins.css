@@ -80,7 +80,7 @@
 
 /* ---------------- 多语言切换器（插件挂载，左下角，避开右下角效率中心） ---------------- */
 
-.i18n-switcher { position: fixed; left: 22px; bottom: 22px; z-index: 61; }
+.i18n-switcher { position: fixed; left: 22px; bottom: 22px; z-index: 61; color: var(--ws-color-e8eaf2, #e8eaf2); }
 .i18n-switcher__btn {
   width: 48px; height: 48px; border-radius: 50%; border: 0; cursor: pointer; font-size: 22px;
   background: var(--ws-color-22242f, #22242f);
@@ -98,11 +98,12 @@
 }
 .i18n-switcher__menu[hidden] { display: none; }
 .i18n-switcher__opt {
-  border: 0; background: transparent; color: inherit; text-align: left;
+  border: 0; background: transparent; text-align: left;
+  color: var(--ws-color-c6cbdb, #c6cbdb);
   padding: 9px 12px; border-radius: 8px; font-size: 13px; cursor: pointer;
 }
 .i18n-switcher__opt:hover { background: var(--ws-color-1d2030, #1d2030); }
-.i18n-switcher__opt.active { color: #6f9bff; font-weight: 600; }
+.i18n-switcher__opt.active { color: var(--ws-color-6f9bff, #6f9bff); font-weight: 600; }
 
 @media (max-width: 600px) {
   .i18n-switcher { left: 14px; bottom: 14px; }
