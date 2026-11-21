@@ -2,8 +2,53 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { BG_PRESETS, useCustomBg, setCustomBg, type CustomBgSetting } from "@/components/CustomBackground";
 
 type Profile = { name: string; studentId: string; gender: string; region: string; bio: string };
+
+// 外观自定义卡片：全站背景（预设渐变色板 / 自定义图片 URL），写入即全站生效
+function AppearanceCard() {
+  const bg = useCustomBg();
+  const [imageUrl, setImageUrl] = useState("");
+
+  const apply = (setting: CustomBgSetting) => { setCustomBg(setting); };
+  const activeGradient = bg.mode === "gradient" ? bg.value : "";
+  const activeImage = bg.mode === "image" ? bg.value : "";
+
+  return (
+    <section className="appearance-card">
+      <h2>外观自定义</h2>
+      <p className="appearance-tip">选择一个全站背景氛围色，或填入图片链接。设置立即生效、随时清除，仅保存在你自己的浏览器里。</p>
+      <div className="appearance-swatches">
+        {BG_PRESETS.map((p) => (
+          <button
+            key={p.name}
+            className={`appearance-swatch ${activeGradient === p.value ? "on" : ""}`}
+            style={{ backgroundImage: p.value }}
+            title={p.name}
+            aria-label={`背景：${p.name}`}
+            onClick={() => apply({ mode: "gradient", value: p.value })}
+          >
+            {activeGradient === p.value ? "✓" : ""}
+          </button>
+        ))}
+      </div>
+      <div className="appearance-image">
+        <input
+          className="ws-input"
+          value={imageUrl}
+          onChange={(e) => setImageUrl(e.target.value)}
+          placeholder="图片链接（https://…），留空则不使用图片背景"
+          aria-label="自定义背景图片链接"
+        />
+        <button className="ws-btn" type="button" disabled={!imageUrl.trim()} onClick={() => apply({ mode: "image", value: imageUrl.trim() })}>应用图片</button>
+      </div>
+      {(bg.mode !== "none" || activeImage) && (
+        <button className="appearance-clear" type="button" onClick={() => { apply({ mode: "none", value: "" }); setImageUrl(""); }}>恢复默认背景</button>
+      )}
+    </section>
+  );
+}
 
 // 个人设置页：仅显示并允许修改「当前登录用户自己」的资料（服务端同样只接受本人提交）
 export default function SettingsPage() {
@@ -67,6 +112,9 @@ export default function SettingsPage() {
           <button className="ws-btn primary" type="submit" disabled={busy}>{busy ? "保存中…" : "保存修改"}</button>
         </div>
       </form>
+
+      {/* 外观自定义：全站背景（氛围层），立即生效、随时清除 */}
+      <AppearanceCard />
     </div>
   </main>;
 }
