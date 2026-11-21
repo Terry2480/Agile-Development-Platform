@@ -467,7 +467,7 @@ export function TaskDrawer() {
                   disabled={!!busy}
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && submitComment()}
+                  onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && submitComment()}
                 />
                 <button className="ws-btn primary" disabled={!!busy || !comment.trim()} onClick={submitComment}>{busy === "发表评论" ? "发送中…" : "发送"}</button>
               </div>

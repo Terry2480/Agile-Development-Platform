@@ -23,14 +23,15 @@ export function DocsPanel() {
   const [creating, setCreating] = useState(false);
   const [openingId, setOpeningId] = useState<number | null>(null);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
-  // 命令面板跳转：docTargetId 变化（含本面板未挂载时设置的值）即拉取详情并打开
-  const docTargetId = ws.docTargetId;
+  // 命令面板跳转：docTarget 变化（含本面板未挂载时设置的值，n 序号保证重复点
+  // 击同一篇也能再次触发）即拉取详情并打开
+  const docTarget = ws.docTarget;
   useEffect(() => {
-    if (docTargetId === null) return;
-    api<{ doc: DocDetail }>(`/api/docs/${docTargetId}`)
+    if (docTarget === null) return;
+    api<{ doc: DocDetail }>(`/api/docs/${docTarget.id}`)
       .then((d) => { setOpenDoc(d.doc); })
       .catch((e: Error) => { setError(e.message); });
-  }, [docTargetId]);
+  }, [docTarget]);
 
   const refresh = useCallback(() => {
     api<{ docs: DocSummary[] }>("/api/docs")
@@ -243,6 +244,7 @@ function DocEditor({ initial, allFolders, onExit }: { initial: DocDetail; allFol
   const [commentBusy, setCommentBusy] = useState(false);
   const [taskMap, setTaskMap] = useState<Map<string, TaskItem>>(new Map());
   const savingRef = useRef(false);
+  const savePromise = useRef<Promise<boolean>>(Promise.resolve(false)); // 占位，仅当无在途保存时不会被读到
   const previewRef = useRef<HTMLDivElement>(null);
   const toc = extractToc(content);
   const dirty = title.trim() !== savedSnapshot.title || content !== savedSnapshot.content || folder.trim() !== savedSnapshot.folder;
@@ -264,36 +266,45 @@ function DocEditor({ initial, allFolders, onExit }: { initial: DocDetail; allFol
     if (commentsOpen && comments === null) loadComments();
   }, [commentsOpen, comments, loadComments]);
 
-  const save = useCallback(async () => {
-    if (savingRef.current) return;
+  // 保存：返回 true=已保存成功，false=失败。已在保存中时返回在途保存的
+  // Promise（调用方等待其结果），避免并发提交，也让退出前能等保存落地。
+  const save = useCallback(async (): Promise<boolean> => {
+    if (savingRef.current) return savePromise.current;
     const nextTitle = title.trim();
-    if (!nextTitle) { setPhase("error"); setSaveError("标题不能为空"); return; }
+    if (!nextTitle) { setPhase("error"); setSaveError("标题不能为空"); return false; }
     savingRef.current = true;
     setPhase("saving");
-    try {
-      const d = await api<{ doc: DocDetail }>(`/api/docs/${initial.id}`, {
-        method: "PUT", json: { title: nextTitle, content, folder: folder.trim() || null },
-      });
-      setSavedSnapshot({ title: d.doc.title, content: d.doc.content, folder: d.doc.folder ?? "" });
-      setFolder(d.doc.folder ?? "");
-      setSavedAt(d.doc.updatedAt);
-      setPhase("saved");
-      setSaveError("");
-    } catch (e) {
-      setPhase("error");
-      setSaveError((e as Error).message);
-      toast(`文档保存失败：${(e as Error).message}`, "error");
-    } finally {
-      savingRef.current = false;
-    }
+    const p = (async () => {
+      try {
+        const d = await api<{ doc: DocDetail }>(`/api/docs/${initial.id}`, {
+          method: "PUT", json: { title: nextTitle, content, folder: folder.trim() || null },
+        });
+        setSavedSnapshot({ title: d.doc.title, content: d.doc.content, folder: d.doc.folder ?? "" });
+        setFolder(d.doc.folder ?? "");
+        setSavedAt(d.doc.updatedAt);
+        setPhase("saved");
+        setSaveError("");
+        return true;
+      } catch (e) {
+        setPhase("error");
+        setSaveError((e as Error).message);
+        toast(`文档保存失败：${(e as Error).message}`, "error");
+        return false;
+      } finally {
+        savingRef.current = false;
+      }
+    })();
+    savePromise.current = p;
+    return p;
   }, [title, content, folder, initial.id]);
 
-  // 自动保存：停止输入 1.2 秒后触发（是否“有改动”在渲染中推导，不在 effect 里改状态）
+  // 自动保存：停止输入 1.2 秒后触发（是否“有改动”在渲染中推导，不在 effect 里改状态）。
+  // 快照/保存时间入依赖：定时器恰逢在途保存而早退时，保存完成会重新排队，改动不会卡死
   useEffect(() => {
     if (!dirty) return;
     const timer = setTimeout(() => { void save(); }, 1200);
     return () => clearTimeout(timer);
-  }, [dirty, save]);
+  }, [dirty, save, savedSnapshot, savedAt]);
 
   // 有未保存内容时拦截误关页面
   useEffect(() => {
@@ -352,7 +363,15 @@ function DocEditor({ initial, allFolders, onExit }: { initial: DocDetail; allFol
   }
 
   async function exit() {
-    if (dirty || phase === "saving") await save();
+    // 保存失败（或标题为空）时留在编辑器，错误已提示；绝不静默丢弃未保存内容
+    if (dirty || savingRef.current) {
+      const ok = await save(); // 在保存中时会等待在途保存并返回其结果
+      if (!ok) return;
+      if (dirty) {             // 等待期间可能又有输入，再保存一次
+        const ok2 = await save();
+        if (!ok2) return;
+      }
+    }
     onExit();
   }
 
