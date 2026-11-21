@@ -751,3 +751,8 @@ html[data-theme="day"] .ws-avatar[data-av="4"]{background:#8a4710}
 .guide-nudge-close:hover{background:#2a2f45;color:#e8eaf2}
 @keyframes guide-nudge-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:600px){.guide-launcher-wrap{right:14px;bottom:76px}.guide-nudge{max-width:calc(100vw - 90px)}}
+
+/* ===== 全站回到顶部小圆钮（优化/back-to-top） ===== */
+.back-to-top{position:fixed;right:30px;bottom:140px;z-index:59;width:42px;height:42px;border-radius:50%;border:1px solid rgba(127,160,255,.35);background:rgba(23,27,40,.88);color:#8ab4ff;display:grid;place-items:center;cursor:pointer;box-shadow:0 6px 18px #00000055;transition:transform .15s,opacity .2s;opacity:.85;font-family:inherit}
+.back-to-top:hover{transform:translateY(-2px);opacity:1}
+@media(max-width:600px){.back-to-top{right:14px;bottom:150px;width:38px;height:38px}}
