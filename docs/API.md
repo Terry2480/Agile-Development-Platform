@@ -154,11 +154,13 @@ npm run dev                 # 启动 http://localhost:3000
 
 ## curl 示例
 
+> 演示环境账号请使用强密码并妥善保管；生产环境严禁在文档/仓库中写入真实账号密码。
+
 ```bash
-# 登录拿 Cookie（后续请求 -b 复用）
+# 登录拿 Cookie（后续请求 -b 复用）——邮箱/密码替换为实际演示账号
 curl -c jar.txt -X POST localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"test@stu.edu.cn","password":"abc123"}'
+  -d '{"email":"your-demo-account@stu.edu.cn","password":"替换为该账号的实际强密码"}'
 
 # 建任务（自动编号 AGI-0xx）
 curl -b jar.txt -X POST localhost:3000/api/tasks \
