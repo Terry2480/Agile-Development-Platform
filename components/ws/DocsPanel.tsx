@@ -23,6 +23,9 @@ export function DocsPanel() {
   const [creating, setCreating] = useState(false);
   const [openingId, setOpeningId] = useState<number | null>(null);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
+  // 计划 3.3 文档目录拖拽变化：把文档卡片拖到目标分组即移动分组（未分组 → folder: null）
+  const dragDocRef = useRef<DocSummary | null>(null);
+  const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
   // 命令面板跳转：docTarget 变化（含本面板未挂载时设置的值，n 序号保证重复点
   // 击同一篇也能再次触发）即拉取详情并打开
   const docTarget = ws.docTarget;
@@ -40,6 +43,19 @@ export function DocsPanel() {
   }, []);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  // 拖拽移动分组：PUT /api/docs/[id] 的 folder 字段是 optional，可单独更新
+  async function moveDocToFolder(doc: DocSummary, folder: string) {
+    const nextFolder = folder === "未分组" ? null : folder;
+    if ((doc.folder ?? null) === nextFolder) return;
+    try {
+      await api(`/api/docs/${doc.id}`, { method: "PUT", json: { folder: nextFolder } });
+      toast(`「${doc.title}」已移至${folder === "未分组" ? "未分组" : `「${folder}」`}`);
+      refresh();
+    } catch (e) {
+      toast(`移动失败：${(e as Error).message}`, "error");
+    }
+  }
 
   const filtered = (docs ?? []).filter((doc) => {
     if (projectFilter !== "all" && doc.projectId !== projectFilter) return false;
@@ -109,7 +125,22 @@ export function DocsPanel() {
       {orderedGroups.map(([folder, items]) => {
         const collapsed = collapsedFolders.has(folder);
         return (
-          <div key={folder} className="ws-doc-group">
+          <div
+            key={folder}
+            className={`ws-doc-group ${dragOverFolder === folder ? "drag-over" : ""}`}
+            onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; if (dragDocRef.current) setDragOverFolder(folder); }}
+            onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverFolder((cur) => cur === folder ? null : cur); }}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOverFolder(null);
+              const id = Number(e.dataTransfer.getData("text/plain"));
+              const dragged = dragDocRef.current;
+              const doc = dragged && dragged.id === id ? dragged : (docs ?? []).find((d) => d.id === id);
+              dragDocRef.current = null;
+              if (!doc) return;
+              void moveDocToFolder(doc, folder);
+            }}
+          >
             {folder !== "未分组" && (
               <button className="ws-doc-group-head" aria-expanded={!collapsed}
                 onClick={() => setCollapsedFolders((prev) => {
@@ -123,7 +154,15 @@ export function DocsPanel() {
               </button>
             )}
             {!collapsed && items.map((doc) => (
-              <button key={doc.id} className="ws-doc-row" disabled={openingId !== null} onClick={() => openDocById(doc.id)}>
+              <button
+                key={doc.id}
+                className="ws-doc-row"
+                disabled={openingId !== null}
+                draggable
+                onDragStart={(e) => { dragDocRef.current = doc; e.dataTransfer.setData("text/plain", String(doc.id)); e.dataTransfer.effectAllowed = "move"; }}
+                onDragEnd={() => { dragDocRef.current = null; setDragOverFolder(null); }}
+                onClick={() => openDocById(doc.id)}
+              >
                 <span className="ws-doc-ic"><Icon name="book" size={14} /></span>
                 <span className="ws-doc-main">
                   <span className="ws-doc-title">{openingId === doc.id ? "正在打开…" : doc.title}</span>

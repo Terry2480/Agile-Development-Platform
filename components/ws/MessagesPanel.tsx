@@ -224,6 +224,9 @@ function DmThread({ conversationId }: { conversationId: number }) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const stickToBottom = useRef(true);
+  // 计划 3.2 私聊文件拖拽传输：把文件拖进会话区即可发送（复用 sendFile）
+  const [fileDragging, setFileDragging] = useState(false);
+  const dragDepth = useRef(0);
   const markingRead = useRef(false);
   const loadSeq = useRef(0);
 
@@ -480,7 +483,20 @@ function DmThread({ conversationId }: { conversationId: number }) {
           const el = e.currentTarget;
           stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
         }}
+        onDragEnter={(e) => { e.preventDefault(); dragDepth.current += 1; if (Array.from(e.dataTransfer.types ?? []).includes("Files")) setFileDragging(true); }}
+        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; }}
+        onDragLeave={() => { dragDepth.current -= 1; if (dragDepth.current <= 0) { dragDepth.current = 0; setFileDragging(false); } }}
+        onDrop={(e) => {
+          e.preventDefault();
+          dragDepth.current = 0;
+          setFileDragging(false);
+          const files = Array.from(e.dataTransfer.files ?? []);
+          if (files.length === 0) return;
+          if (searchOpen) { toast("请先关闭搜索再发送文件"); return; }
+          for (const f of files.slice(0, 5)) void sendFile(f);
+        }}
       >
+        {fileDragging && <div className="ws-dm-dropzone" role="status">松开鼠标，发送文件给 {partner?.displayName ?? "对方"}</div>}
         {searchOpen ? (
           <>
             {searchErr && <div className="ws-error" role="alert" style={{ margin: 12 }}>{searchErr}</div>}
