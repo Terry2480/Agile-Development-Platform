@@ -1,8 +1,8 @@
 /* ============================================================================
    AgileCampus · 首页样式
    ----------------------------------------------------------------------------
-   设计语言：发布会级深色版面 + 浅蓝 → 紫 → 浅粉 光谱
-     · 深空冷黑底（#05070F）+ 单一光谱强调色（#7AA7FF → #8B5CF6 → #FFA6C9）
+   设计语言：发布会级深色版面 + 工作台同源蓝阶（夜）／暖橙（日）
+     · 深空冷黑底（#0D0E14）+ 单一蓝强调（#8AB4FF → #6F9BFF → #3B6EF5）
      · 大字号中文标题、克制的发光、留白优先，避免多彩色块
      · 数据用等宽数字突出，视觉焦点只有一个 68% 圆环
    工程约束：
@@ -12,21 +12,21 @@
    ========================================================================== */
 
 .ac-home {
-  /* — 色彩令牌：浅蓝 → 紫 → 浅粉 — */
-  --ac-bg: #05070f;
-  --ac-bg-2: #080b16;
-  --ac-surface: rgba(255, 255, 255, 0.035);
-  --ac-surface-2: rgba(255, 255, 255, 0.06);
+  /* — 色彩令牌：对齐工作台 · 蓝阶（深空底 + 单一蓝强调） — */
+  --ac-bg: #0d0e14;
+  --ac-bg-2: #12131b;
+  --ac-surface: rgba(255, 255, 255, 0.04);
+  --ac-surface-2: rgba(255, 255, 255, 0.07);
   --ac-line: rgba(255, 255, 255, 0.09);
-  --ac-line-2: rgba(255, 255, 255, 0.18);
-  --ac-text: #f2f4fb;
-  --ac-text-2: #a6adc4;
-  --ac-text-3: #7c8399;
-  --ac-brand: #8b5cf6; /* 光谱中段：紫 */
-  --ac-brand-2: #b79cff; /* 光谱亮端：淡紫 */
-  --ac-brand-soft: rgba(139, 92, 246, 0.14);
-  --ac-pink: #ffa6c9;
-  --ac-spectrum: linear-gradient(96deg, #9dc6ff 0%, #b79cff 48%, #ffb3d1 100%);
+  --ac-line-2: rgba(255, 255, 255, 0.2);
+  --ac-text: #e8eaf2;
+  --ac-text-2: #c6cbdb;
+  --ac-text-3: #7c8194;
+  --ac-brand: #3b6ef5; /* 对齐工作台：主蓝 */
+  --ac-brand-2: #6f9bff; /* 亮蓝 */
+  --ac-brand-soft: rgba(59, 110, 245, 0.16);
+  --ac-pink: #8fa9e6; /* 次级蓝（替代原粉） */
+  --ac-spectrum: linear-gradient(96deg, #a8c4ff 0%, #6f9bff 48%, #3b6ef5 100%);
 
   /* — 尺寸令牌 — */
   --ac-max: 1220px;
@@ -92,9 +92,9 @@
   z-index: -2;
   pointer-events: none;
   background:
-    radial-gradient(780px 430px at 10% -8%, rgba(122, 167, 255, 0.2), transparent 64%),
-    radial-gradient(700px 400px at 88% 2%, rgba(255, 166, 201, 0.14), transparent 62%),
-    radial-gradient(1100px 620px at 52% 112%, rgba(139, 92, 246, 0.13), transparent 72%),
+    radial-gradient(780px 430px at 10% -8%, rgba(90, 140, 255, 0.2), transparent 64%),
+    radial-gradient(700px 400px at 88% 2%, rgba(111, 155, 255, 0.14), transparent 62%),
+    radial-gradient(1100px 620px at 52% 112%, rgba(59, 110, 245, 0.13), transparent 72%),
     linear-gradient(180deg, var(--ac-bg) 0%, var(--ac-bg-2) 56%, var(--ac-bg) 100%);
 }
 
@@ -148,9 +148,9 @@
   width: 32px;
   height: 32px;
   border-radius: 10px;
-  background: linear-gradient(145deg, #7aa7ff 0%, #8b5cf6 54%, #ff8fbe 100%);
+  background: linear-gradient(145deg, #2f5cd8 0%, #5b8cff 100%);
   box-shadow:
-    0 6px 18px -6px rgba(139, 92, 246, 0.85),
+    0 6px 18px -6px rgba(59, 110, 245, 0.7),
     inset 0 1px 0 rgba(255, 255, 255, 0.32);
   color: #fff;
 }
@@ -220,8 +220,8 @@
   bottom: -1px;
   height: 2px;
   border-radius: 2px;
-  background: linear-gradient(90deg, #9dc6ff, #b79cff 55%, #ffb3d1);
-  box-shadow: 0 0 12px rgba(139, 92, 246, 0.7);
+  background: linear-gradient(90deg, #8ab4ff, #6f9bff 55%, #3b6ef5);
+  box-shadow: 0 0 12px rgba(59, 110, 245, 0.6);
 }
 
 .ac-nav__actions {
@@ -250,7 +250,7 @@
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: linear-gradient(145deg, #7aa7ff, #8b5cf6);
+  background: linear-gradient(145deg, #3b6ef5, #5b8cff);
   color: #fff;
   font-size: 11px;
   font-weight: 600;
@@ -316,17 +316,17 @@
 }
 
 .ac-btn--primary {
-  background: linear-gradient(135deg, #5378ef 0%, #7a5ae4 52%, #c25a92 100%);
+  background: linear-gradient(135deg, #2f5cd8 0%, #3b6ef5 100%);
   color: #fff;
   box-shadow:
-    0 10px 26px -12px rgba(124, 92, 232, 0.95),
+    0 10px 26px -12px rgba(59, 110, 245, 0.85),
     inset 0 1px 0 rgba(255, 255, 255, 0.24);
 }
 
 .ac-btn--primary:hover {
   transform: translateY(-1px);
   box-shadow:
-    0 16px 34px -14px rgba(124, 92, 232, 1),
+    0 16px 34px -14px rgba(59, 110, 245, 0.95),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
@@ -381,7 +381,7 @@
   height: 6px;
   border-radius: 50%;
   background: var(--ac-brand);
-  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.2);
+  box-shadow: 0 0 0 4px rgba(59, 110, 245, 0.24);
 }
 
 .ac-title {
@@ -461,7 +461,7 @@
   position: absolute;
   inset: 12%;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(139, 92, 246, 0.34), transparent 64%);
+  background: radial-gradient(circle, rgba(59, 110, 245, 0.32), transparent 64%);
   filter: blur(36px);
 }
 
@@ -486,14 +486,14 @@
   border-radius: 50%;
   background: conic-gradient(
     from 212deg,
-    #8fb8ff 0deg,
-    #a98bff 152deg,
-    #ff9fc8 calc(var(--ac-p, 68) * 3.6deg),
+    #8ab4ff 0deg,
+    #6f9bff 152deg,
+    #3b6ef5 calc(var(--ac-p, 68) * 3.6deg),
     rgba(255, 255, 255, 0.07) 0
   );
   -webkit-mask: radial-gradient(circle closest-side, transparent 89%, #000 89.6%);
   mask: radial-gradient(circle closest-side, transparent 89%, #000 89.6%);
-  filter: drop-shadow(0 0 18px rgba(139, 92, 246, 0.3));
+  filter: drop-shadow(0 0 18px rgba(59, 110, 245, 0.28));
 }
 
 .ac-art__orbit {
@@ -513,8 +513,8 @@
   height: 7px;
   margin-left: -3.5px;
   border-radius: 50%;
-  background: #ffd0e0;
-  box-shadow: 0 0 14px 3px rgba(255, 166, 201, 0.85);
+  background: #8ab4ff;
+  box-shadow: 0 0 14px 3px rgba(107, 155, 255, 0.7);
 }
 
 .ac-art__core {
@@ -877,7 +877,7 @@
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #8fb8ff, #b79cff 62%, #ff9fc8);
+  background: linear-gradient(90deg, #8ab4ff, #6f9bff 62%, #3b6ef5);
 }
 
 .ac-avatars {
@@ -936,7 +936,7 @@
   border: 1px solid var(--ac-line);
   border-radius: var(--ac-radius);
   background:
-    radial-gradient(520px 260px at 8% 0%, rgba(139, 92, 246, 0.18), transparent 68%),
+    radial-gradient(520px 260px at 8% 0%, rgba(59, 110, 245, 0.16), transparent 68%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.012));
 }
 
@@ -1012,14 +1012,14 @@
   inset: 0;
   pointer-events: none;
   border-radius: inherit;
-  background: radial-gradient(300px 160px at 50% -10%, rgba(139, 92, 246, 0.22), transparent 70%);
+  background: radial-gradient(300px 160px at 50% -10%, rgba(59, 110, 245, 0.2), transparent 70%);
   opacity: 0;
   transition: opacity 0.3s ease;
 }
 
 .ac-feature:hover {
   transform: translateY(-4px);
-  border-color: rgba(167, 139, 250, 0.36);
+  border-color: rgba(107, 155, 255, 0.42);
   box-shadow: 0 26px 54px -34px rgba(0, 0, 0, 0.95);
 }
 
@@ -1033,7 +1033,7 @@
   width: 38px;
   height: 38px;
   margin-bottom: 20px;
-  border: 1px solid rgba(167, 139, 250, 0.3);
+  border: 1px solid rgba(107, 155, 255, 0.32);
   border-radius: 11px;
   background: var(--ac-brand-soft);
   color: var(--ac-brand-2);
@@ -1044,29 +1044,29 @@
   height: 18px;
 }
 
-/* 四张卡片沿光谱从浅蓝走到浅粉，避免整页只有一个强调色 */
+/* 四张卡片在蓝阶内做深浅渐变，保持工作台同色系 */
 .ac-features > .ac-feature:nth-child(1) .ac-feature__icon {
-  border-color: rgba(122, 167, 255, 0.3);
-  background: rgba(122, 167, 255, 0.12);
-  color: #a9c8ff;
+  border-color: rgba(138, 180, 255, 0.3);
+  background: rgba(138, 180, 255, 0.12);
+  color: #a8c4ff;
 }
 
 .ac-features > .ac-feature:nth-child(2) .ac-feature__icon {
-  border-color: rgba(139, 92, 246, 0.32);
-  background: rgba(139, 92, 246, 0.14);
-  color: #c4b5fd;
+  border-color: rgba(59, 110, 245, 0.32);
+  background: rgba(59, 110, 245, 0.14);
+  color: #6f9bff;
 }
 
 .ac-features > .ac-feature:nth-child(3) .ac-feature__icon {
-  border-color: rgba(255, 166, 201, 0.3);
-  background: rgba(255, 166, 201, 0.12);
-  color: #ffc2d8;
+  border-color: rgba(111, 155, 255, 0.3);
+  background: rgba(111, 155, 255, 0.12);
+  color: #8ab4ff;
 }
 
 .ac-features > .ac-feature:nth-child(4) .ac-feature__icon {
-  border-color: rgba(167, 139, 250, 0.3);
-  background: rgba(167, 139, 250, 0.13);
-  color: #d8caff;
+  border-color: rgba(47, 92, 216, 0.32);
+  background: rgba(47, 92, 216, 0.14);
+  color: #9cbcff;
 }
 
 .ac-feature__tag {
@@ -1186,18 +1186,19 @@
 
 /* ------------------------------------------------------- 日间（浅白带橘）主题 */
 html[data-theme="day"] .ac-home {
-  --ac-bg: #fff8f0;
-  --ac-bg-2: #fffdf8;
+  --ac-bg: #f8f2e7;
+  --ac-bg-2: #fffaf2;
   --ac-surface: rgba(58, 40, 20, 0.04);
   --ac-surface-2: rgba(58, 40, 20, 0.07);
   --ac-line: rgba(58, 40, 20, 0.13);
   --ac-line-2: rgba(58, 40, 20, 0.26);
-  --ac-text: #2a231a;
-  --ac-text-2: #6d5f4e;
+  --ac-text: #352a20;
+  --ac-text-2: #6b5c49;
   --ac-text-3: #97897a;
-  --ac-brand: #6d5ae8;
-  --ac-brand-2: #8b6ff0;
-  --ac-brand-soft: rgba(109, 90, 232, 0.1);
+  --ac-brand: #ed8128;
+  --ac-brand-2: #c96212;
+  --ac-brand-soft: rgba(237, 129, 40, 0.12);
+  --ac-pink: #e07b26;
 }
 
 html[data-theme="day"] .ac-home::before {
@@ -1230,9 +1231,9 @@ html[data-theme="day"] .ac-art__legend {
 html[data-theme="day"] .ac-art__ring {
   background: conic-gradient(
     from 212deg,
-    #7aa7ff 0deg,
-    #8b6ff0 152deg,
-    #ff8fbe calc(var(--ac-p, 68) * 3.6deg),
+    #ffa447 0deg,
+    #ed8128 152deg,
+    #c96212 calc(var(--ac-p, 68) * 3.6deg),
     rgba(58, 40, 20, 0.09) 0
   );
 }
@@ -1245,42 +1246,95 @@ html[data-theme="day"] .ac-art__num {
 
 html[data-theme="day"] .ac-avatar {
   border-color: var(--ac-bg-2);
-  color: #4a5fd0;
+  color: #a24f1a;
 }
 
 html[data-theme="day"] .ac-title em {
-  background: linear-gradient(96deg, #4a7bef 0%, #7b56e0 46%, #d1568f 100%);
+  background: linear-gradient(96deg, #e07b26 0%, #c96212 46%, #a24f1a 100%);
   -webkit-background-clip: text;
   background-clip: text;
 }
 
 html[data-theme="day"] .ac-nav__link--active::after {
-  background: linear-gradient(90deg, #4a7bef, #7b56e0 55%, #d1568f);
-  box-shadow: 0 0 10px rgba(123, 86, 224, 0.35);
+  background: linear-gradient(90deg, #e07b26, #c96212 55%, #a24f1a);
+  box-shadow: 0 0 10px rgba(201, 98, 18, 0.32);
 }
 
 html[data-theme="day"] .ac-features > .ac-feature:nth-child(1) .ac-feature__icon {
-  border-color: rgba(63, 111, 216, 0.3);
-  background: rgba(63, 111, 216, 0.08);
-  color: #3f6fd8;
+  border-color: rgba(224, 123, 38, 0.3);
+  background: rgba(224, 123, 38, 0.09);
+  color: #c96212;
 }
 
 html[data-theme="day"] .ac-features > .ac-feature:nth-child(2) .ac-feature__icon {
-  border-color: rgba(109, 90, 232, 0.3);
-  background: rgba(109, 90, 232, 0.08);
-  color: #6d5ae8;
+  border-color: rgba(237, 129, 40, 0.3);
+  background: rgba(237, 129, 40, 0.09);
+  color: #c96212;
 }
 
 html[data-theme="day"] .ac-features > .ac-feature:nth-child(3) .ac-feature__icon {
-  border-color: rgba(194, 65, 142, 0.26);
-  background: rgba(194, 65, 142, 0.07);
-  color: #c2418e;
+  border-color: rgba(201, 98, 18, 0.28);
+  background: rgba(201, 98, 18, 0.08);
+  color: #a24f1a;
 }
 
 html[data-theme="day"] .ac-features > .ac-feature:nth-child(4) .ac-feature__icon {
-  border-color: rgba(123, 86, 224, 0.28);
-  background: rgba(123, 86, 224, 0.08);
-  color: #7b56e0;
+  border-color: rgba(255, 164, 71, 0.3);
+  background: rgba(255, 164, 71, 0.1);
+  color: #c96212;
+}
+
+/* 日间：品牌/头像/主按钮/视觉光晕/轨道点一并转为工作台暖橙 */
+html[data-theme="day"] .ac-brand__mark {
+  background: linear-gradient(145deg, #e97820 0%, #ffa447 100%);
+  box-shadow:
+    0 6px 18px -6px rgba(201, 98, 18, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.32);
+}
+
+html[data-theme="day"] .ac-user__avatar {
+  background: linear-gradient(145deg, #e97820, #c96212);
+}
+
+html[data-theme="day"] .ac-btn--primary {
+  background: linear-gradient(135deg, #e07b26 0%, #c96212 100%);
+  box-shadow:
+    0 10px 26px -12px rgba(201, 98, 18, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+html[data-theme="day"] .ac-btn--primary:hover {
+  box-shadow:
+    0 16px 34px -14px rgba(201, 98, 18, 0.85),
+    inset 0 1px 0 rgba(255, 255, 255, 0.32);
+}
+
+html[data-theme="day"] .ac-art__glow {
+  background: radial-gradient(circle, rgba(237, 129, 40, 0.3), transparent 64%);
+}
+
+/* 日间补齐：进度条/项目条形与桥接令牌转暖橙（否则夜蓝残留） */
+html[data-theme="day"] .ac-bar i {
+  background: linear-gradient(90deg, #ffa447, #ed8128 62%, #c96212);
+}
+
+html[data-theme="day"] .ac-progress__fill {
+  background: linear-gradient(90deg, #ffa447, #ed8128 55%, #c96212);
+}
+
+html[data-theme="day"] .ac-progress__fill.full {
+  background: linear-gradient(90deg, #2fae7d, #7fe0b6);
+}
+
+html[data-theme="day"] .ac-home {
+  --ws-color-3b6ef5: #ed8128;
+  --ws-color-8fa9e6: #ffa447;
+  --ws-color-6f9bff: #c96212;
+}
+
+html[data-theme="day"] .ac-art__orbit::before {
+  background: #ffa447;
+  box-shadow: 0 0 14px 3px rgba(237, 129, 40, 0.7);
 }
 
 /* ---------------------------------------------------------------- 响应式 */
@@ -1463,7 +1517,7 @@ html[data-theme="day"] .ac-features > .ac-feature:nth-child(4) .ac-feature__icon
 .ac-progress__fill {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #7aa7ff, #8b5cf6 55%, #ffa6c9);
+  background: linear-gradient(90deg, #8ab4ff, #6f9bff 55%, #3b6ef5);
   transition: width 0.4s ease;
 }
 
@@ -1498,9 +1552,9 @@ html[data-theme="day"] .ac-features > .ac-feature:nth-child(4) .ac-feature__icon
   --ws-color-1c2233: var(--ac-surface-2);
   --ws-color-1c3154: var(--ac-surface-2);
   --ws-color-262a38: var(--ac-line);
-  --ws-color-3b6ef5: #7aa7ff;
-  --ws-color-8fa9e6: #b79cff;
-  --ws-color-6f9bff: var(--ac-brand-2);
+  --ws-color-3b6ef5: #3b6ef5;
+  --ws-color-8fa9e6: #8fa9e6;
+  --ws-color-6f9bff: #6f9bff;
   --ws-color-4a4f60: var(--ac-text-3);
   --ws-color-5d6273: var(--ac-text-3);
   --ws-color-7c8194: var(--ac-text-3);

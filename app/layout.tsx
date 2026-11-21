@@ -3,7 +3,7 @@ import "./globals.css";
 import "./workspace-theme.css";
 import "./motion.css";
 import "./motion-polish.css";
-import "./motion-lively.css";
+import "./workspace-motion.css";
 import { ThemeProvider } from "@/components/ws/ThemeProvider";
 import { SuiteLauncher } from "@/components/SuiteLauncher";
 import { PluginHost } from "@/components/PluginHost";

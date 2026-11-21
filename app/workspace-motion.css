@@ -1,0 +1,114 @@
+/* ==========================================================================
+   AgileCampus 工作台交互动效（对齐首页手感）
+   --------------------------------------------------------------------------
+   纯追加，不改动 motion.css / motion-polish.css / globals.css 任何规则；
+   复用 motion 层的 token（--motion-*）与工作台调色板（--ws-color-*）。
+   原则：
+     1. 只动 translate / scale / box-shadow / 颜色，不触碰布局属性，避免重排
+     2. 选择器带 html[data-theme] 前缀，保证覆盖既有 transition（后加载故生效）
+     3. hover 上浮用独立 translate 属性，避开 motion-enter 动画锁定的 transform
+     4. prefers-reduced-motion 一次兜底
+   ========================================================================== */
+
+/* ---- 1. 主要按钮：hover 轻上浮 + 蓝光投影（对齐首页 .ac-btn--primary）---- */
+html[data-theme] .ws-btn.primary,
+html[data-theme] .ws-send {
+  transition: background-color var(--motion-fast) var(--motion-ease),
+              color var(--motion-fast) var(--motion-ease),
+              border-color var(--motion-fast) var(--motion-ease),
+              box-shadow var(--motion-base) var(--motion-ease),
+              translate var(--motion-base) var(--motion-ease-spring);
+}
+.ws-btn.primary:hover:not(:disabled),
+.ws-send:hover:not(:disabled) {
+  translate: 0 -1px;
+  box-shadow: 0 10px 24px -10px rgba(59, 110, 245, 0.7);
+}
+.ws-btn.primary:active:not(:disabled),
+.ws-send:active:not(:disabled) {
+  translate: 0 0;
+  box-shadow: 0 4px 12px -8px rgba(59, 110, 245, 0.5);
+}
+html[data-theme="day"] .ws-btn.primary:hover:not(:disabled),
+html[data-theme="day"] .ws-send:hover:not(:disabled) {
+  box-shadow: 0 10px 24px -10px rgba(201, 98, 18, 0.55);
+}
+html[data-theme="day"] .ws-btn.primary:active:not(:disabled),
+html[data-theme="day"] .ws-send:active:not(:disabled) {
+  box-shadow: 0 4px 12px -8px rgba(201, 98, 18, 0.4);
+}
+
+/* ---- 2. 卡片 hover：轻上浮 + 柔影（补齐管理/团队/文档/迭代卡片）---- */
+html[data-theme] .ws-management-card,
+html[data-theme] .ws-team-member,
+html[data-theme] .ws-doc-row,
+html[data-theme] .ws-doc-version,
+html[data-theme] .ws-sprint-card,
+html[data-theme] .ws-pin-item {
+  transition: background-color var(--motion-slow) var(--motion-ease),
+              color var(--motion-slow) var(--motion-ease),
+              border-color var(--motion-fast) var(--motion-ease),
+              box-shadow var(--motion-base) var(--motion-ease),
+              translate var(--motion-base) var(--motion-ease-spring);
+}
+.ws-management-card:hover,
+.ws-team-member:hover,
+.ws-doc-row:hover:not(:disabled),
+.ws-doc-version:hover,
+.ws-sprint-card:hover,
+.ws-pin-item:hover {
+  translate: 0 -3px;
+  box-shadow: 0 12px 28px rgba(20, 28, 48, 0.18);
+}
+html[data-theme="day"] .ws-management-card:hover,
+html[data-theme="day"] .ws-team-member:hover,
+html[data-theme="day"] .ws-doc-row:hover:not(:disabled),
+html[data-theme="day"] .ws-doc-version:hover,
+html[data-theme="day"] .ws-sprint-card:hover,
+html[data-theme="day"] .ws-pin-item:hover {
+  box-shadow: 0 12px 28px rgba(41, 74, 120, 0.14);
+}
+
+/* ---- 3. 卡片进场错峰（对齐首页 stagger；仅首屏卡片列表，最多前 6 项）---- */
+.ws-management-card,
+.ws-team-member,
+.ws-doc-row {
+  animation: motion-enter var(--motion-base) var(--motion-ease-out) both;
+}
+.ws-management-card:nth-child(1), .ws-team-member:nth-child(1), .ws-doc-row:nth-child(1) { animation-delay: 0ms; }
+.ws-management-card:nth-child(2), .ws-team-member:nth-child(2), .ws-doc-row:nth-child(2) { animation-delay: 40ms; }
+.ws-management-card:nth-child(3), .ws-team-member:nth-child(3), .ws-doc-row:nth-child(3) { animation-delay: 80ms; }
+.ws-management-card:nth-child(4), .ws-team-member:nth-child(4), .ws-doc-row:nth-child(4) { animation-delay: 120ms; }
+.ws-management-card:nth-child(5), .ws-team-member:nth-child(5), .ws-doc-row:nth-child(5) { animation-delay: 160ms; }
+.ws-management-card:nth-child(6), .ws-team-member:nth-child(6), .ws-doc-row:nth-child(6) { animation-delay: 200ms; }
+
+/* ---- 4. 按下回弹：补齐未纳入 motion.css 的小控件 ---- */
+.ws-send:active:not(:disabled) { scale: 0.96; }
+.ws-tool-btn:active { scale: 0.92; }
+.ws-tab:active { scale: 0.95; }
+.ws-filter-chip:active:not(:disabled) { scale: 0.95; }
+
+/* ---- 5. 无障碍：一次兜底关掉本层引入的全部动效 ---- */
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme] .ws-btn.primary, html[data-theme] .ws-send,
+  html[data-theme] .ws-management-card, html[data-theme] .ws-team-member,
+  html[data-theme] .ws-doc-row, html[data-theme] .ws-doc-version,
+  html[data-theme] .ws-sprint-card, html[data-theme] .ws-pin-item {
+    transition: none !important;
+  }
+  .ws-btn.primary:hover:not(:disabled), .ws-send:hover:not(:disabled),
+  .ws-btn.primary:active:not(:disabled), .ws-send:active:not(:disabled),
+  .ws-management-card:hover, .ws-team-member:hover,
+  .ws-doc-row:hover:not(:disabled), .ws-doc-version:hover,
+  .ws-sprint-card:hover, .ws-pin-item:hover {
+    translate: none !important;
+    box-shadow: none !important;
+  }
+  .ws-management-card, .ws-team-member, .ws-doc-row {
+    animation: none !important;
+  }
+  .ws-send:active:not(:disabled), .ws-tool-btn:active,
+  .ws-tab:active, .ws-filter-chip:active:not(:disabled) {
+    scale: none !important;
+  }
+}
