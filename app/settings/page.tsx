@@ -46,6 +46,17 @@ function AppearanceCard() {
       {(bg.mode !== "none" || activeImage) && (
         <button className="appearance-clear" type="button" onClick={() => { apply({ mode: "none", value: "" }); setImageUrl(""); }}>恢复默认背景</button>
       )}
+      <button
+        className="appearance-clear"
+        type="button"
+        title="恢复被右键屏蔽的新手导引悬浮入口"
+        onClick={() => {
+          try { window.localStorage.removeItem("agile-guide-launcher-blocked"); } catch { /* 忽略 */ }
+          window.location.reload();
+        }}
+      >
+        恢复「新手导引」入口
+      </button>
     </section>
   );
 }

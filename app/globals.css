@@ -779,3 +779,10 @@ html[data-theme="day"] .ws-avatar[data-av="4"]{background:#8a4710}
 .ws-doc-row{cursor:grab}
 .ws-dm-dropzone{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#8ab4ff;background:rgba(18,26,48,.72);border:2px dashed var(--ws-color-3b6ef5);border-radius:12px;pointer-events:none}
 .ws-dm-scroll{position:relative}
+
+/* 新手导引右键屏蔽菜单 */
+.guide-block-menu{margin-top:10px;padding:6px;border-radius:12px;background:#1d2333;border:1px solid #3a4562;box-shadow:0 14px 36px -10px #000000aa;display:flex;flex-direction:column;gap:2px;min-width:190px;animation:guide-nudge-in .18s ease}
+.guide-block-item{border:0;background:transparent;color:#c6cbdb;text-align:left;font-size:12.5px;padding:9px 12px;border-radius:8px;cursor:pointer;font-family:inherit}
+.guide-block-item:hover{background:#2a2f45;color:#fff}
+.guide-block-item.muted{color:#7c8194}
+.guide-block-tip{margin:4px 4px 2px;font-size:10.5px;color:#7c8194}
