@@ -15,6 +15,8 @@ export function TaskBoard({ tasks }: { tasks: TaskItem[] }) {
   const locked = useRef(new Set<number>());
   const [pending, setPending] = useState<number[]>([]);
   const [error, setError] = useState("");
+  const [dragId, setDragId] = useState<number | null>(null);
+  const [overColumn, setOverColumn] = useState<TaskItem["status"] | null>(null);
   const done = tasks.filter((task) => task.status === "done").length;
   const progress = tasks.length ? Math.round(done / tasks.length * 100) : 0;
   async function move(task: TaskItem, status: TaskItem["status"]) {
@@ -34,14 +36,30 @@ export function TaskBoard({ tasks }: { tasks: TaskItem[] }) {
     <div className="ws-board-columns">
       {COLUMNS.map(({ status, description }) => {
         const items = tasks.filter((task) => task.status === status);
-        return <section key={status} className={`ws-board-column ${status}`} aria-label={`${STATUS_TEXT[status]}，${items.length} 个任务`}>
+        return <section key={status} className={`ws-board-column ${status}${overColumn === status && dragId !== null ? " drag-over" : ""}`} aria-label={`${STATUS_TEXT[status]}，${items.length} 个任务`}
+          onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setOverColumn(status); }}
+          onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setOverColumn(null); }}
+          onDrop={(e) => {
+            e.preventDefault();
+            const id = Number(e.dataTransfer.getData("text/plain")) || dragId;
+            setDragId(null); setOverColumn(null);
+            const task = tasks.find((t) => t.id === id);
+            if (task) void move(task, status);
+          }}>
           <header><div><h3><span className="ws-board-status-dot" />{STATUS_TEXT[status]}<span className="ws-count-pill">{items.length}</span></h3><p>{description}</p></div></header>
           <div className="ws-board-column-body">
             {items.length === 0 && <div className="ws-board-empty"><Icon name={status === "done" ? "check" : "grid"} size={22} /><span>暂无{STATUS_TEXT[status]}任务</span></div>}
             {items.map((task) => {
               const busy = pending.includes(task.id);
               const due = task.dueOn && status !== "done" ? dueInfo(task.dueOn) : null;
-              return <article key={task.id} className={`ws-board-card ${busy ? "pending" : ""}`} onClick={() => { if (!busy) ws.openTask(task.id); }}>
+              return <article key={task.id} draggable={!busy} className={`ws-board-card ${busy ? "pending" : ""}${dragId === task.id ? " dragging" : ""}`} onClick={() => { if (!busy) ws.openTask(task.id); }}
+                onDragStart={(e) => {
+                  if (busy) { e.preventDefault(); return; }
+                  e.dataTransfer.effectAllowed = "move";
+                  e.dataTransfer.setData("text/plain", String(task.id));
+                  setDragId(task.id);
+                }}
+                onDragEnd={() => { setDragId(null); setOverColumn(null); }}>
                 <div className="ws-board-card-head"><span>{task.code}</span>
                   <select className="ws-select ws-board-move" aria-label={`移动任务 ${task.title} 的状态`} value={status} disabled={busy}
                     onClick={(e) => e.stopPropagation()} onChange={(e) => void move(task, e.target.value as TaskItem["status"])}>

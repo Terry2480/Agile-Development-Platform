@@ -736,3 +736,9 @@ html[data-theme="day"] .ws-avatar[data-av="4"]{background:#8a4710}
 .su-launcher:hover{transform:translateY(-2px);box-shadow:0 12px 30px #294a7877}
 .su-launcher:active{transform:translateY(0)}
 @media(max-width:600px){.su-launcher span{display:none}.su-launcher{padding:0;width:48px;justify-content:center}}
+
+/* 看板拖拽换区：抓取光标 / 拖起半透明 / 目标分栏虚线高亮 */
+.ws-board-card{cursor:grab}
+.ws-board-card.dragging{opacity:.45;transform:scale(.985)}
+.ws-board-column.drag-over{border-color:var(--ws-color-3b6ef5)}
+.ws-board-column.drag-over .ws-board-column-body{outline:2px dashed var(--ws-color-3b6ef5);outline-offset:-6px;border-radius:10px;background:var(--ws-color-1c2233);min-height:120px}
