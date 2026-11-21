@@ -162,3 +162,80 @@ export function buildDailyReport(input: DailyReportInput): DailyReport {
 
   return { headline, summary, sections, focusItems: focusItems.slice(0, 3), generatedAt: new Date().toISOString() };
 }
+
+/* ---------- AI 周报：把「本周发生了什么」聚合为一页可读总结 ---------- */
+
+export interface WeeklyReportInput {
+  weekStart: string; // YYYY-MM-DD（周一）
+  weekEnd: string;   // YYYY-MM-DD（周日）
+  weekLabelText: string; // 如：11月16日 - 11月22日
+  userName: string;
+  projectCount: number;
+  /** 本周窗口内各项目统计（口径与日报一致，但窗口为一周） */
+  projects: Array<{
+    name: string;
+    created: number;
+    completed: number;
+    messages: number;
+    docsUpdated: number;
+    taskTotal: number;
+    taskDone: number;
+  }>;
+  completedThisWeek: number;
+  createdThisWeek: number;
+  messagesThisWeek: number;
+  /** 仍将进入下周的截止（未完成、dueOn >= 下周一），按 dueOn 升序 */
+  upcoming: string[];
+  /** 本周完成任务的标题清单（最多 5 条） */
+  completedTitles: string[];
+  unreadDms: number;
+}
+
+export interface WeeklyReport {
+  headline: string;
+  summary: string;
+  lines: string[];
+  nextWeekFocus: string[];
+}
+
+export function buildWeeklyReport(input: WeeklyReportInput): WeeklyReport {
+  const { projects } = input;
+  const totalDone = projects.reduce((s, p) => s + p.taskDone, 0);
+  const totalTasks = projects.reduce((s, p) => s + p.taskTotal, 0);
+  const pct = totalTasks === 0 ? 100 : Math.round((totalDone / totalTasks) * 100);
+  const busiest = [...projects].sort((a, b) => b.messages - a.messages)[0];
+
+  const headline = projects.length === 0
+    ? `${input.weekLabelText} · 本周暂无项目动态`
+    : `${input.weekLabelText} · 完成 ${input.completedThisWeek} 项 · 新增 ${input.createdThisWeek} 项 · ${input.messagesThisWeek} 条协作消息`;
+
+  const summaryLines: string[] = [];
+  if (projects.length > 0) {
+    summaryLines.push(`共 ${projects.length} 个活跃项目，整体完成度 ${pct}%（${totalDone}/${totalTasks}）`);
+    if (busiest && busiest.messages > 0) summaryLines.push(`协作最活跃：${busiest.name}（${busiest.messages} 条消息）`);
+    if (input.completedThisWeek > 0) summaryLines.push(`本周交付 ${input.completedThisWeek} 项成果`);
+  } else {
+    summaryLines.push("本周没有项目动态。创建团队和项目后，周报会自动汇总每周进展。");
+  }
+  const summary = summaryLines.join("；") + "。";
+
+  const lines: string[] = [];
+  for (const p of projects) {
+    const bits = [`${p.name}`, `进度 ${p.taskDone}/${p.taskTotal}`, `本周新增 ${p.created} · 完成 ${p.completed}`];
+    if (p.messages > 0) bits.push(`消息 ${p.messages} 条`);
+    if (p.docsUpdated > 0) bits.push(`文档 ${p.docsUpdated} 篇更新`);
+    lines.push(bits.join(" · "));
+  }
+  if (input.completedTitles.length > 0) {
+    lines.push("");
+    lines.push("本周完成：");
+    for (const t of input.completedTitles) lines.push(`  ✓ ${t}`);
+  }
+
+  const nextWeekFocus: string[] = [];
+  for (const u of input.upcoming.slice(0, 3)) nextWeekFocus.push(`下周关注：${u}`);
+  if (nextWeekFocus.length === 0 && input.unreadDms > 0) nextWeekFocus.push(`处理 ${input.unreadDms} 条未读私信`);
+  if (nextWeekFocus.length === 0) nextWeekFocus.push("下周从「我的待办」里挑一件事开始");
+
+  return { headline, summary, lines, nextWeekFocus };
+}
