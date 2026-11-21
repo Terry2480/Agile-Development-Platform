@@ -2,11 +2,11 @@
 
 // 全局「效率中心」悬浮入口：首页/工作台/导引/设置等所有页面可见，一键进入 /suite。
 // 登录页与 /suite 自身不显示；未登录用户也不显示（避免无效入口）。
+// a 标签而非 button：普通点击站内跳转，Ctrl/⌘+点击 或 中键 = 新标签页打开。
 import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 export function SuiteLauncher() {
-  const router = useRouter();
   const pathname = usePathname();
   const [authed, setAuthed] = useState(false);
   const hidden = pathname === "/login" || pathname === "/suite";
@@ -21,11 +21,11 @@ export function SuiteLauncher() {
 
   if (hidden || !authed) return null;
   return (
-    <button
+    <a
       className="su-launcher"
-      title="效率中心 · 日历 / 待办 / 记事"
+      href="/suite"
+      title="效率中心 · 日历 / 待办 / 记事（Ctrl+点击 新标签页打开）"
       aria-label="打开效率中心"
-      onClick={() => router.push("/suite")}
     >
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <rect x="3" y="4" width="18" height="16" rx="2" />
@@ -33,6 +33,6 @@ export function SuiteLauncher() {
         <path d="M8 13l2 2 4-4" />
       </svg>
       <span>效率中心</span>
-    </button>
+    </a>
   );
 }

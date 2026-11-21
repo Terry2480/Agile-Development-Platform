@@ -7,7 +7,7 @@
 // 读取 localStorage 用 useSyncExternalStore：服务端与水合期按"已看过"渲染，
 // 水合完成后再按真实值刷新，避免 SSR 水合错位（react-hooks lint 也不允许 effect 内同步 setState）。
 import { useCallback, useReducer, useSyncExternalStore } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 const SEEN_KEY = "agile-guide-visited";
 const noopSubscribe = () => () => {};
@@ -16,7 +16,6 @@ function readSeen(): boolean {
 }
 
 export function GuideLauncher() {
-  const router = useRouter();
   const pathname = usePathname();
   // 导引页自身不再放悬浮入口；其余页面全部可见（含登录页与未登录状态）
   const hidden = pathname === "/guide";
@@ -38,12 +37,7 @@ export function GuideLauncher() {
             <span>3 分钟新手导引，带你走一遍注册 → 团队 → 看板 → 协作。</span>
           </div>
           <div className="guide-nudge-actions">
-            <button
-              className="guide-nudge-go"
-              onClick={() => { markSeen(); router.push("/guide"); }}
-            >
-              开始导引
-            </button>
+            <a className="guide-nudge-go" href="/guide" onClick={markSeen}>开始导引</a>
             <button
               className="guide-nudge-close"
               aria-label="关闭新手导引提示"
@@ -55,18 +49,20 @@ export function GuideLauncher() {
           </div>
         </div>
       )}
-      <button
+      {/* a 标签而非 button：普通点击站内跳转，Ctrl/⌘+点击 或 中键 = 新标签页打开 */}
+      <a
         className="su-launcher guide-launcher"
-        title="新手导引 · 3 分钟上手"
+        href="/guide"
+        title="新手导引 · 3 分钟上手（Ctrl+点击 新标签页打开）"
         aria-label="打开新手导引"
-        onClick={() => { markSeen(); router.push("/guide"); }}
+        onClick={markSeen}
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z" />
           <path d="M19 16.5l.8 1.7 1.7.8-1.7.8-.8 1.7-.8-1.7-1.7-.8 1.7-.8z" />
         </svg>
         <span>新手导引</span>
-      </button>
+      </a>
     </div>
   );
 }
