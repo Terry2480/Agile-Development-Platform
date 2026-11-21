@@ -45,11 +45,12 @@ export function IconRail() {
         <small>工作台</small>
       </button>
       <button
-        className={`ws-rail-btn ${ws.railView === "notifications" ? "active" : ""}`}
+        className={`ws-rail-btn ws-rail-management ${ws.railView === "notifications" ? "active" : ""}`}
         title="通知"
         onClick={() => ws.setRailView("notifications")}
       >
         <Icon name="bell" size={17} />
+        <small>通知</small>
         {ws.unreadCount > 0 && (
           ws.unreadCount > 9
             ? <span className="ws-rail-badge">9+</span>
@@ -57,20 +58,22 @@ export function IconRail() {
         )}
       </button>
       <button
-        className={`ws-rail-btn ${ws.railView === "todos" ? "active" : ""}`}
+        className={`ws-rail-btn ws-rail-management ${ws.railView === "todos" ? "active" : ""}`}
         title="待办"
         onClick={() => ws.setRailView("todos")}
       >
         <Icon name="check" size={17} />
+        <small>待办</small>
         {myTodoCount > 0 && <span className="ws-rail-dot blue" />}
       </button>
       <button
-        className={`ws-rail-btn ${ws.railView === "messages" ? "active" : ""}`}
+        className={`ws-rail-btn ws-rail-management ${ws.railView === "messages" ? "active" : ""}`}
         title="私信"
         aria-label="私信"
         onClick={() => ws.setRailView("messages")}
       >
         <Icon name="message" size={17} />
+        <small>私聊</small>
         {ws.dmUnreadTotal > 0 && (
           ws.dmUnreadTotal > 9
             ? <span className="ws-rail-badge">9+</span>
@@ -78,21 +81,24 @@ export function IconRail() {
         )}
       </button>
       <button
-        className={`ws-rail-btn ${ws.railView === "docs" ? "active" : ""}`}
+        className={`ws-rail-btn ws-rail-management ${ws.railView === "docs" ? "active" : ""}`}
         title="云文档"
         aria-label="云文档"
         onClick={() => ws.setRailView("docs")}
       >
         <Icon name="book" size={17} />
+        <small>云文档</small>
       </button>
 
       <div className="ws-rail-gap" />
 
-      <button className="ws-rail-btn" title="新手导引" aria-label="新手导引" onClick={() => router.push("/guide")}>
+      <button className="ws-rail-btn ws-rail-management" title="新手导引" aria-label="新手导引" onClick={() => router.push("/guide")}>
         <span style={{ fontSize: 19, fontWeight: 700, lineHeight: 1 }}>?</span>
+        <small>导引</small>
       </button>
-      <button className="ws-rail-btn" title="插件商城" aria-label="插件商城" onClick={() => router.push("/plugins")}>
+      <button className="ws-rail-btn ws-rail-management" title="插件商城" aria-label="插件商城" onClick={() => router.push("/plugins")}>
         <Icon name="puzzle" size={17} />
+        <small>插件</small>
       </button>
       <button className="ws-rail-btn" title={theme === "night" ? "切换日间模式" : "切换夜间模式"} aria-label={theme === "night" ? "切换日间模式" : "切换夜间模式"} onClick={toggle}>
         <Icon name={theme === "night" ? "sun" : "moon"} size={18} />
