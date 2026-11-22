@@ -5,6 +5,7 @@ import { attachments, chatMessages, chatLikes, users, tasks, projects, teamMembe
 import {
   requireUser, parseBody, parseId, requireProjectAccess, ApiError, handleApiError, displayName, taskCode,
 } from "@/lib/api";
+import { consumeLimit } from "@/lib/rate-limit";
 import { notifyMentions } from "@/lib/notify";
 
 // 项目聊天：GET /api/projects/[id]/chat?afterId=/beforeId=/pinned=1
@@ -151,6 +152,8 @@ const sendSchema = z.object({
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await requireUser(request);
+    const blocked = await consumeLimit(`chat:user:${user.id}`, 30, 60); // 每用户每分钟 30 条，防刷屏
+    if (blocked) return blocked;
     const projectId = parseId((await params).id, "项目 ID");
     const { project } = await requireProjectAccess(user.id, projectId);
     const body = await parseBody(request, sendSchema);
