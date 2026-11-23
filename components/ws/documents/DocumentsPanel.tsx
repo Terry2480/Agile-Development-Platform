@@ -14,7 +14,7 @@ import { BodyEditor } from "./BodyEditor";
 import { DocumentDialog } from "./DocumentDialog";
 import { documentListPath, useDocumentResource } from "./useDocumentResource";
 
-type Scope = { kind: "project" | "team"; id: number };
+type Scope = { id: number };
 const kindName = { folder: "文件夹", document: "在线文档", file: "上传文件", link: "外部链接" };
 const time = (value: string) => new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Hong_Kong", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(value));
 
@@ -103,7 +103,7 @@ export function DetailDialog({ id, onClose, trash=false }: { id: number; onClose
 
 function DirectoryWorkspace({ scope, onScopeChange }: { scope: Scope; onScopeChange(scope: Scope): void }) {
   const ws = useWorkspace(); const [spaceRetry, setSpaceRetry] = useState(0);
-  const opened = useDocumentResource<{ space: DocumentSpace }>(`/api/${scope.kind === "project" ? "projects" : "teams"}/${scope.id}/document-space`, spaceRetry);
+  const opened = useDocumentResource<{ space: DocumentSpace }>(`/api/projects/${scope.id}/document-space`, spaceRetry);
   if (opened.error) return <section className="ws-doc-unavailable"><h2>文档空间暂不可用</h2><p role="alert">{opened.error}</p><button className="ws-btn" onClick={() => setSpaceRetry(x => x + 1)}>重试</button></section>;
   if (!opened.data) return <div className="ws-empty" role="status">正在打开文档空间…</div>;
   return <DirectoryContent key={opened.data.space.id} initialSpace={opened.data.space} scope={scope} onScopeChange={onScopeChange} userId={ws.me.id} />;
@@ -139,24 +139,23 @@ function DirectoryContent({ initialSpace, scope, onScopeChange, userId }: { init
   function saved(node: DocumentNode, verb: string) { setCreateKind(null); setRename(null); setMove(null); setOpenMenu(null); setNewMenu(false); setGeneration(x => x + 1); setCursors([null]); setMessage(`已${verb}“${node.name}”`); }
   const path = page.data?.path ?? [];
   return <section className="ws-documents" aria-label="文档目录与资料列表">
-    <aside className="ws-doc-tree"><div><p className="ws-doc-muted">{scope.kind === "team" ? "跨项目共享" : `所属团队：${space.teamName}`}</p><label className="ws-doc-scope"><span className="ws-doc-sr">{scope.kind === "team" ? "选择团队" : "选择项目"}</span><select value={scope.id} onChange={e => onScopeChange({ ...scope, id: Number(e.target.value) })}>
-      {scope.kind === "project" ? ws.projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>) : ws.teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-    </select></label></div><div className="ws-doc-tree-heading"><span>{scope.kind === "team" ? "公共资料分类" : "文档目录"}</span><button className="ws-icon-btn" disabled={space.readOnly} onClick={() => { go(null); setCreateKind("folder"); }} aria-label="新建分区"><Icon name="plus" size={14} /></button></div>
+    <aside className="ws-doc-tree"><div><p className="ws-doc-muted">所属团队：{space.teamName}</p><label className="ws-doc-scope"><span className="ws-doc-sr">选择项目</span><select value={scope.id} onChange={e => onScopeChange({ ...scope, id: Number(e.target.value) })}>
+      {ws.projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+    </select></label></div><div className="ws-doc-tree-heading"><span>文档目录</span><button className="ws-icon-btn" disabled={space.readOnly} onClick={() => { go(null); setCreateKind("folder"); }} aria-label="新建分区"><Icon name="plus" size={14} /></button></div>
       <div className="ws-doc-tree-scroll"><button className={`ws-doc-tree-node ${folderId === null ? "active" : ""}`} onClick={() => go(null)}><Icon name="list" size={15} />全部分区</button><FolderChildren key={generation} space={space.id} parentId={null} current={folderId} generation={generation} onSelect={go} /></div>
       <div className="ws-doc-tree-foot"><button onClick={()=>setTrashOpen(true)}><Icon name="trash" size={15} />回收站</button><button onClick={()=>setExportsOpen(true)}><Icon name="download" size={15} />导出任务</button></div>
     </aside>
-    <div className="ws-doc-main"><header className="ws-doc-context"><div><strong>{scope.kind === "team" ? "团队公共资料" : space.name}</strong><span>{scope.kind === "project" ? "项目空间" : `所属团队：${space.teamName}`}</span></div>{scope.kind === "project" && <button className="ws-doc-link" onClick={() => ws.showTeamDocuments(space.teamId)}>团队公共资料 ↗</button>}</header>
-      {scope.kind === "team" && <p className="ws-doc-notice ws-doc-public-note"><Icon name="users" size={16} />供本团队各项目共同引用；这里的资料独立管理，不会自动汇总项目文档。</p>}
-      <nav className="ws-doc-breadcrumb" aria-label="当前位置"><button onClick={() => go(null)}>{scope.kind === "project" ? "项目空间" : "团队公共区"}</button>{path.map(n => <span key={n.id}> / <button onClick={() => go(n.id)}>{n.name}</button></span>)}</nav>
+    <div className="ws-doc-main"><header className="ws-doc-context"><div><strong>{space.name}</strong><span>项目空间</span></div></header>
+      <nav className="ws-doc-breadcrumb" aria-label="当前位置"><button onClick={() => go(null)}>项目空间</button>{path.map(n => <span key={n.id}> / <button onClick={() => go(n.id)}>{n.name}</button></span>)}</nav>
       <div className="ws-doc-titleline"><div><h2>{q ? "搜索结果" : path.at(-1)?.name ?? "全部分区"}</h2><span>{page.data ? `${page.data.total} 项` : ""}</span></div><div className="ws-doc-actions">
         <button className="ws-btn" onClick={()=>setExportRoot({id:folderId,label:path.at(-1)?.name??"全部分区"})}><Icon name="download" size={14} />导出</button>
         {folderId !== null && <button className="ws-btn" disabled={space.readOnly || !!q} onClick={()=>setUploading(true)}>上传文件</button>}
         {folderId === null ? <button className="ws-btn primary" disabled={space.readOnly || !!q} onClick={() => setCreateKind("folder")}>＋ 新建分区</button> : <div className="ws-doc-menu-wrap"><button className="ws-btn primary" disabled={space.readOnly || !!q} aria-expanded={newMenu} onClick={() => setNewMenu(x => !x)}>＋ 新建 <Icon name="chevronDown" size={12} /></button>{newMenu && <div className="ws-doc-menu"><button onClick={() => { setNewMenu(false); setCreateKind("document"); }}>在线文档</button><button onClick={() => { setNewMenu(false); setCreateKind("folder"); }}>文件夹</button><button onClick={() => { setNewMenu(false); setCreateKind("link"); }}>外部链接</button></div>}</div>}
       </div></div>
-      {scope.kind==="project"&&<label className="ws-doc-template-setting">模板推荐<select className="ws-doc-sort" disabled={space.readOnly} value={space.templateSet??"none"} onChange={async e=>{try{await api(`/api/document-spaces/${space.id}/templates`,{method:"PATCH",json:{templateSet:e.target.value,expectedVersion:space.version}});setGeneration(x=>x+1);setMessage("模板推荐已更新，已有文档不变");}catch(error){setMessage((error as Error).message);}}}><option value="none">不设推荐</option><option value="general">通用课程项目</option><option value="software">软件开发项目</option></select></label>}
+      <label className="ws-doc-template-setting">模板推荐<select className="ws-doc-sort" disabled={space.readOnly} value={space.templateSet??"none"} onChange={async e=>{try{await api(`/api/document-spaces/${space.id}/templates`,{method:"PATCH",json:{templateSet:e.target.value,expectedVersion:space.version}});setGeneration(x=>x+1);setMessage("模板推荐已更新，已有文档不变");}catch(error){setMessage((error as Error).message);}}}><option value="none">不设推荐</option><option value="general">通用课程项目</option><option value="software">软件开发项目</option></select></label>
       {space.readOnly && <p className="ws-doc-notice">项目已归档，当前为只读空间。需要修改时请由负责人或管理员先恢复项目。</p>}
       {message && <p className="ws-doc-notice" role="status">{message}<button className="ws-doc-link" onClick={() => setMessage("")}>关闭</button></p>}
-      <div className="ws-doc-toolbar"><label className="ws-doc-search"><Icon name="search" size={15} /><span className="ws-doc-sr">搜索当前空间标题</span><input value={search} maxLength={200} onChange={e => { setSearch(e.target.value); setCursors([null]); }} placeholder={scope.kind === "project" ? "搜索本项目全部目录…" : "搜索团队公共资料…"} /></label><div className="ws-doc-actions"><select className="ws-doc-sort" aria-label="排序方式" value={sort} onChange={e => { setSort(e.target.value); setCursors([null]); }}><option value="updated">最近修改优先</option><option value="name">按名称排序</option></select><button className="ws-btn" onClick={() => { setGeneration(x => x + 1); setCursors([null]); }}>刷新</button></div></div>
+      <div className="ws-doc-toolbar"><label className="ws-doc-search"><Icon name="search" size={15} /><span className="ws-doc-sr">搜索当前空间标题</span><input value={search} maxLength={200} onChange={e => { setSearch(e.target.value); setCursors([null]); }} placeholder="搜索本项目全部目录…" /></label><div className="ws-doc-actions"><select className="ws-doc-sort" aria-label="排序方式" value={sort} onChange={e => { setSort(e.target.value); setCursors([null]); }}><option value="updated">最近修改优先</option><option value="name">按名称排序</option></select><button className="ws-btn" onClick={() => { setGeneration(x => x + 1); setCursors([null]); }}>刷新</button></div></div>
       {q && <p className="ws-doc-muted">当前空间的标题搜索结果，不包含回收站。点击“所在目录”可定位资料。</p>}
       {page.loading && <div className="ws-doc-empty" role="status">正在加载资料…</div>}
       {page.error && <div className="ws-doc-empty" role="alert"><p>{page.error}</p><div className="ws-doc-actions"><button className="ws-btn" onClick={() => setGeneration(x => x + 1)}>重试</button><button className="ws-btn" onClick={() => go(null)}>返回全部分区</button></div></div>}
@@ -178,10 +177,8 @@ function DirectoryContent({ initialSpace, scope, onScopeChange, userId }: { init
   </section>;
 }
 
-export function DocumentsPanel({ mode }: { mode: "project" | "team" }) {
+export function DocumentsPanel() {
   const ws = useWorkspace();
-  const teamId = ws.documentTeamId && ws.teams.some(t => t.id === ws.documentTeamId) ? ws.documentTeamId : ws.teams[0]?.id;
-  const scope = mode === "project" ? ws.selectedId ? { kind: "project" as const, id: ws.selectedId } : null : teamId ? { kind: "team" as const, id: teamId } : null;
-  if (!scope) return <div className="ws-empty">{mode === "project" ? "选择项目后查看项目文档" : "加入或创建团队后查看团队资料"}</div>;
-  return <DirectoryWorkspace key={`${scope.kind}-${scope.id}`} scope={scope} onScopeChange={next => next.kind === "project" ? ws.selectProject(next.id) : ws.showTeamDocuments(next.id)} />;
+  if (ws.selectedId === null) return <div className="ws-empty">选择项目后查看项目文档</div>;
+  return <DirectoryWorkspace key={ws.selectedId} scope={{ id: ws.selectedId }} onScopeChange={next => ws.selectProject(next.id)} />;
 }

@@ -48,12 +48,11 @@ export function RenameNodeDialog({ node, onClose, onSaved }: { node: DocumentNod
 
 export function MoveNodeDialog({ node, source, onClose, onSaved, operation = "move" }: { operation?: "move" | "copy"; node: DocumentNode; source: DocumentSpace; onClose(): void; onSaved(node: DocumentNode): void }) {
   const ws = useWorkspace();
-  const [scope, setScope] = useState(source.projectId ? `project:${source.projectId}` : `team:${source.teamId}`);
+  const [projectId, setProjectId] = useState(source.projectId ?? "");
   const [parentId, setParentId] = useState<number | null>(null); const [cursors, setCursors] = useState<(string | null)[]>([null]);
   const [retry, setRetry] = useState(0); const [error, setError] = useState(""); const [busy, setBusy] = useState(false); const lock = useRef(false);
   const [requestId] = useState(() => crypto.randomUUID());
-  const [type, id] = scope.split(":");
-  const destination = useDocumentResource<{ space: DocumentSpace }>(`/api/${type === "project" ? "projects" : "teams"}/${id}/document-space`, retry);
+  const destination = useDocumentResource<{ space: DocumentSpace }>(projectId === "" ? null : `/api/projects/${projectId}/document-space`, retry);
   const page = useDocumentResource<DocumentListing>(destination.data ? documentListPath(destination.data.space.id, parentId, { foldersOnly: true, sort: "name", cursor: cursors.at(-1) }) : null, retry);
   const enter = (id: number | null) => { setParentId(id); setCursors([null]); };
   async function submit(e: FormEvent) {
@@ -63,9 +62,9 @@ export function MoveNodeDialog({ node, source, onClose, onSaved, operation = "mo
     catch (e) { setError(errorText(e)); } finally { lock.current = false; setBusy(false); }
   }
   return <DocumentDialog title={`${operation === "copy" ? "复制" : "移动"}“${node.name}”`} busy={busy} onClose={onClose}><form onSubmit={submit}>
-    <label className="ws-doc-field">目标空间<select className="ws-input" disabled={busy} value={scope} onChange={e => { setScope(e.target.value); enter(null); setError(""); }}>
-      <option value={`team:${source.teamId}`}>{source.teamName} / 团队公共资料</option>
-      {ws.projects.filter(p => p.teamId === source.teamId).map(p => <option key={p.id} value={`project:${p.id}`} disabled={p.status === "archived"}>{p.name}{p.status === "archived" ? "（归档，只读）" : ""}</option>)}
+    <label className="ws-doc-field">目标项目<select className="ws-input" disabled={busy} value={projectId} onChange={e => { setProjectId(Number(e.target.value)); enter(null); setError(""); }}>
+      {projectId === "" && <option value="" disabled>请选择项目</option>}
+      {ws.projects.filter(p => p.teamId === source.teamId).map(p => <option key={p.id} value={p.id} disabled={p.status === "archived"}>{p.name}{p.status === "archived" ? "（归档，只读）" : ""}</option>)}
     </select></label>
     <nav className="ws-doc-breadcrumb" aria-label="目标位置"><button type="button" onClick={() => enter(null)}>全部分区</button>{page.data?.path.map(n => <span key={n.id}> / <button type="button" onClick={() => enter(n.id)}>{n.name}</button></span>)}</nav>
     {(destination.loading || page.loading) && <p role="status" className="ws-doc-muted">正在读取目标目录…</p>}

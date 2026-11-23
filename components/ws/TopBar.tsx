@@ -49,7 +49,7 @@ export function TopBar() {
       </nav>
 
       <div className="ws-top-right">
-        {!(ws.railView === "teamDocuments" || (ws.railView === "projects" && ws.focusSection === "documents")) && <div className="ws-searchbox">
+        {!(ws.railView === "projects" && ws.focusSection === "documents") && <div className="ws-searchbox">
           <Icon name="search" size={13} />
           <input
             ref={searchRef}

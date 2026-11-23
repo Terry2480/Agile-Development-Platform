@@ -34,7 +34,7 @@ export function DocumentAssociations({ kind, targetId, projectId }: { kind: "tas
     {(opened.error || list.error || error) && <p className="ws-error" role="alert">{error || opened.error || list.error}</p>}
     {notice && <p className="ws-team-note" role="status">{notice}</p>}
     {list.data?.readOnly && <p className="ws-team-note">项目已归档，关联资料只读。</p>}
-    {list.data?.nodes.length === 0 && <p className="ws-team-note">暂无关联资料，可从项目文档或团队公共区选择。</p>}
+    {list.data?.nodes.length === 0 && <p className="ws-team-note">暂无关联资料，可从本项目文档选择。</p>}
     {list.data?.nodes.map(node => <div className="ws-resource-item" key={node.id}><div><button className="ws-doc-link" onClick={() => setDetail(node.id)}>{node.name}</button><small>{node.kind === "document" ? "在线文档" : node.kind === "link" ? "外部链接" : "上传文件"} · {node.spaceId === opened.data?.space.id ? "本项目" : "团队公共区"}</small></div><button className="ws-btn" disabled={busy || list.data!.readOnly} onClick={() => void remove(node)}>解除关联</button></div>)}
     {detail !== null && <DetailDialog id={detail} onClose={() => { setDetail(null); setGeneration(x => x + 1); }} />}
     {uploading&&opened.data&&<AssociationUpload own={opened.data.space} kind={kind} targetId={targetId} onClose={()=>setUploading(false)} onSaved={()=>{setUploading(false);setGeneration(x=>x+1);setNotice("文件已保存到项目目录并完成关联");}}/>}
@@ -43,7 +43,6 @@ export function DocumentAssociations({ kind, targetId, projectId }: { kind: "tas
 }
 
 function AssociationPicker({ endpoint, own, list, onClose, onSaved }: { endpoint: string; own: DocumentSpace; list: AssociationList; onClose(): void; onSaved(): void }) {
-  const [source, setSource] = useState("project");
   const [parentId, setParentId] = useState<number | null>(null);
   const [query, setQuery] = useState("");
   const [cursors, setCursors] = useState<(string | null)[]>([null]);
@@ -51,9 +50,7 @@ function AssociationPicker({ endpoint, own, list, onClose, onSaved }: { endpoint
   const [busy, setBusy] = useState(false); const locked = useRef(false);
   const [error, setError] = useState(""); const [retry, setRetry] = useState(0);
   const [requestId] = useState(() => crypto.randomUUID());
-  const publicSpace = useDocumentResource<{ space: DocumentSpace }>(source === "team" ? `/api/teams/${own.teamId}/document-space` : null, retry);
-  const space = source === "project" ? own : publicSpace.data?.space;
-  const page = useDocumentResource<DocumentListing>(space ? documentListPath(space.id, parentId, { q: query.trim(), sort: "name", cursor: cursors.at(-1) }) : null, retry);
+  const page = useDocumentResource<DocumentListing>(documentListPath(own.id, parentId, { q: query.trim(), sort: "name", cursor: cursors.at(-1) }), retry);
   const existing = new Set(list.nodes.map(n => n.id));
   function go(id: number | null) { setParentId(id); setQuery(""); setCursors([null]); }
   async function submit() {
@@ -63,11 +60,10 @@ function AssociationPicker({ endpoint, own, list, onClose, onSaved }: { endpoint
     catch (e) { setError((e as Error).message); } finally { locked.current = false; setBusy(false); }
   }
   return <DocumentDialog title="关联已有资料" busy={busy} onClose={onClose}>
-    <label className="ws-doc-field">资料来源<select className="ws-input" disabled={busy} value={source} onChange={e => { setSource(e.target.value); go(null); }}><option value="project">本项目资料</option><option value="team">同团队公共资料</option></select></label>
-    <label className="ws-doc-field">按标题搜索<input className="ws-input" disabled={busy} maxLength={200} value={query} onChange={e => { setQuery(e.target.value); setCursors([null]); }} placeholder="搜索所选空间全部资料" /></label>
+    <label className="ws-doc-field">按标题搜索<input className="ws-input" disabled={busy} maxLength={200} value={query} onChange={e => { setQuery(e.target.value); setCursors([null]); }} placeholder="搜索本项目全部资料" /></label>
     <nav className="ws-doc-breadcrumb" aria-label="选择资料的位置"><button disabled={busy} onClick={() => go(null)}>全部分区</button>{page.data?.path.map(n => <span key={n.id}> / <button disabled={busy} onClick={() => go(n.id)}>{n.name}</button></span>)}</nav>
-    {(page.loading || publicSpace.loading) && <p role="status">正在读取目录…</p>}
-    {(page.error || publicSpace.error) && <p className="ws-error" role="alert">{page.error || publicSpace.error}<button className="ws-btn" onClick={() => setRetry(x => x + 1)}>重试</button></p>}
+    {(page.loading) && <p role="status">正在读取目录…</p>}
+    {(page.error) && <p className="ws-error" role="alert">{page.error}<button className="ws-btn" onClick={() => setRetry(x => x + 1)}>重试</button></p>}
     <div className="ws-doc-destination">{page.data?.nodes.map(n => n.kind === "folder" ? <button key={n.id} disabled={busy} onClick={() => go(n.id)}>▸ {n.name}</button> : <label className="ws-doc-pick-row" key={n.id}><input type="checkbox" disabled={busy || existing.has(n.id) || (selected.length >= 100 && !selected.some(s => s.id === n.id))} checked={existing.has(n.id) || selected.some(s => s.id === n.id)} onChange={e => setSelected(items => e.target.checked ? [...items, n] : items.filter(i => i.id !== n.id))} /><span>{n.name}</span><small>{existing.has(n.id) ? "已关联" : n.kind === "document" ? "在线文档" : n.kind === "link" ? "外部链接" : "上传文件"}</small></label>)}</div>
     {page.data?.nodes.length === 0 && <p className="ws-team-note">没有可选资料；请先在文档空间创建资料，或调整关键词。</p>}
     <div className="ws-doc-pagination"><span>已选 {selected.length} / 100 项（跨目录保留选择）</span><button className="ws-btn" disabled={busy || !selected.length} onClick={() => setSelected([])}>清空选择</button><button className="ws-btn" disabled={busy || cursors.length <= 1} onClick={() => setCursors(c => c.slice(0,-1))}>上一页</button><button className="ws-btn" disabled={busy || !page.data?.nextCursor} onClick={() => setCursors(c => [...c, page.data!.nextCursor])}>下一页</button></div>

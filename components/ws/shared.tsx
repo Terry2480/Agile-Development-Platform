@@ -81,7 +81,7 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
 }
 
 /* ---------- 工作空间状态（page.tsx 提供实现） ---------- */
-export type RailView = "projects" | "todos" | "notifications" | "projectManagement" | "teamManagement" | "teamDocuments";
+export type RailView = "projects" | "todos" | "notifications" | "projectManagement" | "teamManagement";
 export type FocusSection = "tasks" | "chat" | "space" | "documents";
 export type ModalState =
   | { type: "newTeam" }
@@ -97,8 +97,6 @@ export interface WorkspaceStore {
   setRailView(v: RailView): void;
   focusSection: FocusSection;
   setFocusSection(s: FocusSection): void;
-  documentTeamId: number | null;
-  showTeamDocuments(teamId: number): void;
   teams: Team[];
   projects: ProjectSummary[];
   selectedId: number | null;

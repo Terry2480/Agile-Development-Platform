@@ -49,7 +49,6 @@ export default function WorkspacePage() {
   /* ---------- 状态 ---------- */
   const [railView, setRailView] = useState<RailView>("projects");
   const [focusSection, setFocusSection] = useState<FocusSection>("tasks");
-  const [documentTeamId, setDocumentTeamId] = useState<number | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -193,8 +192,6 @@ export default function WorkspacePage() {
     me: me!,
     railView, setRailView: (view) => { gate.cancel(["notificationNavigation"]); setRailView(view); },
     focusSection, setFocusSection: (section) => { gate.cancel(["notificationNavigation"]); setFocusSection(section); },
-    documentTeamId,
-    showTeamDocuments: (teamId) => { gate.cancel(["notificationNavigation"]); setDocumentTeamId(teamId); setRailView("teamDocuments"); },
     teams, projects, selectedId, detail, tasks, myTasks, chat, activities, files,
     notifications, unreadCount, overview,
     taskSearch, setTaskSearch,
@@ -335,7 +332,7 @@ export default function WorkspacePage() {
       } finally { request.finish(); }
     },
   }), [
-    me, railView, focusSection, documentTeamId, teams, projects, selectedId, detail, tasks, myTasks, chat,
+    me, railView, focusSection, teams, projects, selectedId, detail, tasks, myTasks, chat,
     activities, files, notifications, unreadCount, overview, taskSearch, modal, drawerTaskId,
     selectProject, refreshProjects, refreshProjectData, refreshTasks, refreshChat,
     refreshActivities, refreshFiles, refreshNotifications, refreshMyTasks, refreshDetail, refreshTeams, refreshOverview,
@@ -348,8 +345,8 @@ export default function WorkspacePage() {
   if (authLoading) return <div className="ws-empty" role="status">正在加载工作空间…</div>;
   if (!me) return <div className="ws-empty" role="alert">{authError || "正在前往登录页面…"}{authError && <button className="ws-btn" onClick={() => void authenticate()}>重试</button>}</div>;
   const retries: Record<string, () => Promise<void>> = { projects: refreshProjects, teams: refreshTeams, overview: refreshOverview, notifications: refreshNotifications, myTasks: refreshMyTasks, detail: refreshDetail, tasks: refreshTasks, chat: refreshChat, activities: refreshActivities, files: refreshFiles };
-  const documentView = railView === "teamDocuments" || (railView === "projects" && focusSection === "documents");
-  const activeKey = railView === "todos" ? "myTasks" : railView === "notifications" ? "notifications" : railView === "projectManagement" ? "projects" : railView === "teamManagement" || railView === "teamDocuments" ? "teams" : focusSection === "documents" ? "projects" : focusSection === "tasks" ? "tasks" : focusSection === "chat" ? "chat" : "files";
+  const documentView = railView === "projects" && focusSection === "documents";
+  const activeKey = railView === "todos" ? "myTasks" : railView === "notifications" ? "notifications" : railView === "projectManagement" ? "projects" : railView === "teamManagement" ? "teams" : focusSection === "documents" ? "projects" : focusSection === "tasks" ? "tasks" : focusSection === "chat" ? "chat" : "files";
   const initialPending = loads[activeKey] && !loads[activeKey].loaded && (loads[activeKey].loading || loads[activeKey].error);
 
   const project = projects.find((p) => p.id === selectedId);
@@ -370,8 +367,7 @@ export default function WorkspacePage() {
               {!initialPending && railView === "projects" && focusSection === "tasks" && <TaskPanel key={selectedId} />}
               {railView === "projects" && focusSection === "chat" && !initialPending && <ChatPanel key={selectedId} />}
               {railView === "projects" && focusSection === "space" && !initialPending && <SpacePanel key={selectedId} />}
-              {railView === "projects" && focusSection === "documents" && !initialPending && <DocumentsPanel mode="project" />}
-              {railView === "teamDocuments" && !initialPending && <DocumentsPanel mode="team" />}
+              {railView === "projects" && focusSection === "documents" && !initialPending && <DocumentsPanel />}
               {railView === "projectManagement" && <ManagementPanel kind="project" />}
               {railView === "teamManagement" && <ManagementPanel key="teams" kind="team" />}
               {railView === "todos" && !initialPending && <TodosView />}

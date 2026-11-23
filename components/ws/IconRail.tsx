@@ -17,14 +17,24 @@ export function IconRail() {
       <div className="ws-rail-logo" title="AgileCampus">AC</div>
       <button className={`ws-rail-btn ws-rail-management ${ws.railView === "projectManagement" ? "active" : ""}`} title="项目管理：创建、归档和管理项目" aria-label="项目管理" onClick={() => ws.setRailView("projectManagement")}><Icon name="file" size={17} /><small>项目管理</small></button>
       <button className={`ws-rail-btn ws-rail-management ${ws.railView === "teamManagement" ? "active" : ""}`} title="团队管理" aria-label="团队管理" onClick={() => ws.setRailView("teamManagement")}><Icon name="users" size={17} /><small>团队管理</small></button>
-      <button className={`ws-rail-btn ws-rail-management ${ws.railView === "teamDocuments" ? "active" : ""}`} title="团队资料" aria-label="团队资料" onClick={() => ws.setRailView("teamDocuments")}><Icon name="folder" size={17} /><small>团队资料</small></button>
       <button
-        className={`ws-rail-btn ws-rail-management ${ws.railView === "projects" ? "active" : ""}`}
+        className={`ws-rail-btn ws-rail-management ${ws.railView === "projects" && ws.focusSection !== "documents" ? "active" : ""}`}
         title="项目工作台：处理当前项目的任务、聊天和资料"
         aria-label="项目工作台"
-        onClick={() => ws.setRailView("projects")}
+        onClick={() => {
+          if (ws.focusSection === "documents") ws.setFocusSection("tasks");
+          ws.setRailView("projects");
+        }}
       >
         <Icon name="grid" size={17} /><small>项目工作台</small>
+      </button>
+      <button
+        className={`ws-rail-btn ws-rail-management ${ws.railView === "projects" && ws.focusSection === "documents" ? "active" : ""}`}
+        title="云文档"
+        aria-label="云文档"
+        onClick={() => { ws.setFocusSection("documents"); ws.setRailView("projects"); }}
+      >
+        <Icon name="folder" size={17} /><small>云文档</small>
       </button>
       <button
         className={`ws-rail-btn ws-rail-management ${ws.railView === "notifications" ? "active" : ""}`}
