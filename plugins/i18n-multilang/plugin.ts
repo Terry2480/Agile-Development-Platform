@@ -2,13 +2,15 @@
 // ------------------------------------------------------------------
 // 按 AgileCampus 插件标准格式实现（docs/PLUGIN-SPEC.md）。
 // 能力：启用后页面右下角出现地球切换器，可把界面文案切换为
-//       英语 / 日语 / 法语 / 俄语（未收录长句保持原文）。
-// 原理：DOM 文本节点与常用属性（placeholder/title/aria-label）按词典
-//       精确替换；MutationObserver 跟踪 SPA 局部刷新；停用时完整还原。
+//       英语 / 日语 / 法语 / 俄语。
+// 原理：两层翻译（整句精确 + 分段逐段查词典，见 dictionary.ts），
+//       数字与用户数据原样保留，动态文案（日期、计数）也能翻译；
+//       DOM 文本节点与常用属性替换，MutationObserver 跟踪 SPA 局部刷新，
+//       停用时完整还原。代码块、输入框与可编辑正文不翻译。
 "use client";
 
 import type { AgileCampusPlugin, PluginContext } from "@/lib/plugins/types";
-import { DICTIONARIES, LOCALES, type Locale } from "./dictionary";
+import { LOCALES, isLocale, translateText, type Locale } from "./dictionary";
 
 const STORAGE_KEY = "locale";
 
@@ -22,42 +24,42 @@ let currentLocale: Locale | null = null;
 const textOriginals = new Map<Text, string>();
 const attrOriginals = new Map<Attr, string>();
 const ATTRS = ["placeholder", "title", "aria-label"];
+/** 不翻译正文的容器：插件自身 UI、代码、可编辑正文（textarea 的 placeholder 属性仍翻译） */
+const SKIP_CLOSEST = ".i18n-switcher,script,style,code,pre,textarea,[contenteditable='true'],[contenteditable='']";
+/** 属性翻译仅排除插件自身 UI：placeholder/title/aria-label 都不是用户输入内容 */
+const ATTR_SKIP_CLOSEST = ".i18n-switcher";
 
 function pruneOrphan() {
   for (const node of textOriginals.keys()) if (!node.isConnected) textOriginals.delete(node);
   for (const attr of attrOriginals.keys()) if (!attr.ownerElement?.isConnected) attrOriginals.delete(attr);
 }
 
-function dict(): Record<string, string> | null {
-  return currentLocale ? DICTIONARIES[currentLocale] : null;
-}
-
-/** 翻译一个根子树（文本节点 + 白名单属性） */
+/** 翻译一个根子树（文本节点 + 白名单属性）；未命中时 translateText 原样返回 */
 function translateRoot(root: ParentNode) {
-  const d = dict();
-  if (!d) return;
+  if (!currentLocale) return;
+  const locale = currentLocale;
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   const texts: Text[] = [];
   while (walker.nextNode()) texts.push(walker.currentNode as Text);
   for (const node of texts) {
     const raw = node.nodeValue ?? "";
-    const key = raw.trim();
-    if (!key || key.length > 40) continue;
-    const hit = d[key];
-    if (!hit) continue;
+    if (!raw.trim()) continue;
+    if (node.parentElement?.closest(SKIP_CLOSEST)) continue;
+    const out = translateText(raw, locale);
+    if (out === raw) continue;
     if (!textOriginals.has(node)) textOriginals.set(node, raw);
-    node.nodeValue = raw.replace(key, hit);
+    node.nodeValue = out;
   }
-  for (const el of Array.from(root.querySelectorAll("[" + ATTRS.join("],[" ) + "]"))) {
+  for (const el of Array.from(root.querySelectorAll("[" + ATTRS.join("],[") + "]"))) {
+    if (el.closest(ATTR_SKIP_CLOSEST)) continue;
     for (const name of ATTRS) {
       const attr = el.getAttributeNode(name);
-      if (!attr) continue;
-      const raw = attr.value ?? "";
-      const key = raw.trim();
-      const hit = key && key.length <= 40 ? d[key] : undefined;
-      if (!hit) continue;
+      if (!attr || !attr.value.trim()) continue;
+      const raw = attr.value;
+      const out = translateText(raw, locale);
+      if (out === raw) continue;
       if (!attrOriginals.has(attr)) attrOriginals.set(attr, raw);
-      attr.value = raw.replace(key, hit);
+      attr.value = out;
     }
   }
 }
@@ -141,16 +143,16 @@ function removeSwitcher() {
 export const i18nMultilangPlugin: AgileCampusPlugin = {
   id: "i18n-multilang",
   name: "多语言",
-  version: "1.0.0",
+  version: "1.1.0",
   author: "AgileCampus 团队",
-  description: "把界面文案切换为英语 / 日语 / 法语 / 俄语；未收录的长句保持原文，随时可切回中文。",
+  description: "把界面文案切换为英语 / 日语 / 法语 / 俄语；覆盖导航、任务、文档、设置等常用界面，未收录内容保持原文，随时可切回中文。",
   category: "language",
   icon: "🌐",
   permissions: ["ui:translate", "ui:mount", "storage:local"],
   activate(ctx) {
     ctxRef = ctx;
     const saved = ctx.storage.get(STORAGE_KEY);
-    currentLocale = saved && saved !== "zh" && saved in DICTIONARIES ? (saved as Locale) : null;
+    currentLocale = saved && saved !== "zh" && isLocale(saved) ? saved : null;
     buildSwitcher();
     applyLocale(currentLocale);
     observer = new MutationObserver(() => {
