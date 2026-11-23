@@ -1,0 +1,12 @@
+# 密钥绝不入镜像层——runtime 经 compose env_file 运行时注入
+.env
+.env.*
+
+# 构建无需、且拖慢上下文/污染 layer
+node_modules
+.next
+.git
+.playwright-mcp
+tsconfig.tsbuildinfo
+npm-debug.log*
+.DS_Store

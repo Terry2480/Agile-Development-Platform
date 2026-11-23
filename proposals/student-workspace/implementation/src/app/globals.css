@@ -1,0 +1,161 @@
+@import "tailwindcss";
+
+/* ============================================================
+   AgileCampus 设计系统 · 「学术工作台」
+   净暖白纸背景 · 雅靛蓝主色 · 琥珀点缀 · 衬线标题 + Geist 正文
+   ============================================================ */
+
+@theme {
+  /* 中性 · 净暖白纸感（略提对比，更清透） */
+  --color-canvas: #f3f1ea;
+  --color-surface: #ffffff;
+  --color-sunken: #f0ede4;
+  --color-ink: #1a1913;
+  --color-ink-soft: #514c43;
+  --color-ink-faint: #928b7e;
+  --color-line: #e8e3d8;
+  --color-line-strong: #d8d1c2;
+
+  /* 主色 · 藏青（更沉稳有分量） */
+  --color-primary: #294a78;
+  --color-primary-hover: #1e3a60;
+  --color-primary-soft: #e8eef8;
+  --color-primary-ring: #bcccea;
+
+  /* 点缀 · 赭陶（更暖润） */
+  --color-accent: #bf6a34;
+  --color-accent-soft: #f6e7d5;
+
+  /* 语义 · 看板列 */
+  --color-todo: #7c8698;
+  --color-doing: #35548c;
+  --color-done: #3f7a58;
+
+  /* 语义 · 优先级 */
+  --color-high: #b6482f;
+  --color-high-soft: #f7e4dd;
+  --color-medium: #a9722a;
+  --color-medium-soft: #f5e9d2;
+  --color-low: #6f7987;
+  --color-low-soft: #ecedf0;
+
+  /* 字体 */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-display: Georgia, "Songti SC", "SimSun", serif;
+
+  /* 形状 */
+  --radius-card: 0.75rem;
+  --radius-field: 0.5rem;
+}
+
+:root {
+  --shadow-card: 0 1px 2px rgba(28, 22, 12, 0.05), 0 8px 22px -10px rgba(28, 22, 12, 0.10);
+  --shadow-pop: 0 4px 10px rgba(28, 22, 12, 0.07), 0 18px 40px -14px rgba(28, 22, 12, 0.18);
+}
+
+body {
+  background-color: var(--color-canvas);
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(28, 22, 12, 0.024) 1px, transparent 0);
+  background-size: 24px 24px;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* 衬线标题工具类 */
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: 0;
+}
+
+@layer components {
+  /* 卡片面 */
+  .ac-card {
+    border-radius: var(--radius-card);
+    border: 1px solid var(--color-line);
+    background-color: var(--color-surface);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* 表单控件统一 */
+  .ac-field {
+    width: 100%;
+    border-radius: var(--radius-field);
+    border: 1px solid var(--color-line-strong);
+    background-color: var(--color-surface);
+    padding: 0.5rem 0.7rem;
+    font-size: 0.875rem;
+    color: var(--color-ink);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .ac-field::placeholder {
+    color: var(--color-ink-faint);
+  }
+  .ac-field:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-ring);
+  }
+
+  /* 主按钮 */
+  .ac-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    border-radius: var(--radius-field);
+    background-color: var(--color-primary);
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #fff;
+    box-shadow: 0 1px 2px rgba(28, 22, 12, 0.14);
+    transition: background-color 0.15s ease, transform 0.05s ease, box-shadow 0.15s ease;
+  }
+  .ac-btn:hover:not(:disabled) {
+    background-color: var(--color-primary-hover);
+    box-shadow: 0 2px 8px -1px rgba(56, 82, 127, 0.35);
+  }
+  .ac-btn:active:not(:disabled) {
+    transform: translateY(0.5px);
+  }
+  .ac-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* 次按钮 / 幽灵 */
+  .ac-btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    border-radius: var(--radius-field);
+    border: 1px solid var(--color-line-strong);
+    background-color: var(--color-surface);
+    padding: 0.4rem 0.85rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-ink-soft);
+    transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+  }
+  .ac-btn-ghost:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    background-color: var(--color-primary-soft);
+  }
+
+  /* 标签徽章 */
+  .ac-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border-radius: 999px;
+    padding: 0.1rem 0.55rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+}
