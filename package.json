@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "db:add-documents": "tsx db/add-documents.ts",
+    "db:generate-documents": "node db/generate-document-ddl.mjs",
+    "test:documents": "node scripts/test-documents.mjs",
+    "test:document-api": "node scripts/test-document-api.mjs",
     "db:add-milestone-resources": "tsx db/add-milestone-resources.ts",
     "db:add-deadline-reminders": "tsx db/add-deadline-reminders.ts",
     "db:add-task-collaborators": "tsx db/add-task-collaborators.ts",
@@ -10,6 +14,7 @@
     "db:add-member-duties": "tsx db/add-member-duties.ts",
     "db:fix-chat-timezone": "tsx db/fix-chat-timezone.ts",
     "dev": "next dev",
+    "dev:documents": "node scripts/dev-documents.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -28,14 +33,19 @@
     "db:add-chat-attachments": "tsx db/add-chat-attachments.ts",
     "db:add-message-extras": "tsx db/add-message-extras.ts",
     "db:seed": "tsx db/seed.ts",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "setup:documents": "tsx scripts/setup-document-review.mjs",
+    "test:document-ui": "node scripts/check-document-ui.mjs",
+    "test:baseline": "node scripts/test-baseline.mjs"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.3",
     "next": "16.3.6",
+    "playwright-core": "^1.65.1",
     "postgres": "^3.4.9",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "yazl": "^3.3.1",
     "zod": "^4.6.5"
   },
   "devDependencies": {
@@ -43,6 +53,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/yazl": "^3.3.1",
     "dotenv": "^18.0.3",
     "drizzle-kit": "^0.31.11",
     "eslint": "^9",

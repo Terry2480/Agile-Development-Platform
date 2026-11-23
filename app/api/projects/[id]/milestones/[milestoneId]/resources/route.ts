@@ -38,6 +38,7 @@ export async function GET(request: Request, context: Context) {
 async function mutate(request: Request, context: Context, deleting: boolean) {
   try {
     const { user, project, milestoneId } = await access(request, context);
+    if(typeof db.execute==="function"){const {documentsEnabled}=await import("@/lib/documents/lifecycle");if(await documentsEnabled(db))return Response.json({error:"请使用里程碑的关联资料入口；解除关联会保留原资料",code:"USE_DOCUMENT_ASSOCIATIONS"},{status:409});}
     const body = deleting ? await parseBody(request, z.object({ resourceId: z.number().int().positive() }).strict()) : await parseBody(request, createSchema);
     await db.transaction(async (tx) => {
       await tx.select({ id: teams.id }).from(teams).where(eq(teams.id, project.teamId)).for("share");

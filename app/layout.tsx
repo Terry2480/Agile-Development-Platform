@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./workspace-theme.css";
+import "./documents.css";
 import "./motion.css";
 import "./motion-polish.css";
 import "./workspace-motion.css";

@@ -273,6 +273,8 @@
 .ws-btn.primary{background:var(--ws-color-3b6ef5);border-color:transparent;color:var(--ws-color-fff)}
 .ws-btn.danger{background:var(--ws-color-ba3848);border-color:transparent;color:var(--ws-color-fff)}
 .ws-btn:disabled{opacity:.5;cursor:default}
+.ws-doc-create-btn{display:inline-flex;align-items:center;gap:6px;flex:none;white-space:nowrap}
+.ws-doc-create-layer{color:var(--ws-color-e8eaf2);font-family:"Segoe UI",Arial,"Microsoft YaHei",sans-serif}
 .ws-delete-action{color:var(--ws-color-c88790);flex-shrink:0}
 .ws-delete-action:hover{color:var(--ws-color-ff9aa7);background:var(--ws-color-38232b)}
 .ws-team-manage-row{display:flex;align-items:center;gap:8px;padding:8px;color:var(--ws-color-c6cbdb);font-size:12px}

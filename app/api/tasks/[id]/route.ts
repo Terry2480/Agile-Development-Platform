@@ -60,7 +60,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       .from(teamMembers).innerJoin(users, eq(users.id, teamMembers.userId))
       .where(eq(teamMembers.teamId, project.teamId)).orderBy(users.id);
 
-    const fileRows = await db
+    let fileRows = await db
       .select({
         id: attachments.id, originalName: attachments.originalName, size: attachments.size,
         mimeType: attachments.mimeType, createdAt: attachments.createdAt,
@@ -69,6 +69,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       .where(eq(attachments.taskId, taskId))
       .orderBy(desc(attachments.createdAt));
 
+    if(typeof db.execute==="function"){const {documentsEnabled}=await import("@/lib/documents/lifecycle");if(await documentsEnabled(db)){const {canonicalTaskFiles}=await import("@/lib/documents/legacy");fileRows=[...await canonicalTaskFiles(taskId)];}}
     const activityRows = await db
       .select({
         id: activities.id, action: activities.action, detail: activities.detail, createdAt: activities.createdAt,

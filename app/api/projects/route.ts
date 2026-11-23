@@ -32,7 +32,8 @@ export async function GET(request: Request) {
     const teamNameOf = new Map(myTeams.map((t) => [t.id, t.name]));
 
     // 项目基础列表
-    const conditions = [inArray(projects.teamId, teamIds), eq(projects.status, "active")];
+    const conditions = [inArray(projects.teamId, teamIds)];
+    if(url.searchParams.get("includeArchived")!=="1")conditions.push(eq(projects.status,"active"));
     if (q) conditions.push(sql`${projects.name} ILIKE ${"%" + q + "%"}`);
     let rows = await db
       .select()
@@ -111,6 +112,7 @@ export async function GET(request: Request) {
 }
 
 const createSchema = z.object({
+  templateSet:z.enum(["none","general","software"]).default("none"),
   teamId: z.number({ message: "请选择团队" }).int().positive("请选择团队"),
   name: z.string().trim().min(1, "请填写项目名称").max(50, "项目名称过长"),
   key: z
@@ -149,6 +151,11 @@ export async function POST(request: Request) {
           throw error;
         });
 
+      if(body.templateSet!=="none"){
+        const {createDocumentService}=await import("@/lib/documents/service");
+        const {space}=await createDocumentService(tx as unknown as typeof db).openSpace(user.id,"project",created.id);
+        await tx.execute(sql`UPDATE document_spaces SET template_set=${body.templateSet} WHERE id=${space.id}`);
+      }
       // 团队全员自动成为项目成员
       const allMembers = await tx
         .select({ userId: teamMembers.userId })

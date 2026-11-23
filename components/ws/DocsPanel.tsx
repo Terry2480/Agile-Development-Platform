@@ -4,6 +4,7 @@
 // 列表（搜索/项目过滤/文件夹分组折叠）+ Markdown 编辑器（左写右览、自动保存、版本历史）
 // + 文档评论（划词引用、@提及通知）+ 目录大纲 TOC + [[任务码]] 引用卡片（点击直达任务）
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   api, fmtDateShort, fmtTime,
   type DocDetail, type DocSummary, type DocVersion, type DocComment, type TaskItem,
@@ -101,7 +102,10 @@ export function DocsPanel() {
     <div className="ws-docs-list">
       <div className="ws-panel-head">
         <h2><Icon name="book" size={16} /> 云文档 <span className="ws-count-pill">{docs?.length ?? 0} 篇</span></h2>
-        <button className="ws-btn primary" onClick={() => setCreating(true)}><Icon name="plus" size={14} /> 新建文档</button>
+        <button className="ws-btn primary ws-doc-create-btn" onClick={() => setCreating(true)}>
+          <Icon name="plus" size={14} />
+          <span>新建文档</span>
+        </button>
       </div>
 
       <div className="ws-docs-toolbar">
@@ -181,12 +185,15 @@ export function DocsPanel() {
         );
       })}
 
-      {creating && (
-        <NewDocModal
-          folders={[...new Set((docs ?? []).map((d) => d.folder).filter((f): f is string => !!f))]}
-          onClose={() => setCreating(false)}
-          onCreated={(doc) => { setCreating(false); setOpenDoc(doc); refresh(); }}
-        />
+      {creating && createPortal(
+        <div className="ws-doc-create-layer">
+          <NewDocModal
+            folders={[...new Set((docs ?? []).map((d) => d.folder).filter((f): f is string => !!f))]}
+            onClose={() => setCreating(false)}
+            onCreated={(doc) => { setCreating(false); setOpenDoc(doc); refresh(); }}
+          />
+        </div>,
+        document.body,
       )}
     </div>
   );

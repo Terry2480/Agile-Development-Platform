@@ -1,0 +1,3 @@
+# Applied migrations are checksummed verbatim. Preserve their original bytes on
+# every platform; never normalize or rewrite an already applied migration.
+db/migrations/*.sql -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

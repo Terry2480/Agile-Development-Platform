@@ -1,0 +1,11 @@
+import {config} from "dotenv";
+import {spawnSync} from "node:child_process";
+import {readdirSync} from "node:fs";
+config({path:".env.local",quiet:true});
+if(!process.env.DATABASE_URL)throw Error("DATABASE_URL_REQUIRED");
+const url=new URL(process.env.DATABASE_URL);
+if(!["localhost","127.0.0.1","[::1]"].includes(url.hostname))throw Error("LOCAL_DATABASE_REQUIRED");
+url.pathname="/agilecampus_test_20261112";
+const files=readdirSync("tests").filter(name=>/\.test\.(mjs|ts)$/.test(name)).map(name=>"tests/"+name);
+const result=spawnSync(process.execPath,["--import","tsx","--test",...files],{stdio:"inherit",windowsHide:true,env:{...process.env,DATABASE_URL:url.toString(),DOCUMENT_API_TEST:"0",DOCUMENT_REHEARSAL:"0"}});
+process.exitCode=result.status??1;

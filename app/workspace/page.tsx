@@ -18,7 +18,7 @@ import { TopBar } from "@/components/ws/TopBar";
 import { TaskPanel, TodosView, NotificationsView, TaskDrawer, NewTaskModal } from "@/components/ws/TaskPanel";
 import { ChatPanel } from "@/components/ws/ChatPanel";
 import { MessagesPanel } from "@/components/ws/MessagesPanel";
-import { DocsPanel } from "@/components/ws/DocsPanel";
+import { ProjectDocuments } from "@/components/ws/documents/ProjectDocuments";
 import { TodayPanel } from "@/components/ws/TodayPanel";
 import { ShortcutsPanel } from "@/components/ws/ShortcutsPanel";
 import { ScaleFrame } from "@/components/ws/ScaleFrame";
@@ -279,8 +279,8 @@ export default function WorkspacePage() {
       await api("/api/teams", { method: "POST", json: { name, description: description ?? null } });
       await afterProjectMutation();
     },
-    async deleteWorkspaceItem(kind, id) {
-      await api(`/api/${kind === "project" ? "projects" : "teams"}/${id}`, { method: "DELETE" });
+    async deleteWorkspaceItem(kind, id, confirmation) {
+      await api(`/api/${kind === "project" ? "projects" : "teams"}/${id}`, { method: "DELETE", ...(confirmation ? { json: confirmation } : {}) });
       toast(`已删除${kind === "project" ? "项目" : "团队"}`);
       const removesSelection = kind === "project"
         ? selectedIdRef.current === id
@@ -296,9 +296,9 @@ export default function WorkspacePage() {
         refreshProjects(), refreshTeams(), refreshOverview(), refreshMyTasks(), refreshNotifications(),
       ]);
     },
-    async createProject(teamId, name, key, description, courseName) {
+    async createProject(teamId, name, key, description, courseName, templateSet) {
       const d = await api<{ project: { id: number } }>("/api/projects", {
-        method: "POST", json: { teamId, name, key, description: description ?? null, courseName: courseName ?? null },
+        method: "POST", json: { teamId, name, key, description: description ?? null, courseName: courseName ?? null, templateSet },
       });
       await afterSaved([refreshProjects()]);
       selectProject(d.project.id);
@@ -463,7 +463,7 @@ export default function WorkspacePage() {
               {railView === "todos" && !initialPending && <TodosView />}
               {railView === "notifications" && !initialPending && <NotificationsView />}
               {railView === "messages" && <MessagesPanel />}
-              {railView === "docs" && <DocsPanel />}
+              {railView === "docs" && <ProjectDocuments />}
               {railView === "today" && <TodayPanel />}
             </div>
             {railView === "projects" && <ProjectActivitySidebar />}

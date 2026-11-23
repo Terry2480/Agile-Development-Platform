@@ -1,5 +1,6 @@
 import {
   pgTable, serial, text, timestamp, integer, boolean, date, unique, index, check,
+  bigint, jsonb, uniqueIndex, foreignKey, primaryKey,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
@@ -405,3 +406,190 @@ export const personalNotes = pgTable("personal_notes", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("personal_notes_user_idx").on(t.userId)]);
+
+/* 文档模块：db/add-documents.ts 同时安装跨行约束和旧清理保护。 */
+const docTime = (name: string) => timestamp(name, { withTimezone: true });
+const docVersion = (name: string) => bigint(name, { mode: "bigint" }).notNull().default(sql`1`);
+const docActor = (name: string) => integer(name).references(() => users.id, { onDelete: "set null" });
+
+export const documentSpaces = pgTable("document_spaces", {
+  id: serial("id").primaryKey(),
+  teamId: integer("team_id").notNull().references(() => teams.id, { onDelete: "restrict" }),
+  projectId: integer("project_id").references(() => projects.id, { onDelete: "restrict" }),
+  templateSet: text("template_set").notNull().default("none"),
+  state: text("state").notNull().default("active"), version: docVersion("version"),
+  createdAt: docTime("created_at").notNull().defaultNow(),
+}, t => [unique("document_spaces_project_uq").on(t.projectId),
+  uniqueIndex("document_spaces_public_uq").on(t.teamId).where(sql`${t.projectId} IS NULL`),
+  check("document_spaces_state_ck", sql`${t.state} IN ('active','archived','deleting')`),
+  check("document_spaces_template_set_ck",sql`${t.templateSet} IN ('none','general','software')`),
+  check("document_spaces_version_ck", sql`${t.version} > 0`)]);
+
+export const documentNodes = pgTable("document_nodes", {
+  id: serial("id").primaryKey(), spaceId: integer("space_id").notNull().references(() => documentSpaces.id, { onDelete: "restrict" }),
+  parentId: integer("parent_id"), kind: text("kind").notNull(), name: text("name").notNull(),
+  normalizedName: text("normalized_name").notNull(), systemRole: text("system_role"),
+  state: text("state").notNull().default("active"), version: docVersion("version"),
+  trashBatchId: integer("trash_batch_id").references((): AnyPgColumn => documentTrashBatches.id, { onDelete: "restrict" }),
+  deletedAt: docTime("deleted_at"), expiresAt: docTime("expires_at"),
+  createdBy: docActor("created_by"), updatedBy: docActor("updated_by"),
+  createdAt: docTime("created_at").notNull().defaultNow(), updatedAt: docTime("updated_at").notNull().defaultNow(),
+}, t => [unique("document_nodes_id_space_uq").on(t.id, t.spaceId),
+  foreignKey({ name: "document_nodes_parent_fk", columns: [t.parentId, t.spaceId], foreignColumns: [t.id, t.spaceId] }).onDelete("restrict"),
+  uniqueIndex("document_nodes_root_name_uq").on(t.spaceId, t.normalizedName).where(sql`${t.parentId} IS NULL AND ${t.state} = 'active'`),
+  uniqueIndex("document_nodes_child_name_uq").on(t.spaceId, t.parentId, t.normalizedName).where(sql`${t.parentId} IS NOT NULL AND ${t.state} = 'active'`),
+  uniqueIndex("document_nodes_recovery_uq").on(t.spaceId).where(sql`${t.systemRole} = 'recovery' AND ${t.state} = 'active'`),
+  index("document_nodes_parent_idx").on(t.spaceId, t.parentId), index("document_nodes_expiry_idx").on(t.expiresAt).where(sql`${t.state} = 'trashed'`),
+  check("document_nodes_kind_ck", sql`${t.kind} IN ('folder','document','file','link')`),
+  check("document_nodes_state_ck", sql`${t.state} IN ('active','trashed','purging')`),
+  check("document_nodes_root_ck", sql`${t.parentId} IS NOT NULL OR ${t.kind} = 'folder'`),
+  check("document_nodes_name_ck", sql`char_length(${t.name}) BETWEEN 1 AND 200 AND ${t.name} = btrim(${t.name}) AND ${t.name} !~ '[[:cntrl:]/]' AND position(chr(92) in ${t.name}) = 0 AND ${t.name} NOT IN ('.','..')`),
+  check("document_nodes_normalized_ck", sql`${t.normalizedName} = translate(${t.name}, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')`),
+  check("document_nodes_recovery_ck", sql`${t.systemRole} IS NULL OR (${t.systemRole} = 'recovery' AND ${t.kind} = 'folder' AND ${t.parentId} IS NULL)`),
+  check("document_nodes_trash_ck", sql`(${t.state} = 'active' AND ${t.trashBatchId} IS NULL AND ${t.deletedAt} IS NULL AND ${t.expiresAt} IS NULL) OR (${t.state} IN ('trashed','purging') AND ${t.trashBatchId} IS NOT NULL AND ${t.deletedAt} IS NOT NULL AND ${t.expiresAt} IS NOT NULL AND ${t.expiresAt} > ${t.deletedAt})`),
+  check("document_nodes_version_ck", sql`${t.version} > 0`)]);
+
+export const documentBodies = pgTable("document_bodies", {
+  nodeId: integer("node_id").primaryKey().references(() => documentNodes.id, { onDelete: "cascade" }),
+  formatVersion: integer("format_version").notNull().default(1), contentJson: jsonb("content_json").notNull(),
+  bodyRevision: docVersion("body_revision"), contentHash: text("content_hash").notNull(),
+  lastCheckpointAt: docTime("last_checkpoint_at"), updatedBy: docActor("updated_by"), updatedAt: docTime("updated_at").notNull().defaultNow(),
+}, t => [check("document_bodies_content_ck", sql`jsonb_typeof(${t.contentJson}) = 'object' AND (${t.contentJson}->>'type') IS NOT DISTINCT FROM 'doc' AND octet_length(${t.contentJson}::text) <= 5242880`),
+  check("document_bodies_hash_ck", sql`${t.contentHash} ~ '^[0-9a-f]{64}$'`),
+  check("document_bodies_revision_ck", sql`${t.bodyRevision} > 0 AND ${t.formatVersion} > 0`)]);
+
+export const documentVersions = pgTable("document_versions", {
+  id: serial("id").primaryKey(), nodeId: integer("node_id").notNull().references(() => documentNodes.id, { onDelete: "cascade" }),
+  formatVersion: integer("format_version").notNull().default(1), contentJson: jsonb("content_json").notNull(), contentHash: text("content_hash").notNull(),
+  sourceRevision: bigint("source_revision", { mode: "bigint" }).notNull(), bodyAuthorId: docActor("body_author_id"), bodyAuthorName: text("body_author_name").notNull(),
+  createdBy: docActor("created_by"), reason: text("reason").notNull(), createdAt: docTime("created_at").notNull().defaultNow(),
+}, t => [index("document_versions_node_idx").on(t.nodeId, t.createdAt, t.id),
+  check("document_versions_content_ck", sql`jsonb_typeof(${t.contentJson}) = 'object' AND (${t.contentJson}->>'type') IS NOT DISTINCT FROM 'doc' AND octet_length(${t.contentJson}::text) <= 5242880`),
+  check("document_versions_hash_ck", sql`${t.contentHash} ~ '^[0-9a-f]{64}$'`),
+  check("document_versions_revision_ck", sql`${t.sourceRevision} > 0 AND ${t.formatVersion} > 0`),
+  check("document_versions_reason_ck", sql`${t.reason} IN ('edit_start','periodic','manual','before_restore','before_draft_restore')`)]);
+
+export const documentEditLocks = pgTable("document_edit_locks", {
+  nodeId: integer("node_id").primaryKey().references(() => documentNodes.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }), sessionTokenHash: text("session_token_hash").notNull(),
+  acquiredAt: docTime("acquired_at").notNull().defaultNow(), expiresAt: docTime("expires_at").notNull(),
+}, t => [index("document_edit_locks_expiry_idx").on(t.expiresAt),
+  check("document_edit_locks_token_ck", sql`${t.sessionTokenHash} ~ '^[0-9a-f]{64}$'`),
+  check("document_edit_locks_time_ck", sql`${t.expiresAt} > ${t.acquiredAt}`)]);
+
+export const documentResources = pgTable("document_resources", {
+  id: serial("id").primaryKey(), teamId: integer("team_id").notNull().references(() => teams.id, { onDelete: "restrict" }),
+  storedName: text("stored_name").notNull(), originalName: text("original_name").notNull(), mimeType: text("mime_type"), size: bigint("size", { mode: "bigint" }).notNull(),
+  state: text("state").notNull().default("ready"), createdBy: docActor("created_by"), createdAt: docTime("created_at").notNull().defaultNow(),
+  stagedForNodeId: integer("staged_for_node_id").references(() => documentNodes.id, { onDelete: "set null" }),
+  orphanNotBefore: docTime("orphan_not_before").notNull().default(sql`now() + interval '24 hours'`),
+}, t => [unique("document_resources_stored_name_uq").on(t.storedName), index("document_resources_orphan_idx").on(t.orphanNotBefore),
+  check("document_resources_state_ck", sql`${t.state} IN ('staged','ready','deleting')`), check("document_resources_size_ck", sql`${t.size} >= 0`),
+  check("document_resources_path_ck", sql`char_length(${t.storedName}) BETWEEN 1 AND 255 AND ${t.storedName} NOT IN ('.','..') AND ${t.storedName} !~ '[[:cntrl:]/:]' AND position(chr(92) in ${t.storedName}) = 0`)]);
+
+export const documentFileEntries = pgTable("document_file_entries", {
+  nodeId: integer("node_id").primaryKey().references(() => documentNodes.id, { onDelete: "cascade" }),
+  resourceId: integer("resource_id").notNull().references(() => documentResources.id, { onDelete: "restrict" }),
+});
+export const documentLinkEntries = pgTable("document_link_entries", {
+  nodeId: integer("node_id").primaryKey().references(() => documentNodes.id, { onDelete: "cascade" }), url: text("url").notNull(),
+}, t => [check("document_link_entries_url_ck", sql`${t.url} ~* '^https?://[^[:space:]]+$'`)]);
+
+export const documentExports = pgTable("document_exports", {
+  id: serial("id").primaryKey(), teamId: integer("team_id").notNull().references(() => teams.id, { onDelete: "restrict" }),
+  spaceId: integer("space_id").notNull().references(() => documentSpaces.id, { onDelete: "restrict" }), requestedBy: docActor("requested_by"),
+  state: text("state").notNull().default("queued"), format: text("format").notNull(), snapshotAt: docTime("snapshot_at").notNull().defaultNow(),
+  expiresAt: docTime("expires_at").notNull().default(sql`now() + interval '24 hours'`), requestId: text("request_id").notNull(),
+  leaseUntil: docTime("lease_until"), attempts: integer("attempts").notNull().default(0), artifactName: text("artifact_name"),
+  snapshotMetadata:jsonb("snapshot_metadata").notNull().default(sql`'{}'::jsonb`),
+  failureManifest: jsonb("failure_manifest").notNull().default(sql`'[]'::jsonb`),
+  createdAt: docTime("created_at").notNull().defaultNow(), updatedAt: docTime("updated_at").notNull().defaultNow(),
+}, t => [unique("document_exports_request_uq").on(t.requestedBy, t.requestId), index("document_exports_work_idx").on(t.state, t.leaseUntil),
+  check("document_exports_state_ck", sql`${t.state} IN ('queued','running','partial','completed','failed','cancelled','expired')`),
+  check("document_exports_format_ck", sql`${t.format} IN ('pdf','markdown')`), check("document_exports_time_ck", sql`${t.expiresAt} > ${t.snapshotAt} AND ${t.attempts} >= 0`)]);
+
+export const documentExportItems = pgTable("document_export_items", {
+  id: serial("id").primaryKey(), exportId: integer("export_id").notNull().references(() => documentExports.id, { onDelete: "cascade" }),
+  nodeId: integer("node_id").notNull(), relativePath: text("relative_path").notNull(), kind: text("kind").notNull(), snapshotName: text("snapshot_name").notNull(),
+  snapshotBody: jsonb("snapshot_body"), snapshotUrl: text("snapshot_url"), resourceId: integer("resource_id").references(() => documentResources.id, { onDelete: "restrict" }),
+  state: text("state").notNull().default("pending"), errorCode: text("error_code"), outputSize: bigint("output_size", { mode: "bigint" }).notNull().default(sql`0`),
+}, t => [unique("document_export_items_path_uq").on(t.exportId, t.relativePath),
+  check("document_export_items_kind_ck", sql`${t.kind} IN ('document','file','link')`),
+  check("document_export_items_state_ck", sql`${t.state} IN ('pending','running','completed','failed')`), check("document_export_items_size_ck", sql`${t.outputSize} >= 0`),
+  check("document_export_items_content_ck", sql`(${t.kind} = 'document' AND ${t.snapshotBody} IS NOT NULL AND ${t.snapshotUrl} IS NULL AND ${t.resourceId} IS NULL) OR (${t.kind} = 'file' AND ${t.resourceId} IS NOT NULL AND ${t.snapshotBody} IS NULL AND ${t.snapshotUrl} IS NULL) OR (${t.kind} = 'link' AND ${t.snapshotUrl} IS NOT NULL AND ${t.snapshotBody} IS NULL AND ${t.resourceId} IS NULL)`),
+  check("document_export_items_path_ck", sql`${t.relativePath} <> '' AND ${t.relativePath} !~ '(^/|(^|/)[.][.](/|$)|[[:cntrl:]:])' AND position(chr(92) in ${t.relativePath}) = 0`)]);
+
+export const documentResourceRefs = pgTable("document_resource_refs", {
+  id: serial("id").primaryKey(), resourceId: integer("resource_id").notNull().references(() => documentResources.id, { onDelete: "restrict" }),
+  nodeId: integer("node_id").references(() => documentNodes.id, { onDelete: "cascade" }), versionId: integer("version_id").references(() => documentVersions.id, { onDelete: "cascade" }),
+  exportItemId: integer("export_item_id").references(() => documentExportItems.id, { onDelete: "cascade" }), role: text("role").notNull(), createdAt: docTime("created_at").notNull().defaultNow(),
+}, t => [index("document_resource_refs_resource_idx").on(t.resourceId),
+  uniqueIndex("document_resource_refs_node_uq").on(t.nodeId, t.resourceId, t.role).where(sql`${t.nodeId} IS NOT NULL`),
+  uniqueIndex("document_resource_refs_version_uq").on(t.versionId, t.resourceId).where(sql`${t.versionId} IS NOT NULL`),
+  uniqueIndex("document_resource_refs_export_uq").on(t.exportItemId, t.resourceId).where(sql`${t.exportItemId} IS NOT NULL`),
+  check("document_resource_refs_owner_ck", sql`num_nonnulls(${t.nodeId}, ${t.versionId}, ${t.exportItemId}) = 1`),
+  check("document_resource_refs_role_ck", sql`(${t.nodeId} IS NOT NULL AND ${t.role} IN ('file','body_image')) OR (${t.versionId} IS NOT NULL AND ${t.role} = 'version_image') OR (${t.exportItemId} IS NOT NULL AND ${t.role} = 'export')`)]);
+
+export const documentImageGrants = pgTable("document_image_grants", {
+  nodeId: integer("node_id").notNull().references(() => documentNodes.id, { onDelete: "cascade" }), resourceId: integer("resource_id").notNull().references(() => documentResources.id, { onDelete: "restrict" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }), lockTokenHash: text("lock_token_hash").notNull(),
+  expiresAt: docTime("expires_at").notNull().default(sql`now() + interval '24 hours'`),
+}, t => [primaryKey({ columns: [t.nodeId, t.resourceId, t.userId, t.lockTokenHash] }), index("document_image_grants_resource_idx").on(t.resourceId, t.expiresAt),
+  check("document_image_grants_token_ck", sql`${t.lockTokenHash} ~ '^[0-9a-f]{64}$'`)]);
+
+export const documentAssociations = pgTable("document_associations", {
+  id: serial("id").primaryKey(), nodeId: integer("node_id").notNull().references(() => documentNodes.id, { onDelete: "restrict" }),
+  taskId: integer("task_id").references(() => tasks.id, { onDelete: "cascade" }), milestoneId: integer("milestone_id").references(() => milestones.id, { onDelete: "cascade" }),
+  createdBy: docActor("created_by"), createdAt: docTime("created_at").notNull().defaultNow(),
+}, t => [check("document_associations_target_ck", sql`num_nonnulls(${t.taskId}, ${t.milestoneId}) = 1`),
+  uniqueIndex("document_associations_task_uq").on(t.nodeId, t.taskId).where(sql`${t.taskId} IS NOT NULL`),
+  uniqueIndex("document_associations_milestone_uq").on(t.nodeId, t.milestoneId).where(sql`${t.milestoneId} IS NOT NULL`)]);
+
+export const documentLegacyFiles = pgTable("document_legacy_files", {
+  legacyAttachmentId: integer("legacy_attachment_id").primaryKey(), // 不关联旧行，旧级联删除后仍保留 URL 身份
+  nodeId: integer("node_id").notNull().references(() => documentNodes.id, { onDelete: "cascade" }),
+  legacyCreatedAt: timestamp("legacy_created_at"), // 原无时区值原样保留，不猜历史时区
+}, t => [unique("document_legacy_files_node_uq").on(t.nodeId)]);
+
+export const documentLegacyLinks = pgTable("document_legacy_links", {
+  legacyResourceId: integer("legacy_resource_id").primaryKey(),
+  nodeId: integer("node_id").notNull().references(() => documentNodes.id, { onDelete: "cascade" }),
+}, t => [unique("document_legacy_links_node_uq").on(t.nodeId)]);
+
+export const documentTrashBatches = pgTable("document_trash_batches", {
+  id: serial("id").primaryKey(), spaceId: integer("space_id").notNull().references(() => documentSpaces.id, { onDelete: "restrict" }),
+  rootNodeId: integer("root_node_id"), deletedBy: docActor("deleted_by"), deletedAt: docTime("deleted_at").notNull().defaultNow(),
+  expiresAt: docTime("expires_at").notNull().default(sql`now() + interval '30 days'`),
+}, t => [check("document_trash_batches_time_ck", sql`${t.expiresAt} > ${t.deletedAt}`)]);
+
+export const documentTrashItems = pgTable("document_trash_items", {
+  nodeId: integer("node_id").primaryKey().references(() => documentNodes.id, { onDelete: "cascade" }),
+  batchId: integer("batch_id").notNull().references(() => documentTrashBatches.id, { onDelete: "restrict" }),
+  originalParentId: integer("original_parent_id"), originalPath: jsonb("original_path").notNull(), originalSpaceId: integer("original_space_id").notNull(), originalName: text("original_name").notNull(),
+}, t => [index("document_trash_items_batch_idx").on(t.batchId)]);
+
+export const documentRequests = pgTable("document_requests", {
+  id: serial("id").primaryKey(), userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  operation: text("operation").notNull(), requestId: text("request_id").notNull(), payloadHash: text("payload_hash").notNull(), state: text("state").notNull().default("pending"),
+  resultJson: jsonb("result_json"), createdAt: docTime("created_at").notNull().defaultNow(), expiresAt: docTime("expires_at").notNull().default(sql`now() + interval '24 hours'`),
+}, t => [unique("document_requests_key_uq").on(t.userId, t.operation, t.requestId),
+  check("document_requests_state_ck", sql`${t.state} IN ('pending','completed','failed')`), check("document_requests_hash_ck", sql`${t.payloadHash} ~ '^[0-9a-f]{64}$'`)]);
+
+export const documentCleanupJobs = pgTable("document_cleanup_jobs", {
+  resourceId: integer("resource_id").primaryKey().references(() => documentResources.id, { onDelete: "cascade" }),
+  notBefore: docTime("not_before").notNull().defaultNow(), attempts: integer("attempts").notNull().default(0), lastError: text("last_error"), leaseUntil: docTime("lease_until"),
+}, t => [check("document_cleanup_jobs_attempts_ck", sql`${t.attempts} >= 0`)]);
+
+export const documentMigrationRoots = pgTable("document_migration_roots", {
+  spaceId: integer("space_id").notNull().references(() => documentSpaces.id, { onDelete: "cascade" }), role: text("role").notNull(),
+  nodeId: integer("node_id").references(() => documentNodes.id, { onDelete: "set null" }),
+}, t => [primaryKey({ columns: [t.spaceId, t.role] })]);
+
+export const documentMigrations = pgTable("document_migrations", {
+  key: text("key").primaryKey(), checksum: text("checksum").notNull(), details: jsonb("details").notNull().default(sql`'{}'::jsonb`), appliedAt: docTime("applied_at").notNull().defaultNow(),
+});
+
+// Metadata-only audit: no old binary history is retained.
+export const documentOperations=pgTable("document_operations",{
+ id:serial("id").primaryKey(),nodeId:integer("node_id").notNull(),actorId:integer("actor_id"),action:text("action").notNull(),detail:jsonb("detail").notNull(),createdAt:docTime("created_at").notNull().defaultNow(),
+},t=>[foreignKey({name:"document_operations_node_id_fkey",columns:[t.nodeId],foreignColumns:[documentNodes.id]}).onDelete("cascade"),foreignKey({name:"document_operations_actor_id_fkey",columns:[t.actorId],foreignColumns:[users.id]}).onDelete("set null"),index("document_operations_node_idx").on(t.nodeId),check("document_operations_action_ck",sql`${t.action} IN ('file.replaced','link.updated')`)]);

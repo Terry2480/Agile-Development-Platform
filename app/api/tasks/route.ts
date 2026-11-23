@@ -97,7 +97,7 @@ export async function GET(request: Request) {
           .where(inArray(comments.taskId, taskIds))
           .groupBy(comments.taskId)
       : [];
-    const fileCounts = taskIds.length
+    let fileCounts = taskIds.length
       ? await db
           .select({ taskId: attachments.taskId, count: sql<number>`count(*)::int` })
           .from(attachments)
@@ -105,6 +105,7 @@ export async function GET(request: Request) {
           .groupBy(attachments.taskId)
       : [];
 
+    if(typeof db.execute==="function"){const {documentsEnabled}=await import("@/lib/documents/lifecycle");if(await documentsEnabled(db)){const {canonicalTaskFileCounts}=await import("@/lib/documents/legacy");fileCounts=[...await canonicalTaskFileCounts(taskIds)];}}
     const result = rows.map((r) => ({
       ...r.task,
       code: taskCode(r.projectKey, r.task.number),

@@ -147,8 +147,8 @@ export interface WorkspaceStore {
   refreshNotifications(): Promise<void>;
   refreshMyTasks(): Promise<void>;
   createTeam(name: string, description?: string): Promise<void>;
-  deleteWorkspaceItem(kind: "project" | "team", id: number): Promise<void>;
-  createProject(teamId: number, name: string, key: string, description?: string, courseName?: string): Promise<void>;
+  deleteWorkspaceItem(kind: "project" | "team", id: number, confirmation?: { confirmPermanent: boolean; expectedActive: number; expectedTrashed: number }): Promise<void>;
+  createProject(teamId: number, name: string, key: string, description?: string, courseName?: string, templateSet?: "none" | "general" | "software"): Promise<void>;
   createTask(input: Record<string, unknown>): Promise<void>;
   updateTask(id: number, patch: Record<string, unknown>): Promise<void>;
   deleteTask(id: number): Promise<void>;

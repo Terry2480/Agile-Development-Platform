@@ -1,5 +1,6 @@
 "use client";
 
+import {api} from "@/lib/api-client";
 import { useState } from "react";
 import { useWorkspace, Icon } from "./shared";
 import { DeleteWorkspaceModal, type DeleteTarget } from "./DeleteWorkspaceModal";
@@ -12,6 +13,7 @@ export function ManagementPanel({ kind }: { kind: "project" | "team" }) {
   const [target, setTarget] = useState<DeleteTarget | null>(null);
   const [teamId, setTeamId] = useState<number | null>(null);
   const [notice, setNotice] = useState("");
+  const [busy,setBusy]=useState(false);
   const isTeam = kind === "team";
   const items = (isTeam ? ws.teams : ws.projects).filter((item) => `${item.name} ${"courseName" in item ? item.courseName ?? "" : ""}`.toLowerCase().includes(query.toLowerCase()));
   const selectedTeam = ws.teams.find((t) => t.id === teamId);
@@ -28,8 +30,9 @@ export function ManagementPanel({ kind }: { kind: "project" | "team" }) {
         const project = !isTeam ? ws.projects.find((p) => p.id === item.id) : null;
         const team = isTeam ? ws.teams.find((t) => t.id === item.id) : ws.teams.find((t) => t.id === project?.teamId);
         const canDelete = isTeam ? team?.role === "owner" : team?.role === "owner" || team?.role === "admin";
-        return <article className="ws-management-card" key={item.id}><div><h3>{item.name}</h3>{project?.courseName && <span className="ws-role-tag">{project.courseName}</span>}<p>{item.description || "暂无简介"}</p><small>{isTeam ? `${team?.memberCount ?? 0} 位成员 · ${team?.projectCount ?? 0} 个项目` : `${project?.teamName} · ${project?.taskCounts.total ?? 0} 个任务`}</small></div>
+        return <article className="ws-management-card" key={item.id}><div><h3>{item.name}</h3>{project?.status==="archived"&&<span className="ws-role-tag">已归档 · 文档只读</span>}{project?.courseName && <span className="ws-role-tag">{project.courseName}</span>}<p>{item.description || "暂无简介"}</p><small>{isTeam ? `${team?.memberCount ?? 0} 位成员 · ${team?.projectCount ?? 0} 个项目` : `${project?.teamName} · ${project?.taskCounts.total ?? 0} 个任务`}</small></div>
           <div className="ws-management-actions"><button className="ws-btn" onClick={() => { if (isTeam) setTeamId(item.id); else { ws.selectProject(item.id); ws.setFocusSection("tasks"); ws.setRailView("projects"); } }}>{isTeam ? "管理成员" : "进入项目"}</button>
+          {project&&canDelete&&<button className="ws-btn" disabled={busy} onClick={async()=>{setBusy(true);try{await api(`/api/projects/${project.id}`,{method:"PUT",json:{status:project.status==="archived"?"active":"archived"}});await ws.refreshProjects();setNotice(project.status==="archived"?"项目已恢复":"项目已归档，文档可阅读、复制和导出");}catch(e){setNotice((e as Error).message);}finally{setBusy(false);}}}>{project.status==="archived"?"恢复项目":"归档项目"}</button>}
           </div>
           {canDelete && <button className="ws-management-delete" type="button" title={isTeam ? "解散团队" : "删除项目"} aria-label={`${isTeam ? "解散团队" : "删除项目"}：${item.name}`} onClick={() => setTarget({ kind, id: item.id, name: item.name })}><Icon name="trash" size={15} /></button>}
         </article>;
