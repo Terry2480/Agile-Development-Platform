@@ -56,6 +56,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         "Content-Type": record.mimeType || "application/octet-stream",
         "Content-Length": String(buffer.length),
         "Content-Disposition": `attachment; filename="${encodedName}"; filename*=UTF-8''${encodedName}`,
+        "X-Content-Type-Options": "nosniff",
       },
     });
   } catch (error) {

@@ -56,11 +56,16 @@ export default function LoginPage() {
         return;
       }
       // 登录 / 注册
-      const res = await fetch(mode === "login" ? "/api/auth/login" : "/api/auth/register", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(values),
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error ?? "操作失败，请重试"); return; }
+      let res: Response;
+      try {
+        res = await fetch(mode === "login" ? "/api/auth/login" : "/api/auth/register", {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(values),
+        });
+      } catch {
+        setError("无法连接服务器，请检查网络后重试"); return;
+      }
+      const data = await res.json().catch(() => null);
+      if (!res.ok) { setError(data?.error ?? "操作失败，请重试"); return; }
       router.replace("/"); // 登录 / 注册成功，进入工作台
     } finally { setBusy(false); }
   }

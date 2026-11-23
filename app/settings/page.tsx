@@ -6,6 +6,52 @@ import { BG_PRESETS, useCustomBg, setCustomBg, type CustomBgSetting } from "@/co
 
 type Profile = { name: string; studentId: string; gender: string; region: string; bio: string };
 
+// 修改密码卡片：验证当前密码后更新；其他设备会被强制重新登录
+function PasswordCard() {
+  const [form, setForm] = useState({ currentPassword: "", newPassword: "", confirm: "" });
+  const [msg, setMsg] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(""); setMsg("");
+    if (form.newPassword !== form.confirm) { setError("两次输入的新密码不一致"); return; }
+    setBusy(true);
+    try {
+      const res = await fetch("/api/auth/change-password", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword: form.currentPassword, newPassword: form.newPassword }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) { setError(data?.error ?? "修改失败，请重试"); return; }
+      setMsg("密码已修改，其他设备需要重新登录");
+      setForm({ currentPassword: "", newPassword: "", confirm: "" });
+    } catch {
+      setError("无法连接服务器，请检查网络后重试");
+    } finally { setBusy(false); }
+  }
+
+  return (
+    <section className="appearance-card">
+      <h2>修改密码</h2>
+      <p className="appearance-tip">修改成功后，其他已登录的设备会自动退出，需要用新密码重新登录。</p>
+      <form onSubmit={submit} className="appearance-image" style={{ flexDirection: "column", gap: 8, alignItems: "stretch" }}>
+        <input className="ws-input" type="password" required value={form.currentPassword} placeholder="当前密码" aria-label="当前密码"
+          onChange={(e) => setForm({ ...form, currentPassword: e.target.value })} />
+        <input className="ws-input" type="password" required minLength={6} value={form.newPassword} placeholder="新密码（至少 6 位）" aria-label="新密码"
+          onChange={(e) => setForm({ ...form, newPassword: e.target.value })} />
+        <input className="ws-input" type="password" required value={form.confirm} placeholder="确认新密码" aria-label="确认新密码"
+          onChange={(e) => setForm({ ...form, confirm: e.target.value })} />
+        {error && <p className="ws-error" role="alert">{error}</p>}
+        {msg && <p role="status" style={{ color: "#2fae7d", fontSize: 12 }}>{msg}</p>}
+        <div><button className="ws-btn primary" type="submit" disabled={busy || !form.currentPassword || form.newPassword.length < 6}>
+          {busy ? "提交中…" : "修改密码"}</button></div>
+      </form>
+    </section>
+  );
+}
+
 // 外观自定义卡片：全站背景（预设渐变色板 / 自定义图片 URL），写入即全站生效
 function AppearanceCard() {
   const bg = useCustomBg();
@@ -123,6 +169,8 @@ export default function SettingsPage() {
           <button className="ws-btn primary" type="submit" disabled={busy}>{busy ? "保存中…" : "保存修改"}</button>
         </div>
       </form>
+
+      <PasswordCard />
 
       {/* 外观自定义：全站背景（氛围层），立即生效、随时清除 */}
       <AppearanceCard />

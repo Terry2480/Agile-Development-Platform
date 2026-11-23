@@ -41,7 +41,9 @@ test("task writes roll back on activity or notification failure", async () => {
    common["@/lib/api"]=moduleAt("../lib/api.ts",common);
    common["@/lib/activity"]=moduleAt("../lib/activity.ts",common);
   common["./dm"]=moduleAt("../lib/dm.ts",common); // notify.ts 依赖 ./dm：vm 转译模块的相对导入按测试目录解析，必须显式映射
+  // 限流走独立真实 DB 客户端，与单连接事务测试互斥——mock 为不限流（限流语义不属于本测试范围）
    common["@/lib/notify"]=moduleAt("../lib/notify.ts",common);
+  common["@/lib/rate-limit"]={consumeLimit:async()=>null};
    common["@/lib/task-collaborators"]=moduleAt("../lib/task-collaborators.ts", {...common, "./api": common["@/lib/api"], "./notify": common["@/lib/notify"]});
    return {create:moduleAt("../app/api/tasks/route.ts",common).POST,
     ...moduleAt("../app/api/tasks/[id]/route.ts",common),

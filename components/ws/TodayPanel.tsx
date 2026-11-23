@@ -4,7 +4,8 @@
 // 截止提醒 / 进行中待办 / 未读私信 / 最近文档 四张卡片，点击直达对应内容
 import { useEffect, useState } from "react";
 import { api, dayKey, dueInfo, type DocSummary, type TaskItem } from "@/lib/api-client";
-import { useWorkspace, Icon, Avatar } from "./shared";
+import type { WeeklyReport } from "@/lib/home-report";
+import { useWorkspace, Icon, Avatar, Modal } from "./shared";
 import { DailyReportCard } from "./DailyReportCard";
 import { HomeCalendar } from "./HomeCalendar";
 
@@ -47,6 +48,20 @@ export function TodayPanel() {
   const ov = ws.overview;
   const taskPct = ov && ov.taskTotal > 0 ? Math.round((ov.taskDone / ov.taskTotal) * 100) : 0;
 
+  // AI 周报：近 7 天聚合（与日报同源口径）
+  const [weeklyOpen, setWeeklyOpen] = useState(false);
+  const [weekly, setWeekly] = useState<WeeklyReport | null>(null);
+  const [weeklyBusy, setWeeklyBusy] = useState(false);
+  async function loadWeekly() {
+    setWeeklyBusy(true);
+    try {
+      const d = await api<{ report: WeeklyReport }>("/api/home/weekly-report");
+      setWeekly(d.report);
+      setWeeklyOpen(true);
+    } catch { /* 失败静默，按钮可重试 */ }
+    finally { setWeeklyBusy(false); }
+  }
+
   return (
     <div className="ws-today">
       <header className="ws-today-head">
@@ -54,6 +69,9 @@ export function TodayPanel() {
           <h1>{greeting}，{ws.me.name || ws.me.studentId}</h1>
           <p>{dateText} · {ws.overview ? `${ws.overview.myTodo + ws.overview.myDoing} 个待办 · ${ws.dmUnreadTotal} 条未读私信` : "正在加载…"}</p>
         </div>
+        <button className="ws-btn" disabled={weeklyBusy} title="聚合近 7 天的项目动态、交付与消息" onClick={() => void loadWeekly()}>
+          <Icon name="list" size={13} /> {weeklyBusy ? "生成中…" : "AI 周报"}
+        </button>
       </header>
 
       {ov && (
@@ -130,6 +148,22 @@ export function TodayPanel() {
         <DailyReportCard />
         <HomeCalendar />
       </div>
+
+      {weeklyOpen && weekly && (
+        <Modal title={`AI 周报 · ${weekly.headline.slice(0, 18)}…`} onClose={() => setWeeklyOpen(false)}>
+          <div style={{ fontSize: 13, lineHeight: 1.8 }}>
+            <p style={{ fontWeight: 600, margin: "0 0 8px" }}>{weekly.headline}</p>
+            <p style={{ margin: "0 0 14px", opacity: 0.85 }}>{weekly.summary}</p>
+            {weekly.lines.map((line, i) => (
+              <p key={i} style={{ whiteSpace: "pre-wrap", margin: "4px 0" }}>{line}</p>
+            ))}
+            <div style={{ marginTop: 14, borderTop: "1px dashed var(--ws-color-262a38, #2a2f45)", paddingTop: 10 }}>
+              {weekly.nextWeekFocus.map((f, i) => <p key={i} style={{ margin: "4px 0" }}>{f}</p>)}
+            </div>
+            <p style={{ marginTop: 12, fontSize: 11, opacity: 0.6 }}>由本地规则引擎基于近 7 天数据生成，内容不出本机。</p>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

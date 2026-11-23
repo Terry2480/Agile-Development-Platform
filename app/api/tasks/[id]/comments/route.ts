@@ -5,6 +5,7 @@ import { tasks, comments, users, teamMembers, teams, projects } from "@/db/schem
 import {
   requireUser, parseBody, parseId, requireProjectAccess, ApiError, handleApiError, displayName, taskCode,
 } from "@/lib/api";
+import { consumeLimit } from "@/lib/rate-limit";
 import { notify, notifyMentions } from "@/lib/notify";
 
 // 任务评论：GET /api/tasks/[id]/comments  评论列表
@@ -36,6 +37,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await requireUser(request);
+    const blocked = await consumeLimit(`comment:user:${user.id}`, 10, 60); // 每用户每分钟 10 条
+    if (blocked) return blocked;
     const taskId = parseId((await params).id, "任务 ID");
     const [initialTask] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
     if (!initialTask) throw new ApiError(404, "任务不存在");

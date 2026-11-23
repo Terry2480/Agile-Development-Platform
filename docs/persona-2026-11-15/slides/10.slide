@@ -1,0 +1,42 @@
+<Slide style={{ width: '1280px', height: '720px', background: '#F5F5F5', padding: '60px' }}>
+  <Box style={{ width: '100%', height: '100%', flexDirection: 'column', justifyContent: 'space-between' }}>
+    <Box>
+      <Text style={{ fontSize: 14, color: '#2A5E96', letterSpacing: 3 }}>10 / 映射</Text>
+      <Text style={{ fontSize: 34, fontWeight: 'bold', color: '#081F5C' }}>三种诉求，映射到功能</Text>
+      <Box style={{ height: 10, width: '100%', borderBottom: '1px solid #D4D7E0' }} />
+    </Box>
+    <Box style={{ width: '100%', height: 390 }}>
+      <Table
+        style={{ width: '100%', height: '100%' }}
+        defaultTextStyle={{ fontSize: 17, textAlign: 'left', color: '#20346B' }}
+        defaultCellStyle={{
+          border: {
+            left: { width: 0, color: '#D4D7E0' },
+            right: { width: 0, color: '#D4D7E0' },
+            top: { width: 0, color: '#D4D7E0' },
+            bottom: { width: 1, color: '#D4D7E0' },
+          },
+        }}
+        cells={[
+          [
+            { text: '角色', textStyle: { bold: true, color: '#FFFFFF', fontSize: 18 }, cellStyle: { background: { color: '#334EAC' } } },
+            { text: '高层次目标', textStyle: { bold: true, color: '#FFFFFF', fontSize: 18 }, cellStyle: { background: { color: '#334EAC' } } },
+            { text: '高频功能', textStyle: { bold: true, color: '#FFFFFF', fontSize: 18 }, cellStyle: { background: { color: '#334EAC' } } },
+            { text: '最怕什么', textStyle: { bold: true, color: '#FFFFFF', fontSize: 18 }, cellStyle: { background: { color: '#334EAC' } } },
+          ],
+          ['晓彤 · 组员', '知道该做什么', '我的任务 · 状态更新', '群聊刷屏，没人回复'],
+          [
+            { text: '陈昱 · 组长', cellStyle: { background: { color: '#ECECEC' } } },
+            { text: '一屏看全局', cellStyle: { background: { color: '#ECECEC' } } },
+            { text: '看板 · 批量操作 · 摘要', cellStyle: { background: { color: '#ECECEC' } } },
+            { text: '逐个催、手工汇总', cellStyle: { background: { color: '#ECECEC' } } },
+          ],
+          ['王老师 · 教师', '快速跨组检查', '只读视图 · 异常提示', '安装步骤与加载等待'],
+        ]}
+      />
+    </Box>
+    <Box style={{ background: '#ECECEC', padding: 18 }}>
+      <Text style={{ fontSize: 17, color: '#081F5C', lineHeight: 1.5 }}><span style={{ fontWeight: 'bold' }}>同一功能，对三种人的价值不同：</span>看板对组员是待办清单，对组长是调度面板，对教师是检查结果。</Text>
+    </Box>
+  </Box>
+</Slide>

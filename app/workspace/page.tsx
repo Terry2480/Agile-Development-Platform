@@ -194,7 +194,10 @@ export default function WorkspacePage() {
     const stop = [
       ["notifications", refreshNotifications], ["overview", refreshOverview], ["myTasks", refreshMyTasks],
       ["dms", refreshDms],
-    ].map(([key, refresh]) => startPolling(() => gate.isPending(key as string) ? Promise.resolve() : (refresh as () => Promise<void>)(), 20000));
+    ].map(([key, refresh]) => startPolling(() => {
+      if (document.visibilityState === "hidden" || gate.isPending(key as string)) return Promise.resolve();
+      return (refresh as () => Promise<void>)();
+    }, 20000));
     return () => stop.forEach((cancel) => cancel());
   }, [me, gate, refreshTeams, refreshProjects, refreshOverview, refreshNotifications, refreshMyTasks, refreshDms]);
 
@@ -334,10 +337,12 @@ export default function WorkspacePage() {
       await afterSaved([refreshDetail(), refreshProjects()]);
     },
     async toggleStar(projectId) {
-      const wasStarred = projects.some((p) => p.id === projectId && p.starred);
-      await api(`/api/projects/${projectId}/star`, { method: "POST", json: {} });
-      toast(wasStarred ? "已取消收藏" : "已收藏项目");
-      await afterSaved([refreshProjects(), refreshDetail()]);
+      try {
+        const wasStarred = projects.some((p) => p.id === projectId && p.starred);
+        await api(`/api/projects/${projectId}/star`, { method: "POST", json: {} });
+        toast(wasStarred ? "已取消收藏" : "已收藏项目");
+        await afterSaved([refreshProjects(), refreshDetail()]);
+      } catch (e) { toast(`收藏操作失败：${(e as Error).message}`, "error"); }
     },
     async sendChat(content, opts) {
       const id = selectedIdRef.current;
@@ -349,12 +354,16 @@ export default function WorkspacePage() {
       await afterSaved([refreshChat()]);
     },
     async toggleLike(messageId, emoji) {
-      await api(`/api/chat/${messageId}/like`, { method: "POST", json: { emoji: emoji ?? "👍" } });
-      await afterSaved([refreshChat()]);
+      try {
+        await api(`/api/chat/${messageId}/like`, { method: "POST", json: { emoji: emoji ?? "👍" } });
+        await afterSaved([refreshChat()]);
+      } catch (e) { toast(`回应失败：${(e as Error).message}`, "error"); }
     },
     async togglePin(messageId, pinned) {
-      await api(`/api/chat/${messageId}/pin`, { method: "PUT", json: { pinned } });
-      await afterSaved([refreshChat()]);
+      try {
+        await api(`/api/chat/${messageId}/pin`, { method: "PUT", json: { pinned } });
+        await afterSaved([refreshChat()]);
+      } catch (e) { toast(`置顶操作失败：${(e as Error).message}`, "error"); }
     },
     async uploadProjectFile(file) {
       const id = selectedIdRef.current;
@@ -376,8 +385,10 @@ export default function WorkspacePage() {
       await afterSaved([refreshFiles()]);
     },
     async markRead(ids) {
-      await api("/api/notifications", { method: "PUT", json: ids?.length ? { ids } : { all: true } });
-      await afterSaved([refreshNotifications()]);
+      try {
+        await api("/api/notifications", { method: "PUT", json: ids?.length ? { ids } : { all: true } });
+        await afterSaved([refreshNotifications()]);
+      } catch (e) { toast(`标记已读失败：${(e as Error).message}`, "error"); }
     },
     async openNotification(notification) {
       const request = gate.begin("notificationNavigation");

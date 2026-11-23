@@ -8,11 +8,11 @@ import { getSessionUser } from "@/lib/auth";
 // 「仅个人能更改」由服务端保证：只能改当前会话用户自己的那一行
 // 名称（展示名）可不填；学工号为唯一标识，必填且不能与他人重复
 const profileSchema = z.object({
-  name: z.string().trim().optional().nullable(),
-  studentId: z.string().trim().min(1, "学工号不能为空"),
-  gender: z.string().trim().optional().nullable(),
-  region: z.string().trim().optional().nullable(),
-  bio: z.string().trim().optional().nullable(),
+  name: z.string().trim().max(40, "名称最长 40 字").optional().nullable(),
+  studentId: z.string().trim().min(1, "学工号不能为空").max(20, "学工号过长"),
+  gender: z.string().trim().max(10, "性别取值过长").optional().nullable(),
+  region: z.string().trim().max(30, "地区最长 30 字").optional().nullable(),
+  bio: z.string().trim().max(500, "个人简介最长 500 字").optional().nullable(),
 });
 
 export async function GET(request: Request) {
