@@ -25,9 +25,9 @@ const textOriginals = new Map<Text, string>();
 const attrOriginals = new Map<Attr, string>();
 const ATTRS = ["placeholder", "title", "aria-label"];
 /** 不翻译正文的容器：插件自身 UI、代码、可编辑正文（textarea 的 placeholder 属性仍翻译） */
-const SKIP_CLOSEST = ".i18n-switcher,script,style,code,pre,textarea,[contenteditable='true'],[contenteditable='']";
+const SKIP_CLOSEST = ".i18n-switcher,.sw-panel,.sw-launcher,script,style,code,pre,textarea,[contenteditable='true'],[contenteditable='']";
 /** 属性翻译仅排除插件自身 UI：placeholder/title/aria-label 都不是用户输入内容 */
-const ATTR_SKIP_CLOSEST = ".i18n-switcher";
+const ATTR_SKIP_CLOSEST = ".i18n-switcher,.sw-panel,.sw-launcher";
 
 function pruneOrphan() {
   for (const node of textOriginals.keys()) if (!node.isConnected) textOriginals.delete(node);
