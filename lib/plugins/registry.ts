@@ -3,11 +3,12 @@
 
 import type { AgileCampusPlugin } from "./types";
 import { i18nMultilangPlugin } from "@/plugins/i18n-multilang/plugin";
+import { switchPlugin } from "@/plugins/switch/plugin";
 
 const ENABLED_KEY = "agilecampus-plugins-enabled";
 const CHANGE_EVENT = "agilecampus-plugins-change";
 
-export const builtinPlugins: AgileCampusPlugin[] = [i18nMultilangPlugin];
+export const builtinPlugins: AgileCampusPlugin[] = [i18nMultilangPlugin, switchPlugin];
 
 export function listPlugins(): AgileCampusPlugin[] {
   return builtinPlugins;

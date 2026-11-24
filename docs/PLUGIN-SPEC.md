@@ -33,11 +33,26 @@ const myPlugin: AgileCampusPlugin = {
   category: "productivity",       // 必需。language|productivity|theme|integration|other
   icon: "👋",                     // 必需。emoji 或单字符图标
   permissions: ["ui:mount", "storage:local"], // 必需。声明用到的全部权限点
+  railEntry: { icon: "👋", label: "问候" },  // 可选。工作台左侧功能列入口（队尾）
   activate(ctx) { /* 启用：挂 UI、注册监听 */ },
   deactivate() { /* 停用：必须卸载 UI、断开监听、还原文本 */ },
 };
 export default myPlugin;
 ```
+
+### railEntry —— 左侧功能列入口（可选）
+
+声明该字段的插件，启用后图标会进入**工作台左侧功能列队尾**（云文档之后、带文字小标签，遵循既有 `ws-rail-management` 样式；栏位按钮过多时可上下滚动，图标尺寸恒定）。宿主渲染按钮，点击时向 `document` 派发事件，由插件自行响应（典型为开合自有面板）：
+
+```ts
+// 插件 activate 内监听（deactivate 时随监听表一并断开）
+document.addEventListener("agilecampus-plugin-rail", (e) => {
+  if ((e as CustomEvent<{ pluginId?: string }>).detail?.pluginId !== "hello-world") return;
+  /* 打开/关闭插件面板 */
+});
+```
+
+不声明 `railEntry` 的插件不占栏位（例：多语言插件的切换器为右下角悬浮球，与左侧栏无关）。
 
 ## 四、权限点
 

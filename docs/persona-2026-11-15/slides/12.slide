@@ -1,0 +1,14 @@
+<Slide style={{ width: '1280px', height: '720px', background: '#041133', padding: '60px' }}>
+  <Box style={{ width: '100%', height: '100%', flexDirection: 'column', justifyContent: 'space-between' }}>
+    <Text style={{ fontSize: 14, color: '#A3AFDA', letterSpacing: 3 }}>12 / 收束</Text>
+    <Box>
+      <Text style={{ fontSize: 66, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.32 }}>Persona 不是画出来的，<br />是问出来的。</Text>
+      <Box style={{ height: 28 }} />
+      <Text style={{ fontSize: 22, color: '#A3AFDA' }}>先把假设写清楚，再去问真实的人。</Text>
+    </Box>
+    <Box style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', borderTop: '1px solid #334EAC', paddingTop: 20 }}>
+      <Text style={{ fontSize: 16, color: '#A3AFDA' }}>AgileCampus 用户 Persona · 交互设计课程项目</Text>
+      <Text style={{ fontSize: 16, color: '#A3AFDA' }}>Step-5-Preview · 2026.11</Text>
+    </Box>
+  </Box>
+</Slide>

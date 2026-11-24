@@ -1,16 +1,31 @@
 "use client";
 
 // 最左图标栏：品牌、项目/通知/待办导航、底部主题与头像（按设计图）
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWorkspace, Icon, Avatar } from "./shared";
 import { displayNameOf } from "./helpers";
 import { useTheme } from "./ThemeProvider";
+import { builtinPlugins, isEnabled, subscribePlugins } from "@/lib/plugins/registry";
 
 export function IconRail() {
   const ws = useWorkspace();
   const router = useRouter();
   const { theme, toggle } = useTheme();
   const myTodoCount = (ws.overview?.myTodo ?? 0) + (ws.overview?.myDoing ?? 0);
+
+  // 插件栏位入口：仅渲染「声明 railEntry 且已启用」的插件（挂在功能列队尾）。
+  // mounted 门挡避免 SSR 首帧与 localStorage 状态不一致导致水合警告。
+  // 用 setTimeout 而非 requestAnimationFrame：嵌入式浏览器里 rAF 可能长期不触发，
+  // 会导致插件入口在页面加载后一直不渲染。
+  const [mounted, setMounted] = useState(false);
+  const [, setPluginTick] = useState(0);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setMounted(true), 0);
+    const unsub = subscribePlugins(() => setPluginTick((t) => t + 1));
+    return () => { window.clearTimeout(timer); unsub(); };
+  }, []);
+  const railPlugins = mounted ? builtinPlugins.filter((p) => p.railEntry && isEnabled(p.id)) : [];
 
   return (
     <aside className="ws-rail">
@@ -89,6 +104,19 @@ export function IconRail() {
         <Icon name="book" size={17} />
         <small>云文档</small>
       </button>
+      {/* 插件栏位入口（队尾）：点击派发事件，由插件自行响应开合 */}
+      {railPlugins.map((p) => (
+        <button
+          key={p.id}
+          className="ws-rail-btn ws-rail-management"
+          title={p.railEntry!.title ?? p.name}
+          aria-label={p.railEntry!.label}
+          onClick={() => document.dispatchEvent(new CustomEvent("agilecampus-plugin-rail", { detail: { pluginId: p.id } }))}
+        >
+          <span style={{ fontSize: 17, lineHeight: 1 }}>{p.railEntry!.icon}</span>
+          <small>{p.railEntry!.label}</small>
+        </button>
+      ))}
 
       <div className="ws-rail-gap" />
 

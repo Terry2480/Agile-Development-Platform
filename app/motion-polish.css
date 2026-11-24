@@ -150,14 +150,13 @@ html { overscroll-behavior-y: contain; }
 .ws-drawer::-webkit-scrollbar-thumb:hover,
 .ws-main::-webkit-scrollbar-thumb:hover { background: rgba(127, 140, 170, .65); }
 
-/* ---- 7. 页面级导航：View Transitions 渐进增强 ----
-   对整页跳转/刷新自动交叉淡入淡出；SPA 客户端路由不触发（Next.js 限制），
-   不支持该 API 的浏览器完全忽略，无任何副作用。 */
-@view-transition { navigation: auto; }
-::view-transition-old(root) { animation: motion-vt-out var(--motion-fast) var(--motion-ease) both; }
-::view-transition-new(root) { animation: motion-vt-in var(--motion-base) var(--motion-ease-out) both; }
-@keyframes motion-vt-out { to { opacity: 0; } }
-@keyframes motion-vt-in { from { opacity: 0; } }
+/* ---- 7. 页面级导航：View Transitions —— 已禁用 ----
+   @view-transition { navigation: auto; } 会让 Chrome 在整页跳转/刷新时做跨文档
+   交叉淡入淡出，但开发模式下 Turbopack 热更新触发的自动刷新会让过渡被打断，
+   Chrome 把中止当成未捕获的 InvalidStateError（"Transition was aborted because
+   of invalid state. ViewTransition opt-in disabled"）抛给页面，被 Next 开发浮层
+   显示成运行时报错（Chromium 已知缺陷，见 react#37751）。SPA 路由本就不触发
+   该动画，收益仅剩整页刷新的一瞬淡入，故移除以换取干净的控制台。 */
 
 /* ---- 8. 输入框聚焦：柔和的边框与焦点环过渡 ---- */
 :where(input, textarea, select):focus-visible {
@@ -191,5 +190,4 @@ html { overscroll-behavior-y: contain; }
     box-shadow: none !important;
   }
   .ws-rail-btn::before { display: none !important; }
-  ::view-transition-old(root), ::view-transition-new(root) { animation: none !important; }
 }
