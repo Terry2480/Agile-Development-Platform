@@ -12,7 +12,7 @@ import {ContentUpdateDialog} from "./ContentUpdateDialog";
 import { FilePreview } from "./FilePreview";
 import { BodyEditor } from "./BodyEditor";
 import { DocumentDialog } from "./DocumentDialog";
-import { documentListPath, useDocumentResource } from "./useDocumentResource";
+import { documentListParams, documentListPath, useDocumentResource } from "./useDocumentResource";
 
 type Scope = { id: number };
 const kindName = { folder: "文件夹", document: "在线文档", file: "上传文件", link: "外部链接" };
@@ -101,19 +101,29 @@ export function DetailDialog({ id, onClose, trash=false }: { id: number; onClose
   </DocumentDialog>;
 }
 
-function DirectoryWorkspace({ scope, onScopeChange }: { scope: Scope; onScopeChange(scope: Scope): void }) {
-  const ws = useWorkspace(); const [spaceRetry, setSpaceRetry] = useState(0);
-  const opened = useDocumentResource<{ space: DocumentSpace }>(`/api/projects/${scope.id}/document-space`, spaceRetry);
-  if (opened.error) return <section className="ws-doc-unavailable"><h2>文档空间暂不可用</h2><p role="alert">{opened.error}</p><button className="ws-btn" onClick={() => setSpaceRetry(x => x + 1)}>重试</button></section>;
-  if (!opened.data) return <div className="ws-empty" role="status">正在打开文档空间…</div>;
-  return <DirectoryContent key={opened.data.space.id} initialSpace={opened.data.space} scope={scope} onScopeChange={onScopeChange} userId={ws.me.id} />;
+// 目录位置按"账号 + 项目"保存：项目到空间本身要问服务端，按空间保存等于又要多绕一轮。
+function savedFolder(userId: number, projectId: number) {
+  try { const raw = sessionStorage.getItem(`agile-doc-directory:${userId}:p${projectId}`); return raw && /^[1-9][0-9]*$/.test(raw) ? Number(raw) : null; } catch { return null; }
 }
 
-function DirectoryContent({ initialSpace, scope, onScopeChange, userId }: { initialSpace: DocumentSpace; scope: Scope; onScopeChange(scope: Scope): void; userId: number }) {
+function DirectoryWorkspace({ scope, onScopeChange }: { scope: Scope; onScopeChange(scope: Scope): void }) {
+  const ws = useWorkspace(); const [spaceRetry, setSpaceRetry] = useState(0);
+  // 本机目录位置只能由浏览器读取；服务端首屏按根目录生成请求，客户端挂载时改用已保存的目录。
+  // 位置只影响请求参数、不影响首屏文字，所以不会造成水合不一致。
+  const [folder] = useState<number | null>(() => (typeof window === "undefined" ? null : savedFolder(ws.me.id, scope.id)));
+  // 空间信息与首屏列表一次取回：一个请求就够了，不再"先问空间、再问列表"。
+  const params = documentListParams(folder, {}); params.set("include", "listing");
+  const opened = useDocumentResource<{ space: DocumentSpace; listing: DocumentListing }>(`/api/projects/${scope.id}/document-space?${params}`, spaceRetry);
+  if (opened.error) return <section className="ws-doc-unavailable"><h2>文档空间暂不可用</h2><p role="alert">{opened.error}</p><button className="ws-btn" onClick={() => setSpaceRetry(x => x + 1)}>重试</button></section>;
+  if (!opened.data) return <div className="ws-empty" role="status">正在打开文档空间…</div>;
+  return <DirectoryContent key={opened.data.space.id} initialSpace={opened.data.space} initialListing={opened.data.listing} scope={scope} onScopeChange={onScopeChange} userId={ws.me.id} />;
+}
+
+function DirectoryContent({ initialSpace, initialListing, scope, onScopeChange, userId }: { initialSpace: DocumentSpace; initialListing: DocumentListing; scope: Scope; onScopeChange(scope: Scope): void; userId: number }) {
   const [exportRoot,setExportRoot]=useState<{id:number|null;label:string}|null>(null);const [exportsOpen,setExportsOpen]=useState(false);
   const [trashOpen,setTrashOpen]=useState(false);const [trashNode,setTrashNode]=useState<DocumentNode|null>(null);const [copyNode,setCopyNode]=useState<DocumentNode|null>(null);
   const [uploading,setUploading]=useState(false);
-  const ws = useWorkspace(); const [folderId, setFolderId] = useState<number | null>(null);
+  const ws = useWorkspace(); const [folderId, setFolderId] = useState<number | null>(() => initialListing.path.at(-1)?.id ?? null);
   const [search, setSearch] = useState(""); const q = useSearch(search); const [sort, setSort] = useState("updated");
   const [cursors, setCursors] = useState<(string | null)[]>([null]); const [generation, setGeneration] = useState(0);
   const [message, setMessage] = useState(""); const [createKind, setCreateKind] = useState<"folder" | "document" | "link" | null>(null);
@@ -128,14 +138,11 @@ function DirectoryContent({ initialSpace, scope, onScopeChange, userId }: { init
     document.addEventListener("keydown", escape);
     return () => { document.removeEventListener("pointerdown", closeOutside); document.removeEventListener("keydown", escape); };
   }, [openMenu, newMenu]);
-  const page = useDocumentResource<DocumentListing>(documentListPath(initialSpace.id, folderId, { q, sort, cursor: cursors.at(-1) }), generation);
+  // 首屏列表随"打开空间"一起返回：同一路径的第 0 代直接用它，不再多发一次目录请求。
+  const initialFolder = initialListing.path.at(-1)?.id ?? null;
+  const page = useDocumentResource<DocumentListing>(documentListPath(initialSpace.id, folderId, { q, sort, cursor: cursors.at(-1) }), generation, { path: documentListPath(initialSpace.id, initialFolder, {}), data: initialListing });
   const space = page.data?.space ?? initialSpace;
-  const storageKey = `agile-doc-directory:${userId}:${space.id}`;
-  useEffect(() => {
-    // Load after mount; the result is still validated by the server before any content is shown.
-    void Promise.resolve().then(() => { try { const old = sessionStorage.getItem(storageKey); if (old && /^[1-9][0-9]*$/.test(old)) setFolderId(Number(old)); } catch {} });
-  }, [storageKey]);
-  function go(id: number | null) { setFolderId(id); setSearch(""); setCursors([null]); setOpenMenu(null); setNewMenu(false); try { sessionStorage.setItem(storageKey, id === null ? "" : String(id)); } catch {} }
+  function go(id: number | null) { setFolderId(id); setSearch(""); setCursors([null]); setOpenMenu(null); setNewMenu(false); try { sessionStorage.setItem(`agile-doc-directory:${userId}:p${scope.id}`, id === null ? "" : String(id)); } catch {} }
   function saved(node: DocumentNode, verb: string) { setCreateKind(null); setRename(null); setMove(null); setOpenMenu(null); setNewMenu(false); setGeneration(x => x + 1); setCursors([null]); setMessage(`已${verb}“${node.name}”`); }
   const path = page.data?.path ?? [];
   return <section className="ws-documents" aria-label="文档目录与资料列表">
