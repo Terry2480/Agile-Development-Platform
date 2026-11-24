@@ -36,7 +36,9 @@ let chatView: HTMLElement | null = null;
 let settingsView: HTMLElement | null = null;
 let docsView: HTMLElement | null = null;
 let toast: HTMLElement | null = null;
-let agentSelect: HTMLSelectElement | null = null;
+let agentMenuBtn: HTMLButtonElement | null = null;
+let agentPop: HTMLElement | null = null;
+let agentPopOpen = false;
 let messagesEl: HTMLElement | null = null;
 let composer: HTMLTextAreaElement | null = null;
 let sendBtn: HTMLButtonElement | null = null;
@@ -129,20 +131,53 @@ function closePanel() {
   if (panel) panel.hidden = true;
 }
 
-function renderAgentSelect() {
-  if (!agentSelect) return;
+/** 渲染 Agent 下拉：触发按钮文字 + 弹层列表（每行名称 + 预设·模型） */
+function renderAgentMenu() {
+  if (!agentMenuBtn || !agentPop) return;
   const active = activeAgent();
-  agentSelect.replaceChildren();
+  const name = el("span", "sw-agent-menu__name", active ? active.name : "未配置 Agent");
+  if (!active) name.classList.add("sw-agent-menu__name--empty");
+  agentMenuBtn.replaceChildren(name, el("span", "sw-agent-menu__caret", "▾"));
+  agentMenuBtn.setAttribute("aria-expanded", agentPopOpen ? "true" : "false");
+
+  agentPop.replaceChildren();
   if (agents.length === 0) {
-    agentSelect.append(el("option", undefined, "未配置 Agent"));
+    agentPop.appendChild(el("div", "sw-agent-pop__empty", "暂无 Agent · 点右上 ⚙ 添加"));
     return;
   }
   for (const a of agents) {
-    const opt = el("option", undefined, a.name);
-    opt.value = a.id;
-    if (active?.id === a.id) opt.selected = true;
-    agentSelect.appendChild(opt);
+    const row = el("button", `sw-agent-row${active?.id === a.id ? " sw-agent-row--active" : ""}`);
+    row.type = "button";
+    row.setAttribute("role", "option");
+    row.setAttribute("aria-selected", active?.id === a.id ? "true" : "false");
+    const nameRow = el("span", "sw-agent-row__name");
+    nameRow.appendChild(el("b", undefined, a.name));
+    if (active?.id === a.id) nameRow.appendChild(el("span", undefined, "✓"));
+    const preset = presetById(a.providerId);
+    row.append(nameRow, el("small", "sw-agent-row__meta", `${preset?.name ?? a.type} · ${a.model}`));
+    on(row, "click", () => {
+      setActiveId(a.id);
+      renderAgentMenu();
+      renderSettingsList();
+      setStatus(`已切换到 ${a.name}`);
+      closeAgentPop();
+    });
+    agentPop.appendChild(row);
   }
+}
+function openAgentPop() {
+  if (!agentPop || agentPopOpen) return;
+  agentPopOpen = true;
+  agentPop.classList.add("sw-agent-pop--open");
+  agentMenuBtn?.setAttribute("aria-expanded", "true");
+  // 重新展开时让当前选中行滚入可视区
+  agentPop.querySelector(".sw-agent-row--active")?.scrollIntoView({ block: "nearest" });
+}
+function closeAgentPop() {
+  if (!agentPop || !agentPopOpen) return;
+  agentPopOpen = false;
+  agentPop.classList.remove("sw-agent-pop--open");
+  agentMenuBtn?.setAttribute("aria-expanded", "false");
 }
 
 function renderEmptyHint() {
@@ -213,7 +248,7 @@ function renderSettingsList() {
       `${preset?.name ?? a.providerId} · ${a.model} · Key ${maskApiKey(a.apiKey)}`));
     on(item, "click", () => {
       setActiveId(a.id);
-      renderAgentSelect();
+      renderAgentMenu();
       renderSettingsList();
       setStatus(`已切换到 ${a.name}`);
     });
@@ -231,7 +266,7 @@ function renderSettingsList() {
       agents = agents.filter((x) => x.id !== a.id);
       if (active?.id === a.id) setActiveId("");
       saveAgents();
-      renderAgentSelect();
+      renderAgentMenu();
       renderSettingsList();
       if (agents.length === 0) renderEmptyHint();
     });
@@ -313,7 +348,7 @@ function saveAgentFromForm() {
   if (!ctxRef?.storage.get("activeAgentId") && agents.length === 1) setActiveId(draft.id);
   closeAgentForm();
   renderSettingsList();
-  renderAgentSelect();
+  renderAgentMenu();
   if (messagesEl && messagesEl.querySelector(".sw-empty")) {
     messagesEl.replaceChildren();
   }
@@ -537,17 +572,23 @@ export const switchPlugin: AgileCampusPlugin = {
     panel = el("div", "sw-panel");
     panel.hidden = true;
 
-    // 顶栏：标题 + Agent 切换 + 设置 + 关闭
+    // 顶栏：标题 + Agent 下拉（弹出式列表）+ 设置 + 关闭
     const head = el("div", "sw-head");
     const title = el("div", "sw-head__title", "⚡ Switch 工作助手");
     title.title = `宿主 v${ctx.hostVersion}`;
-    agentSelect = el("select", "sw-agent-select");
-    agentSelect.setAttribute("aria-label", "切换 Agent");
-    on(agentSelect, "change", () => {
-      setActiveId(agentSelect!.value);
-      renderSettingsList();
-      setStatus(`已切换到 ${activeAgent()?.name ?? "…"}`);
+    const agentWrap = el("div", "sw-agent-wrap");
+    agentMenuBtn = el("button", "sw-agent-menu");
+    agentMenuBtn.type = "button";
+    agentMenuBtn.setAttribute("aria-haspopup", "listbox");
+    agentMenuBtn.setAttribute("aria-label", "切换 Agent");
+    on(agentMenuBtn, "click", () => {
+      if (agentPopOpen) closeAgentPop();
+      else openAgentPop();
     });
+    agentPop = el("div", "sw-agent-pop");
+    agentPop.setAttribute("role", "listbox");
+    agentPop.setAttribute("aria-label", "Agent 列表");
+    agentWrap.append(agentMenuBtn, agentPop);
     const gear = el("button", "sw-icon-btn", "⚙");
     gear.type = "button";
     gear.title = "管理 Agent";
@@ -556,7 +597,7 @@ export const switchPlugin: AgileCampusPlugin = {
     close.type = "button";
     close.title = "关闭";
     on(close, "click", () => closePanel());
-    head.append(title, agentSelect, gear, close);
+    head.append(title, agentWrap, gear, close);
     panel.appendChild(head);
 
     // 对话视图
@@ -704,15 +745,26 @@ export const switchPlugin: AgileCampusPlugin = {
       else closePanel();
     });
     on(document, "keydown", (e) => {
-      if ((e as KeyboardEvent).key === "Escape") closePanel();
+      if ((e as KeyboardEvent).key === "Escape") {
+        if (agentPopOpen) closeAgentPop();
+        else closePanel();
+      }
     });
     on(document, "click", (e) => {
-      if (panel && !panel.hidden && !panel.contains(e.target as Node) && !(e.target as HTMLElement)?.closest?.(".ws-rail")) {
+      // 用 composedPath（事件派发时的路径快照）而非 contains(target)：
+      // 点击处理器若同步重渲染并移除被点元素（如 Agent 行、文档项），
+      // 冒泡到这里的 target 已脱离 DOM，contains 会误判为「面板外点击」把面板关掉
+      const path = e.composedPath() as Array<EventTarget | Element>;
+      const el = (n: EventTarget) => (n instanceof Element ? n : null);
+      const inWrap = path.some((n) => el(n)?.classList.contains("sw-agent-wrap"));
+      if (agentPopOpen && !inWrap) closeAgentPop();
+      const inRail = path.some((n) => el(n)?.closest?.(".ws-rail"));
+      if (panel && !panel.hidden && !path.includes(panel) && !inRail) {
         closePanel();
       }
     });
 
-    renderAgentSelect();
+    renderAgentMenu();
     if (agents.length === 0) renderEmptyHint();
   },
   deactivate() {
@@ -728,7 +780,9 @@ export const switchPlugin: AgileCampusPlugin = {
     settingsView = null;
     docsView = null;
     toast = null;
-    agentSelect = null;
+    agentMenuBtn = null;
+    agentPop = null;
+    agentPopOpen = false;
     messagesEl = null;
     composer = null;
     sendBtn = null;

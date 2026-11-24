@@ -11,6 +11,8 @@ export const SWITCH_CSS = `
   --sw-line:#4d566d;         /* 控件描边（静止即可见，对面板≈2.4:1） */
   --sw-line-strong:#616d8a;  /* 控件描边（悬停） */
   --sw-divider:#262a38;      /* 区块分隔线（比描边弱一档） */
+  --sw-hover:#2b3245;        /* 列表行悬停底色 */
+  --sw-tint:rgba(111,155,255,.12); /* 选中行底色（强调色淡染） */
   --sw-text-2:#aab2c5;
   position:fixed;left:22px;bottom:22px;z-index:65;display:flex;flex-direction:column;
   width:min(400px,calc(100vw - 44px));height:min(640px,calc(100vh - 66px));
@@ -23,6 +25,8 @@ html[data-theme="day"] .sw-panel{
   --sw-line:#a06f3f;         /* 暖棕描边，对米色面板≈3.4:1（平台日间令牌多为近色，不可直接引用） */
   --sw-line-strong:#8a5c2e;
   --sw-divider:#b98d5e;      /* 分隔线用弱一档的暖棕，避免与描边同重 */
+  --sw-hover:#efdec2;
+  --sw-tint:rgba(160,111,63,.10);
   --sw-text-2:#6b4a26;
   box-shadow:-24px 0 70px rgba(120,80,30,.25);
 }
@@ -31,8 +35,40 @@ html[data-theme="day"] .sw-panel{
 
 .sw-head{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--sw-divider)}
 .sw-head__title{display:flex;align-items:center;gap:7px;font-size:14px;font-weight:700;white-space:nowrap}
-.sw-agent-select{flex:1;min-width:0;height:32px;border:1px solid var(--sw-line);border-radius:8px;background:var(--sw-surface);color:var(--ws-color-e8eaf2,#e8eaf2);font-size:12px;padding:0 6px;cursor:pointer}
-.sw-agent-select:hover{border-color:var(--sw-line-strong)}
+/* Agent 下拉：触发按钮 + 向下弹出的列表（约 4 行可视，更多则内部滚动） */
+.sw-agent-wrap{position:relative;flex:1;min-width:0}
+.sw-agent-menu{display:flex;align-items:center;gap:6px;width:100%;height:32px;border:1px solid var(--sw-line);border-radius:8px;background:var(--sw-surface);color:var(--ws-color-e8eaf2,#e8eaf2);font-size:12px;padding:0 8px;cursor:pointer;font-family:inherit}
+.sw-agent-menu:hover{border-color:var(--sw-line-strong)}
+.sw-agent-menu__name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+.sw-agent-menu__name--empty{color:var(--sw-text-2)}
+.sw-agent-menu__caret{flex:none;font-size:10px;color:var(--sw-text-2);transition:transform .18s ease}
+.sw-agent-menu[aria-expanded="true"] .sw-agent-menu__caret{transform:rotate(180deg)}
+.sw-agent-pop{
+  position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:8;
+  background:var(--sw-surface);border:1px solid var(--sw-line-strong);border-radius:10px;
+  box-shadow:0 14px 34px rgba(0,0,0,.38);
+  max-height:200px;overflow-y:auto;overscroll-behavior:contain;
+  scrollbar-width:thin;scrollbar-color:var(--sw-line) transparent;
+  opacity:0;visibility:hidden;transform:translateY(-8px) scale(.97);transform-origin:top center;
+  pointer-events:none;
+  transition:opacity .16s ease,transform .2s cubic-bezier(.2,.8,.3,1.05),visibility 0s linear .2s;
+}
+.sw-agent-pop--open{
+  opacity:1;visibility:visible;transform:translateY(0) scale(1);pointer-events:auto;
+  transition:opacity .16s ease,transform .2s cubic-bezier(.2,.8,.3,1.05),visibility 0s;
+}
+.sw-agent-pop::-webkit-scrollbar{width:4px}
+.sw-agent-pop::-webkit-scrollbar-thumb{background:var(--sw-line);border-radius:999px}
+.sw-agent-pop__empty{padding:12px 10px;font-size:11px;color:var(--sw-text-2)}
+.sw-agent-row{display:flex;flex-direction:column;gap:2px;width:100%;padding:8px 10px;border:0;border-left:2px solid transparent;background:transparent;cursor:pointer;text-align:left;font-family:inherit}
+.sw-agent-row + .sw-agent-row{border-top:1px solid var(--sw-divider)}
+.sw-agent-row:hover{background:var(--sw-hover)}
+.sw-agent-row--active{border-left-color:var(--ws-color-6f9bff,#6f9bff);background:var(--sw-tint)}
+.sw-agent-row__name{display:flex;align-items:center;gap:6px}
+.sw-agent-row__name b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:600;color:var(--ws-color-e8eaf2,#e8eaf2)}
+.sw-agent-row__name > span{flex:none;font-size:11px;color:var(--ws-color-6f9bff,#6f9bff)}
+.sw-agent-row__meta{font-size:11px;color:var(--sw-text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-theme="day"] .sw-agent-pop{box-shadow:0 14px 34px rgba(120,80,30,.28)}
 .sw-icon-btn{flex:none;width:32px;height:32px;border:1px solid var(--sw-line);border-radius:8px;background:var(--sw-surface);color:var(--ws-color-c6cbdb,#c6cbdb);font-size:13px;cursor:pointer}
 .sw-icon-btn:hover{border-color:var(--sw-line-strong);color:var(--ws-color-e8eaf2,#e8eaf2);background:var(--sw-surface)}
 
