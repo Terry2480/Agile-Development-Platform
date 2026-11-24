@@ -17,8 +17,7 @@ export function UploadDialog({space,parentId,association,onClose,onSaved}:{space
   }
   return <DocumentDialog title="上传文件" busy={busy} onClose={onClose}><form onSubmit={submit}>
     <p className="ws-doc-muted">上传到：{space.name} / 当前目录。单文件最大 100MB，同名资料不会覆盖。</p>
-    <label className="ws-doc-field">选择文件<input type="file" required disabled={busy} onChange={e=>{setFile(e.target.files?.[0]??null);requestId.current=crypto.randomUUID();setError("");}}/></label>
-    {file && <p>{file.name} · {(file.size/1024).toFixed(1)} KB</p>}
+    <label className="ws-doc-field">文件<input className="ws-doc-file-picker" type="file" required disabled={busy} onChange={e=>{setFile(e.target.files?.[0]??null);requestId.current=crypto.randomUUID();setError("");}}/></label>
     {error && <p className="ws-error" role="alert">{error}。可保留当前选择重试。</p>}
     {busy && <p role="status">正在上传，请保持窗口开启…</p>}
     <footer><button type="button" className="ws-btn" disabled={busy} onClick={onClose}>取消</button><button className="ws-btn primary" disabled={busy||!file}>{busy?"上传中…":"上传"}</button></footer>

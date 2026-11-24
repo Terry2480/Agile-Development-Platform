@@ -1,5 +1,6 @@
 "use client";
 import Image from "next/image";
+import { renderMarkdown } from "@/lib/markdown";
 import {api} from "@/lib/api-client";
 import { useEffect, useState, type ReactNode } from "react";
 import type { DocumentDetail, DocumentListing, DocumentNode, DocumentSpace } from "@/lib/documents/types";
@@ -12,30 +13,32 @@ import {ContentUpdateDialog} from "./ContentUpdateDialog";
 import { FilePreview } from "./FilePreview";
 import { BodyEditor } from "./BodyEditor";
 import { DocumentDialog } from "./DocumentDialog";
-import { documentListParams, documentListPath, useDocumentResource } from "./useDocumentResource";
+import { documentListPath, documentOpenPath, peekDocumentOpen, savedFolder, useDocumentResource, type DocumentOpenResult } from "./useDocumentResource";
+import { clearCached } from "./prefetch";
 
 type Scope = { id: number };
 const kindName = { folder: "文件夹", document: "在线文档", file: "上传文件", link: "外部链接" };
 const time = (value: string) => new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Hong_Kong", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(value));
 
-function FolderChildren({ space, parentId, current, generation, depth = 0, onSelect }: {
-  space: number; parentId: number | null; current: number | null; generation: number; depth?: number; onSelect(id: number): void;
+function FolderChildren({ space, parentId, current, generation, depth = 0, onSelect, shared }: {
+  space: number; parentId: number | null; current: number | null; generation: number; depth?: number; onSelect(id: number): void; shared?: string;
 }) {
   const [cursor, setCursor] = useState<string | null>(null);
-  const page = useDocumentResource<DocumentListing>(documentListPath(space, parentId, { foldersOnly: true, sort: "name", cursor }), generation);
+  // 目录树跨挂载复用：30 秒内回到云文档不用重取；写操作会按前缀清空。
+  const page = useDocumentResource<DocumentListing>(documentListPath(space, parentId, { foldersOnly: true, sort: "name", cursor }), generation, null, { shared: shared ? { prefix: shared, freshMs: 30_000 } : undefined });
   if (depth > 30) return <p className="ws-doc-muted">目录较深，请从列表继续进入。</p>;
   return <>{page.loading && <p className="ws-doc-tree-status" role="status">读取目录…</p>}{page.error && <p className="ws-doc-tree-status" role="alert">目录加载失败，请点击刷新重试。</p>}
-    {page.data?.nodes.map(folder => <FolderBranch key={`${folder.id}-${generation}`} node={folder} space={space} current={current} generation={generation} depth={depth} onSelect={onSelect} />)}
+    {page.data?.nodes.map(folder => <FolderBranch key={`${folder.id}-${generation}`} node={folder} space={space} current={current} generation={generation} depth={depth} onSelect={onSelect} shared={shared} />)}
     {page.data?.nextCursor && <button className="ws-doc-tree-next" onClick={() => setCursor(page.data!.nextCursor)}>更多同级目录</button>}
     {cursor && <button className="ws-doc-tree-next" onClick={() => setCursor(null)}>返回首批目录</button>}
   </>;
 }
-function FolderBranch({ node, space, current, generation, depth, onSelect }: { node: DocumentNode; space: number; current: number | null; generation: number; depth: number; onSelect(id: number): void }) {
+function FolderBranch({ node, space, current, generation, depth, onSelect, shared }: { node: DocumentNode; space: number; current: number | null; generation: number; depth: number; onSelect(id: number): void; shared?: string }) {
   const [expanded, setExpanded] = useState(false);
   return <div><div className="ws-doc-tree-row" style={{ paddingLeft: depth * 13 }}>
     <button className="ws-doc-expand" aria-label={`${expanded ? "收起" : "展开"}${node.name}`} aria-expanded={expanded} disabled={node.childFolderCount === 0} onClick={() => setExpanded(x => !x)}><Icon name={expanded ? "chevronDown" : "chevronRight"} size={12} /></button>
     <button className={`ws-doc-tree-node ${current === node.id ? "active" : ""}`} aria-current={current === node.id ? "page" : undefined} onClick={() => { onSelect(node.id); setExpanded(true); }}><Icon name="folder" size={15} /><span>{node.name}</span></button>
-  </div>{expanded && <FolderChildren space={space} parentId={node.id} current={current} generation={generation} depth={depth + 1} onSelect={onSelect} />}</div>;
+  </div>{expanded && <FolderChildren space={space} parentId={node.id} current={current} generation={generation} depth={depth + 1} onSelect={onSelect} shared={shared} />}</div>;
 }
 
 function useSearch(value: string) {
@@ -49,6 +52,7 @@ function ReadBody({ body, id, versionId, trash=false }: { body: unknown; id?:num
     if (!value || typeof value !== "object" || depth > 20) return null;
     const n = value as { type?: string; text?: string; content?: unknown[]; attrs?: { level?: number; alt?: string } };
     const children = Array.isArray(n.content) ? n.content.map((c, i) => render(c, `${key}-${i}`, depth + 1)) : null;
+    if (n.type === "markdown") return <div key={key} dangerouslySetInnerHTML={{ __html: renderMarkdown(n.text ?? "") }} />;
     if (n.type === "text") {
       let text: ReactNode = typeof n.text === "string" ? n.text : null;
       const marks = (value as {marks?:{type:string;attrs?:{href?:string}}[]}).marks;
@@ -88,7 +92,7 @@ export function DetailDialog({ id, onClose, trash=false }: { id: number; onClose
     {detail.error && <p className="ws-error" role="alert">{detail.error}<button className="ws-btn" onClick={() => setRetry(x => x + 1)}>重试</button></p>}
     {detail.data && <><dl className="ws-doc-details"><dt>位置</dt><dd>{detail.data.space.name} / {detail.data.path.map(n => n.name).join(" / ")}</dd><dt>类型</dt><dd>{kindName[detail.data.node.kind]}</dd><dt>最近修改</dt><dd>{detail.data.node.updatedBy.name} · {time(detail.data.node.updatedAt)}</dd></dl>
       {detail.data.node.editLock && <p className="ws-doc-notice">{detail.data.node.editLock.editorName} 正在编辑</p>}
-      {detail.data.body !== undefined && (detail.data.trashed ? <ReadBody body={detail.data.body} id={id} trash/> : <BodyEditor space={detail.data.space} key={id} id={id} body={detail.data.body} name={detail.data.node.name} readOnly={detail.data.space.readOnly} renderRead={(body,versionId)=><ReadBody body={body} id={id} versionId={versionId}/>}/>)}
+      {detail.data.body !== undefined && (detail.data.trashed ? <ReadBody body={detail.data.body} id={id} trash/> : <BodyEditor key={id} id={id} body={detail.data.body} name={detail.data.node.name} readOnly={detail.data.space.readOnly} renderRead={(body,versionId)=><ReadBody body={body} id={id} versionId={versionId}/>}/>)}
       {detail.data.url && <p><a className="ws-doc-link" href={detail.data.url} target="_blank" rel="noopener noreferrer">打开外部链接 ↗</a><span className="ws-doc-muted ws-doc-url">{detail.data.url}</span></p>}
       {detail.data.file && <FilePreview key={`${id}:${detail.data.node.version}`} name={detail.data.node.name} file={detail.data.file}/>}
       {!detail.data.file && detail.data.legacyDownloadUrl && <a className="ws-btn" href={detail.data.legacyDownloadUrl}>下载文件</a>}
@@ -101,22 +105,18 @@ export function DetailDialog({ id, onClose, trash=false }: { id: number; onClose
   </DocumentDialog>;
 }
 
-// 目录位置按"账号 + 项目"保存：项目到空间本身要问服务端，按空间保存等于又要多绕一轮。
-function savedFolder(userId: number, projectId: number) {
-  try { const raw = sessionStorage.getItem(`agile-doc-directory:${userId}:p${projectId}`); return raw && /^[1-9][0-9]*$/.test(raw) ? Number(raw) : null; } catch { return null; }
-}
-
 function DirectoryWorkspace({ scope, onScopeChange }: { scope: Scope; onScopeChange(scope: Scope): void }) {
   const ws = useWorkspace(); const [spaceRetry, setSpaceRetry] = useState(0);
   // 本机目录位置只能由浏览器读取；服务端首屏按根目录生成请求，客户端挂载时改用已保存的目录。
   // 位置只影响请求参数、不影响首屏文字，所以不会造成水合不一致。
   const [folder] = useState<number | null>(() => (typeof window === "undefined" ? null : savedFolder(ws.me.id, scope.id)));
-  // 空间信息与首屏列表一次取回：一个请求就够了，不再"先问空间、再问列表"。
-  const params = documentListParams(folder, {}); params.set("include", "listing");
-  const opened = useDocumentResource<{ space: DocumentSpace; listing: DocumentListing }>(`/api/projects/${scope.id}/document-space?${params}`, spaceRetry);
+  // 鼠标刚在图标栏停过就点进来时，直接用刚才预取到的"空间 + 首屏列表"，这一次不再发请求。
+  const [prefetched] = useState(() => (typeof window === "undefined" ? null : peekDocumentOpen(ws.me.id, scope.id, folder)));
+  const opened = useDocumentResource<DocumentOpenResult>(prefetched ? null : documentOpenPath(scope.id, folder), spaceRetry);
+  const openedData = prefetched?.data ?? opened.data;
   if (opened.error) return <section className="ws-doc-unavailable"><h2>文档空间暂不可用</h2><p role="alert">{opened.error}</p><button className="ws-btn" onClick={() => setSpaceRetry(x => x + 1)}>重试</button></section>;
-  if (!opened.data) return <div className="ws-empty" role="status">正在打开文档空间…</div>;
-  return <DirectoryContent key={opened.data.space.id} initialSpace={opened.data.space} initialListing={opened.data.listing} scope={scope} onScopeChange={onScopeChange} userId={ws.me.id} />;
+  if (!openedData) return <div className="ws-empty" role="status">正在打开文档空间…</div>;
+  return <DirectoryContent key={openedData.space.id} initialSpace={openedData.space} initialListing={openedData.listing} scope={scope} onScopeChange={onScopeChange} userId={ws.me.id} />;
 }
 
 function DirectoryContent({ initialSpace, initialListing, scope, onScopeChange, userId }: { initialSpace: DocumentSpace; initialListing: DocumentListing; scope: Scope; onScopeChange(scope: Scope): void; userId: number }) {
@@ -126,6 +126,10 @@ function DirectoryContent({ initialSpace, initialListing, scope, onScopeChange, 
   const ws = useWorkspace(); const [folderId, setFolderId] = useState<number | null>(() => initialListing.path.at(-1)?.id ?? null);
   const [search, setSearch] = useState(""); const q = useSearch(search); const [sort, setSort] = useState("updated");
   const [cursors, setCursors] = useState<(string | null)[]>([null]); const [generation, setGeneration] = useState(0);
+  // 目录列表与目录树的短期缓存：30 秒内换到别的目录再换回来直接用；写操作后按前缀整批作废。
+  const sharedList = `list:${userId}:${initialSpace.id}`;
+  const sharedTree = `tree:${userId}:${initialSpace.id}`;
+  function refresh() { clearCached(sharedList); clearCached(sharedTree); setGeneration(current => current + 1); }
   const [message, setMessage] = useState(""); const [createKind, setCreateKind] = useState<"folder" | "document" | "link" | null>(null);
   const [rename, setRename] = useState<DocumentNode | null>(null); const [move, setMove] = useState<DocumentNode | null>(null);
   const [detailId, setDetailId] = useState<number | null>(null); const [openMenu, setOpenMenu] = useState<number | null>(null); const [newMenu, setNewMenu] = useState(false);
@@ -140,16 +144,16 @@ function DirectoryContent({ initialSpace, initialListing, scope, onScopeChange, 
   }, [openMenu, newMenu]);
   // 首屏列表随"打开空间"一起返回：同一路径的第 0 代直接用它，不再多发一次目录请求。
   const initialFolder = initialListing.path.at(-1)?.id ?? null;
-  const page = useDocumentResource<DocumentListing>(documentListPath(initialSpace.id, folderId, { q, sort, cursor: cursors.at(-1) }), generation, { path: documentListPath(initialSpace.id, initialFolder, {}), data: initialListing });
+  const page = useDocumentResource<DocumentListing>(documentListPath(initialSpace.id, folderId, { q, sort, cursor: cursors.at(-1) }), generation, { path: documentListPath(initialSpace.id, initialFolder, {}), data: initialListing }, { shared: { prefix: sharedList, freshMs: 30_000 } });
   const space = page.data?.space ?? initialSpace;
   function go(id: number | null) { setFolderId(id); setSearch(""); setCursors([null]); setOpenMenu(null); setNewMenu(false); try { sessionStorage.setItem(`agile-doc-directory:${userId}:p${scope.id}`, id === null ? "" : String(id)); } catch {} }
-  function saved(node: DocumentNode, verb: string) { setCreateKind(null); setRename(null); setMove(null); setOpenMenu(null); setNewMenu(false); setGeneration(x => x + 1); setCursors([null]); setMessage(`已${verb}“${node.name}”`); }
+  function saved(node: DocumentNode, verb: string) { setCreateKind(null); setRename(null); setMove(null); setOpenMenu(null); setNewMenu(false); refresh(); setCursors([null]); setMessage(`已${verb}“${node.name}”`); }
   const path = page.data?.path ?? [];
   return <section className="ws-documents" aria-label="文档目录与资料列表">
     <aside className="ws-doc-tree"><div><p className="ws-doc-muted">所属团队：{space.teamName}</p><label className="ws-doc-scope"><span className="ws-doc-sr">选择项目</span><select value={scope.id} onChange={e => onScopeChange({ ...scope, id: Number(e.target.value) })}>
       {ws.projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
     </select></label></div><div className="ws-doc-tree-heading"><span>文档目录</span><button className="ws-icon-btn" disabled={space.readOnly} onClick={() => { go(null); setCreateKind("folder"); }} aria-label="新建分区"><Icon name="plus" size={14} /></button></div>
-      <div className="ws-doc-tree-scroll"><button className={`ws-doc-tree-node ${folderId === null ? "active" : ""}`} onClick={() => go(null)}><Icon name="list" size={15} />全部分区</button><FolderChildren key={generation} space={space.id} parentId={null} current={folderId} generation={generation} onSelect={go} /></div>
+      <div className="ws-doc-tree-scroll"><button className={`ws-doc-tree-node ${folderId === null ? "active" : ""}`} onClick={() => go(null)}><Icon name="list" size={15} />全部分区</button><FolderChildren key={generation} space={space.id} parentId={null} current={folderId} generation={generation} onSelect={go} shared={sharedTree} /></div>
       <div className="ws-doc-tree-foot"><button onClick={()=>setTrashOpen(true)}><Icon name="trash" size={15} />回收站</button><button onClick={()=>setExportsOpen(true)}><Icon name="download" size={15} />导出任务</button></div>
     </aside>
     <div className="ws-doc-main"><header className="ws-doc-context"><div><strong>{space.name}</strong><span>项目空间</span></div></header>
@@ -159,13 +163,13 @@ function DirectoryContent({ initialSpace, initialListing, scope, onScopeChange, 
         {folderId !== null && <button className="ws-btn" disabled={space.readOnly || !!q} onClick={()=>setUploading(true)}>上传文件</button>}
         {folderId === null ? <button className="ws-btn primary" disabled={space.readOnly || !!q} onClick={() => setCreateKind("folder")}>＋ 新建分区</button> : <div className="ws-doc-menu-wrap"><button className="ws-btn primary" disabled={space.readOnly || !!q} aria-expanded={newMenu} onClick={() => setNewMenu(x => !x)}>＋ 新建 <Icon name="chevronDown" size={12} /></button>{newMenu && <div className="ws-doc-menu"><button onClick={() => { setNewMenu(false); setCreateKind("document"); }}>在线文档</button><button onClick={() => { setNewMenu(false); setCreateKind("folder"); }}>文件夹</button><button onClick={() => { setNewMenu(false); setCreateKind("link"); }}>外部链接</button></div>}</div>}
       </div></div>
-      <label className="ws-doc-template-setting">模板推荐<select className="ws-doc-sort" disabled={space.readOnly} value={space.templateSet??"none"} onChange={async e=>{try{await api(`/api/document-spaces/${space.id}/templates`,{method:"PATCH",json:{templateSet:e.target.value,expectedVersion:space.version}});setGeneration(x=>x+1);setMessage("模板推荐已更新，已有文档不变");}catch(error){setMessage((error as Error).message);}}}><option value="none">不设推荐</option><option value="general">通用课程项目</option><option value="software">软件开发项目</option></select></label>
+      <label className="ws-doc-template-setting">模板推荐<select className="ws-doc-sort" disabled={space.readOnly} value={space.templateSet??"none"} onChange={async e=>{try{await api(`/api/document-spaces/${space.id}/templates`,{method:"PATCH",json:{templateSet:e.target.value,expectedVersion:space.version}});refresh();setMessage("模板推荐已更新，已有文档不变");}catch(error){setMessage((error as Error).message);}}}><option value="none">不设推荐</option><option value="general">通用课程项目</option><option value="software">软件开发项目</option></select></label>
       {space.readOnly && <p className="ws-doc-notice">项目已归档，当前为只读空间。需要修改时请由负责人或管理员先恢复项目。</p>}
       {message && <p className="ws-doc-notice" role="status">{message}<button className="ws-doc-link" onClick={() => setMessage("")}>关闭</button></p>}
-      <div className="ws-doc-toolbar"><label className="ws-doc-search"><Icon name="search" size={15} /><span className="ws-doc-sr">搜索当前空间标题</span><input value={search} maxLength={200} onChange={e => { setSearch(e.target.value); setCursors([null]); }} placeholder="搜索本项目全部目录…" /></label><div className="ws-doc-actions"><select className="ws-doc-sort" aria-label="排序方式" value={sort} onChange={e => { setSort(e.target.value); setCursors([null]); }}><option value="updated">最近修改优先</option><option value="name">按名称排序</option></select><button className="ws-btn" onClick={() => { setGeneration(x => x + 1); setCursors([null]); }}>刷新</button></div></div>
+      <div className="ws-doc-toolbar"><label className="ws-doc-search"><Icon name="search" size={15} /><span className="ws-doc-sr">搜索当前空间标题</span><input value={search} maxLength={200} onChange={e => { setSearch(e.target.value); setCursors([null]); }} placeholder="搜索本项目全部目录…" /></label><div className="ws-doc-actions"><select className="ws-doc-sort" aria-label="排序方式" value={sort} onChange={e => { setSort(e.target.value); setCursors([null]); }}><option value="updated">最近修改优先</option><option value="name">按名称排序</option></select><button className="ws-btn" onClick={() => { refresh(); setCursors([null]); }}>刷新</button></div></div>
       {q && <p className="ws-doc-muted">当前空间的标题搜索结果，不包含回收站。点击“所在目录”可定位资料。</p>}
       {page.loading && <div className="ws-doc-empty" role="status">正在加载资料…</div>}
-      {page.error && <div className="ws-doc-empty" role="alert"><p>{page.error}</p><div className="ws-doc-actions"><button className="ws-btn" onClick={() => setGeneration(x => x + 1)}>重试</button><button className="ws-btn" onClick={() => go(null)}>返回全部分区</button></div></div>}
+      {page.error && <div className="ws-doc-empty" role="alert"><p>{page.error}</p><div className="ws-doc-actions"><button className="ws-btn" onClick={() => refresh()}>重试</button><button className="ws-btn" onClick={() => go(null)}>返回全部分区</button></div></div>}
       {page.data && <><div className="ws-doc-table-wrap"><table className="ws-doc-table"><thead><tr><th>名称 / 类型</th><th>最近修改人</th><th>更新时间</th><th>操作</th></tr></thead><tbody>{page.data.nodes.map(node => <tr key={node.id}><td><div className="ws-doc-name"><span className={`ws-doc-type ${node.kind}`}><Icon name={node.kind === "folder" ? "folder" : node.kind === "link" ? "link" : "file"} size={17} /></span><div><button className="ws-doc-name-button" onClick={() => node.kind === "folder" ? go(node.id) : setDetailId(node.id)}>{node.name}</button><small>{node.editLock ? `${node.editLock.editorName} 正在编辑` : node.associationCount ? `${node.associationCount} 处关联` : node.kind === "folder" ? `${node.childCount} 项` : kindName[node.kind]}</small>{q && <button className="ws-doc-location" onClick={() => go(node.parentId)}>所在目录</button>}</div></div></td><td><div className="ws-doc-person"><Avatar name={node.updatedBy.name} colorKey={node.updatedBy.id ?? node.id} size="sm" />{node.updatedBy.name}</div></td><td className="ws-doc-date">{time(node.updatedAt)}</td><td><div className="ws-doc-menu-wrap"><button className="ws-icon-btn" aria-label={`${node.name}的更多操作`} aria-expanded={openMenu === node.id} onClick={e => { const rect = e.currentTarget.getBoundingClientRect(); setMenuPosition({ top: Math.max(8, Math.min(rect.bottom + 5, window.innerHeight - 320)), left: Math.max(8, rect.right - 165) }); setOpenMenu(x => x === node.id ? null : node.id); }}>···</button>{openMenu === node.id && <div className="ws-doc-menu" style={{ position: "fixed", top: menuPosition.top, left: menuPosition.left, right: "auto", width: 165 }}><button onClick={() => { setOpenMenu(null); if (node.kind === "folder") go(node.id); else setDetailId(node.id); }}>打开</button><button onClick={() => { setOpenMenu(null); setDetailId(node.id); }}>资料信息</button><button disabled={!node.permissions.rename} onClick={() => { setOpenMenu(null); setRename(node); }}>重命名</button><button disabled={!node.permissions.move} onClick={() => { setOpenMenu(null); setMove(node); }}>移动到…</button><button onClick={()=>{setOpenMenu(null);setCopyNode(node);}}>复制到…</button><button onClick={()=>{setOpenMenu(null);setExportRoot({id:node.id,label:node.name});}}>导出此项</button><button disabled={!node.permissions.move} onClick={()=>{setOpenMenu(null);setTrashNode(node);}}>移入回收站</button></div>}</div></td></tr>)}</tbody></table></div>
         {page.data.nodes.length === 0 && <div className="ws-doc-empty"><Icon name={q ? "search" : "folder"} size={26} /><h3>{q ? "没有找到匹配资料" : "这里还没有资料"}</h3><p>{q ? "尝试其他标题关键词，或切换到正确的空间。" : folderId === null ? "先创建一个分区，再整理项目资料。" : "新建文档、文件夹或外部链接。"}</p></div>}
         <div className="ws-doc-pagination"><span>文件夹优先 · 共 {page.data.total} 项</span><div className="ws-doc-actions"><button className="ws-btn" disabled={cursors.length <= 1} onClick={() => setCursors(c => c.slice(0, -1))}>上一页</button><button className="ws-btn" disabled={!page.data.nextCursor} onClick={() => setCursors(c => [...c, page.data!.nextCursor])}>下一页</button></div></div>
@@ -174,13 +178,13 @@ function DirectoryContent({ initialSpace, initialListing, scope, onScopeChange, 
     {exportRoot&&<ExportConfirm space={space} rootId={exportRoot.id} label={exportRoot.label} onClose={()=>setExportRoot(null)} onQueued={()=>{setExportRoot(null);setExportsOpen(true);}}/>}
     {exportsOpen&&<ExportJobs space={space} onClose={()=>setExportsOpen(false)}/>}
     {copyNode && <MoveNodeDialog operation="copy" node={copyNode} source={space} onClose={()=>setCopyNode(null)} onSaved={node=>{setCopyNode(null);saved(node,"复制");}}/>}
-    {trashNode && <TrashConfirm node={trashNode} onClose={()=>setTrashNode(null)} onSaved={()=>{setTrashNode(null);setGeneration(x=>x+1);setMessage("已移入回收站，保留 30 天");}}/>}
-    {trashOpen && <TrashDialog space={space} onClose={()=>setTrashOpen(false)} onChanged={()=>setGeneration(x=>x+1)}/>}
+    {trashNode && <TrashConfirm node={trashNode} onClose={()=>setTrashNode(null)} onSaved={()=>{setTrashNode(null);refresh();setMessage("已移入回收站，保留 30 天");}}/>}
+    {trashOpen && <TrashDialog space={space} onClose={()=>setTrashOpen(false)} onChanged={()=>refresh()}/>}
     {uploading && folderId!==null && <UploadDialog space={space} parentId={folderId} onClose={()=>setUploading(false)} onSaved={node=>{setUploading(false);saved(node,"上传");}}/>}
     {createKind && <CreateNodeDialog kind={createKind} parentId={folderId} path={path.map(n => n.name).join(" / ") || "空间根层"} space={space} onClose={() => setCreateKind(null)} onSaved={n => saved(n, "创建")} />}
     {rename && <RenameNodeDialog node={rename} onClose={() => setRename(null)} onSaved={n => saved(n, "重命名")} />}
     {move && <MoveNodeDialog node={move} source={space} onClose={() => setMove(null)} onSaved={n => saved(n, "移动")} />}
-    {detailId !== null && <DetailDialog id={detailId} onClose={() => { setDetailId(null); setGeneration(x => x + 1); }} />}
+    {detailId !== null && <DetailDialog id={detailId} onClose={() => { setDetailId(null); refresh(); }} />}
   </section>;
 }
 

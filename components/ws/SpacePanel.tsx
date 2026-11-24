@@ -5,6 +5,7 @@ import { useState } from "react";
 import { api } from "@/lib/api-client";
 import { useWorkspace, Modal } from "./shared";
 import { MilestonePanel } from "./MilestonePanel";
+import { HomeCalendar } from "./HomeCalendar";
 import { ReportPanel } from "./ReportPanel";
 import { canCreateSprint } from "@/lib/sprint-permissions";
 
@@ -24,6 +25,7 @@ export function SpacePanel() {
   return (
     <aside className="ws-space">
       {project.courseName && <p className="ws-team-note">所属课程：{project.courseName}</p>}
+      <HomeCalendar key={`calendar-${project.id}`} projectId={project.id} />
       <MilestonePanel key={project.id} projectId={project.id} />
       <ReportPanel key={`report-${project.id}`} projectId={project.id} />
       <section className="ws-space-section">

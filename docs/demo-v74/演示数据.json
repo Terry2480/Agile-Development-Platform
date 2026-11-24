@@ -1,0 +1,19 @@
+{
+  "team": "青禾课程小组",
+  "project": "校园活动报名 · 课程演示",
+  "projectKey": "CAMP",
+  "course": "交互设计实践",
+  "accounts": [
+    {"id":"owner","name":"林青禾","email":"camp-owner@example.test","studentId":"DEMO74001","role":"owner"},
+    {"id":"member","name":"陈星野","email":"camp-member@example.test","studentId":"DEMO74002","role":"member"}
+  ],
+  "sprint":{"name":"迭代一 · 报名闭环","goal":"学生能浏览活动并收到报名确认","startDay":0,"endDay":7},
+  "tasks":[
+    {"id":"scope","title":"确认活动报名字段","description":"确定活动名称、报名人及报名状态三个字段，并记录重复报名的处理规则。","assignee":"owner","status":"done","priority":"medium","dueDay":0},
+    {"id":"confirm","title":"验证报名确认与重复提交","description":"按验收样例走通首次报名、重复提交和满额报名，保存结果。","assignee":"member","status":"doing","priority":"high","dueDay":3},
+    {"id":"handoff","title":"整理课堂演示与交付说明","description":"汇总测试结果，在里程碑中提交需求说明和验收附件。","assignee":"owner","status":"todo","priority":"medium","dueDay":6}
+  ],
+  "milestone":{"name":"报名流程课堂验收","dueDay":7,"requirements":"展示报名、重复提交、名额已满三种反馈，从里程碑打开同一份交付附件。","tasks":["scope","confirm","handoff"]},
+  "document":{"title":"活动报名与名额规则","source":"活动报名与名额规则.md","milestone":true},
+  "attachment":{"source":"报名验收样例.txt","task":"confirm","milestone":true}
+}

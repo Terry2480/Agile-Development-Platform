@@ -42,6 +42,11 @@ function ActivityContent({ compact }: { compact: boolean }) {
   const [error, setError] = useState("");
   const detail = ws.detail;
   const canCreate = canCreateSprint(detail, ws.selectedId, ws.me.id);
+  const tasksReady = !!ws.loaded.tasks;
+  const detailReady = !!ws.loaded.detail;
+  const activitiesReady = !!ws.loaded.activities;
+  // 进度同时依赖任务和详情；未加载时显示"未知"，不把空数组算成 0%。
+  const progressReady = tasksReady && detailReady;
   const sprint = detail?.sprints.find((s) => s.status === "active") ?? null;
   // 本轮进度：优先统计当前活跃迭代内的任务，否则统计整个项目
   const scoped = sprint ? ws.tasks.filter((t) => t.sprintId === sprint.id) : ws.tasks;
@@ -70,7 +75,12 @@ function ActivityContent({ compact }: { compact: boolean }) {
   }
   return (
     <div className="ws-activity-content">
-      {compact ? (
+      {!progressReady ? (
+        <section className="ws-space-section" role="status">
+          <div className="ws-space-title">项目进度</div>
+          <div className="ws-empty">正在加载进度…</div>
+        </section>
+      ) : compact ? (
         <section className="ws-space-section">
           <div className="ws-space-title">{sprint ? sprint.name : "项目整体进度"}<b>{pct}%</b></div>
           <div className="ws-progress"><i style={{ width: `${pct}%` }} /></div>
@@ -128,16 +138,20 @@ function ActivityContent({ compact }: { compact: boolean }) {
 
       )}
       <section className="ws-space-section">
-        <div className="ws-space-title">{compact ? "最新动态 · 3 条" : "项目日志"}</div>
-        {entries.length === 0 && <div className="ws-empty">暂无动态</div>}
+        <div className="ws-space-title">
+          {compact ? (activitiesReady ? `最新动态 · ${Math.min(entries.length, 3)} 条` : "最新动态") : "项目日志"}
+        </div>
+        {!activitiesReady
+          ? <div className="ws-empty" role="status">正在加载日志…</div>
+          : entries.length === 0 && <div className="ws-empty">暂无动态</div>}
         {(compact ? entries.slice(0, 3) : entries).map((entry) => (
           <div key={entry.id} className="ws-activity">
             <div className="act-detail" title={compact ? entry.detail : undefined}>{entry.detail}</div>
             <div className="act-time">{new Date(entry.createdAt).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
           </div>
         ))}
-        {!compact && entries.length > 0 && hasMore && <button className="ws-view-all" disabled={loading} onClick={loadOlder}>{loading ? "加载中…" : "加载更早日志"}</button>}
-        {!compact && !hasMore && <div className="act-time">已显示全部日志</div>}
+        {!compact && activitiesReady && entries.length > 0 && hasMore && <button className="ws-view-all" disabled={loading} onClick={loadOlder}>{loading ? "加载中…" : "加载更早日志"}</button>}
+        {!compact && activitiesReady && !hasMore && <div className="act-time">已显示全部日志</div>}
         {!compact && error && <div className="ws-error" role="alert">{error}</div>}
       </section>
     </div>

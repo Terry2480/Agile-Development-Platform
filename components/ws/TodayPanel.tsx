@@ -52,7 +52,7 @@ export function TodayPanel() {
       <header className="ws-today-head">
         <div>
           <h1>{greeting}，{ws.me.name || ws.me.studentId}</h1>
-          <p>{dateText} · {ws.overview ? `${ws.overview.myTodo + ws.overview.myDoing} 个待办 · ${ws.dmUnreadTotal} 条未读私信` : "正在加载…"}</p>
+          <p>{dateText} · {ws.overview ? `${ws.overview.myTodo + ws.overview.myDoing} 个待办` : "正在加载…"}{ws.overview && (ws.dmsLoaded ? ` · ${ws.dmUnreadTotal} 条未读私信` : " · 私信加载中…")}</p>
         </div>
       </header>
 
@@ -95,9 +95,10 @@ export function TodayPanel() {
         </section>
 
         <section className="ws-today-card">
-          <h2><Icon name="message" size={14} /> 未读私信 <span className="ws-count-pill">{ws.dmUnreadTotal}</span></h2>
-          {unreadDms.length === 0 && <div className="ws-empty" style={{ padding: 18 }}>没有未读私信</div>}
-          {unreadDms.map((c) => (
+          <h2><Icon name="message" size={14} /> 未读私信 <span className="ws-count-pill">{ws.dmsLoaded ? ws.dmUnreadTotal : "—"}</span></h2>
+          {!ws.dmsLoaded && <div className="ws-empty" style={{ padding: 18 }} role="status">正在加载私信…</div>}
+          {ws.dmsLoaded && unreadDms.length === 0 && <div className="ws-empty" style={{ padding: 18 }}>没有未读私信</div>}
+          {ws.dmsLoaded && unreadDms.map((c) => (
             <button key={c.id} className="ws-today-item" onClick={() => ws.openDmConversation(c.id)}>
               <Avatar name={c.partner.displayName} colorKey={c.partner.userId} size="sm" />
               <span className="ws-today-item-main">

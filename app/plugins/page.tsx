@@ -36,7 +36,10 @@ export default function PluginsPage() {
           <h1>插件商城</h1>
           <p>插件为平台增添功能，可随时启用或停用；全部遵循统一的标准格式。</p>
         </div>
-        <button type="button" className="plg-back" onClick={() => router.push("/")}>返回首页</button>
+        <button type="button" className="plg-back" onClick={() => router.push("/")}>
+          <span className="plg-back__arrow" aria-hidden="true">←</span>
+          <span>返回首页</span>
+        </button>
       </header>
 
       <div className="plg-grid">
@@ -57,7 +60,7 @@ export default function PluginsPage() {
                 <span className="plg-card__perms-label">权限</span>
                 {p.permissions.map((perm) => <code key={perm}>{perm}</code>)}
               </div>
-              <footer className="plg-card__foot">
+              <div className="plg-card__foot">
                 <button
                   type="button"
                   className={`plg-toggle${on ? " plg-toggle--on" : ""}`}
@@ -66,16 +69,16 @@ export default function PluginsPage() {
                 >
                   {on ? "停用" : "启用"}
                 </button>
-              </footer>
+              </div>
             </article>
           );
         })}
         {plugins.length === 0 && <p className="plg-empty">商城暂无插件。按标准格式开发后到 registry 注册即可上架。</p>}
       </div>
 
-      <footer className="plg-foot">
+      <div className="plg-foot">
         <p>插件标准格式（含最小示例）见仓库 <code>docs/PLUGIN-SPEC.md</code>；独立副本见 <code>plugin-spec</code> 分支。</p>
-      </footer>
+      </div>
     </div>
   );
 }

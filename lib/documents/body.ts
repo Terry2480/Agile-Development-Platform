@@ -1,12 +1,13 @@
 import { z } from "zod";
 export type BodyNode = { type: string; text?: string; attrs?: Record<string, unknown>; marks?: { type: string; attrs?: Record<string, unknown> }[]; content?: BodyNode[] };
-const types = new Set(["doc", "paragraph", "heading", "text", "bulletList", "orderedList", "listItem", "codeBlock", "blockquote", "hardBreak", "horizontalRule", "table", "tableRow", "tableCell", "tableHeader", "image"]);
+const types = new Set(["doc", "paragraph", "heading", "text", "bulletList", "orderedList", "listItem", "codeBlock", "blockquote", "hardBreak", "markdown", "horizontalRule", "table", "tableRow", "tableCell", "tableHeader", "image"]);
 export const bodyInput = z.unknown().transform((value, ctx): BodyNode => {
   let count = 0;
   function check(v: unknown, depth: number): boolean {
     if (!v || typeof v !== "object" || Array.isArray(v) || depth > 30 || ++count > 50000) return false;
     const n = v as BodyNode;
     if (!types.has(n.type) || Object.keys(n).some(k => !["type", "text", "attrs", "marks", "content"].includes(k))) return false;
+    if (n.type === "markdown") return depth === 1 && typeof n.text === "string" && n.content === undefined && n.attrs === undefined && n.marks === undefined;
     if (n.type === "text" && (typeof n.text !== "string" || n.content !== undefined)) return false;
     if (n.text !== undefined && n.type !== "text") return false;
     if (n.attrs !== undefined) {

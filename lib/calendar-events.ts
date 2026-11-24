@@ -1,6 +1,14 @@
 // 首页日历工具（纯函数，便于单测）：月历网格生成 + 事件按日期分组。
 // 数据聚合见 app/api/home/calendar/route.ts；渲染见 components/ws/HomeCalendar.tsx。
 
+export interface CalendarSprint {
+  id: number;
+  title: string;
+  projectName: string;
+  startsOn: string;
+  endsOn: string;
+}
+
 export interface CalendarEvent {
   date: string; // YYYY-MM-DD
   kind: "task" | "milestone";

@@ -56,24 +56,29 @@ export function TopBar() {
         </button>
 
         <div className="ws-bell-wrap">
-          <button className="ws-rail-btn" style={{ width: 34, height: 34 }} title="通知" onClick={() => setShowNotif((v) => !v)}>
+          <button className="ws-rail-btn" style={{ width: 34, height: 34 }} title="通知" onClick={() => { if (!ws.loaded.notifications) ws.ensureResource("notifications"); setShowNotif((v) => !v); }}>
             <Icon name="bell" size={16} />
-            {ws.unreadCount > 0 && <span className="ws-rail-dot" />}
+            {ws.loaded.notifications
+              ? ws.unreadCount > 0 && <span className="ws-rail-dot" />
+              : <span className="ws-rail-dot loading" title="未读通知加载中" aria-label="未读通知加载中" />}
           </button>
           {showNotif && (
             <div className="ws-pop" onMouseDown={(e) => e.stopPropagation()}>
               <div className="ws-pop-head">
                 <b>通知</b>
                 <ClearReadNotifications />
-                {ws.unreadCount > 0 && (
+                {ws.loaded.notifications && ws.unreadCount > 0 && (
                   <button onClick={() => ws.markRead()}>全部已读</button>
                 )}
               </div>
               <div className="ws-pop-list">
-                {ws.notifications.length === 0 && (
+                {!ws.loaded.notifications && (
+                  <div style={{ padding: "28px 14px", textAlign: "center", fontSize: 12, color: "var(--ws-color-5d6273)" }} role="status">正在加载通知…</div>
+                )}
+                {ws.loaded.notifications && ws.notifications.length === 0 && (
                   <div style={{ padding: "28px 14px", textAlign: "center", fontSize: 12, color: "var(--ws-color-5d6273)" }}>暂无通知</div>
                 )}
-                {ws.notifications.map((n) => (
+                {ws.loaded.notifications && ws.notifications.map((n) => (
                   <NotificationEntry key={n.id} notification={n} onOpened={() => setShowNotif(false)} />
                 ))}
               </div>

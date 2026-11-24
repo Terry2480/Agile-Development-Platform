@@ -76,7 +76,7 @@ export function TaskBoard({ tasks }: { tasks: TaskItem[] }) {
                   {task.labels.length > 2 && <span className="ws-board-label" title={task.labels.slice(2).map((label) => label.name).join("、")}>+{task.labels.length - 2}</span>}
                 </div>
                 <TaskParticipants assignee={task.assignee ? { id: task.assignee.id ?? task.assigneeId!, displayName: task.assignee.displayName } : null} collaborators={task.collaborators ?? []} />
-                <footer>{busy ? <span role="status">正在移动…</span> : <span>点击查看详情</span>}<span>{[task.commentCount > 0 ? `${task.commentCount} 条评论` : "", task.attachmentCount > 0 ? `${task.attachmentCount} 个附件` : ""].filter(Boolean).join(" · ")}</span></footer>
+                <div className="ws-board-card-meta">{busy ? <span role="status">正在移动…</span> : <span>点击查看详情</span>}<span>{[task.commentCount > 0 ? `${task.commentCount} 条评论` : "", task.attachmentCount > 0 ? `${task.attachmentCount} 个附件` : ""].filter(Boolean).join(" · ")}</span></div>
               </article>;
             })}
           </div>

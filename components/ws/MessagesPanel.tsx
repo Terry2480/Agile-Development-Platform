@@ -281,7 +281,9 @@ function DmThread({ conversationId }: { conversationId: number }) {
       });
       stickToBottom.current = true;
       loadSeq.current++; // 使在途的旧轮询响应失效，防止把刚发出的消息覆盖掉
-      setMessages((items) => [...items, d.message]);
+      setMessages((items) => items.some((message) => message.id === d.message.id)
+        ? items
+        : [...items, d.message]);
       setText("");
       setDmReply(null);
       void ws.refreshDms().catch(() => {});
@@ -302,7 +304,9 @@ function DmThread({ conversationId }: { conversationId: number }) {
       const d = await uploadFile<{ message: DmMessage }>(`/api/dm/${conversationId}/files`, file);
       stickToBottom.current = true;
       loadSeq.current++; // 同上：防止过期轮询响应覆盖刚上传的文件消息
-      setMessages((items) => [...items, d.message]);
+      setMessages((items) => items.some((message) => message.id === d.message.id)
+        ? items
+        : [...items, d.message]);
       void ws.refreshDms().catch(() => {});
       toast(`已发送「${file.name}」`);
     } catch (e) {

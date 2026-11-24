@@ -21,7 +21,7 @@ export class RequestGate {
     };
   }
 
-  cancel(keys?: string[]) {
+  cancel(keys?: readonly string[]) {
     for (const key of keys ?? [...this.requests.keys()]) {
       const controller = this.requests.get(key);
       if (controller) { controller.abort(); this.pending.delete(controller); }

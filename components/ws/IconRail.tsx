@@ -5,12 +5,19 @@ import { useRouter } from "next/navigation";
 import { useWorkspace, Icon, Avatar } from "./shared";
 import { displayNameOf } from "./helpers";
 import { useTheme } from "./ThemeProvider";
+import { prefetchDocumentOpen } from "./documents/useDocumentResource";
 
 export function IconRail() {
   const ws = useWorkspace();
   const router = useRouter();
   const { theme, toggle } = useTheme();
   const myTodoCount = (ws.overview?.myTodo ?? 0) + (ws.overview?.myDoing ?? 0);
+  // 未加载的角标保持"未知"状态，不把 0 当成真实数量。
+  const notificationsReady = !!ws.loaded.notifications;
+  const dmsReady = !!ws.loaded.dms;
+  const overviewReady = !!ws.loaded.overview;
+  // 鼠标停到「云文档」上就先取一次首屏数据；真点进去时直接命中，不再等网络。
+  const warmDocuments = () => { if (ws.selectedId !== null) prefetchDocumentOpen(ws.me.id, ws.selectedId); };
 
   return (
     <aside className="ws-rail">
@@ -51,11 +58,13 @@ export function IconRail() {
       >
         <Icon name="bell" size={17} />
         <small>通知</small>
-        {ws.unreadCount > 0 && (
-          ws.unreadCount > 9
-            ? <span className="ws-rail-badge">9+</span>
-            : <span className="ws-rail-badge">{ws.unreadCount}</span>
-        )}
+        {notificationsReady
+          ? (ws.unreadCount > 0 && (
+            ws.unreadCount > 9
+              ? <span className="ws-rail-badge">9+</span>
+              : <span className="ws-rail-badge">{ws.unreadCount}</span>
+          ))
+          : <span className="ws-rail-badge loading" title="未读通知加载中" aria-label="未读通知加载中" />}
       </button>
       <button
         className={`ws-rail-btn ws-rail-management ${ws.railView === "todos" ? "active" : ""}`}
@@ -64,7 +73,9 @@ export function IconRail() {
       >
         <Icon name="check" size={17} />
         <small>待办</small>
-        {myTodoCount > 0 && <span className="ws-rail-dot blue" />}
+        {overviewReady
+          ? myTodoCount > 0 && <span className="ws-rail-dot blue" />
+          : <span className="ws-rail-dot loading" title="待办数量加载中" aria-label="待办数量加载中" />}
       </button>
       <button
         className={`ws-rail-btn ws-rail-management ${ws.railView === "messages" ? "active" : ""}`}
@@ -74,16 +85,20 @@ export function IconRail() {
       >
         <Icon name="message" size={17} />
         <small>私聊</small>
-        {ws.dmUnreadTotal > 0 && (
-          ws.dmUnreadTotal > 9
-            ? <span className="ws-rail-badge">9+</span>
-            : <span className="ws-rail-badge">{ws.dmUnreadTotal}</span>
-        )}
+        {dmsReady
+          ? (ws.dmUnreadTotal > 0 && (
+            ws.dmUnreadTotal > 9
+              ? <span className="ws-rail-badge">9+</span>
+              : <span className="ws-rail-badge">{ws.dmUnreadTotal}</span>
+          ))
+          : <span className="ws-rail-badge loading" title="未读私信加载中" aria-label="未读私信加载中" />}
       </button>
       <button
         className={`ws-rail-btn ws-rail-management ${ws.railView === "docs" ? "active" : ""}`}
         title="云文档"
         aria-label="云文档"
+        onPointerEnter={warmDocuments}
+        onFocus={warmDocuments}
         onClick={() => ws.setRailView("docs")}
       >
         <Icon name="book" size={17} />

@@ -10,6 +10,8 @@ import { NotificationEntry } from "./NotificationEntry";
 import { TaskParticipants } from "./TaskParticipants";
 import { TaskFilterBar } from "./TaskFilterBar";
 import { TaskBoard } from "./TaskBoard";
+import { DocumentAssociations } from "./documents/DocumentAssociations";
+import { useDocumentResource } from "./documents/useDocumentResource";
 import { EMPTY_TASK_FILTERS, filterTasks } from "@/lib/task-filters";
 import { RequestGate } from "@/lib/request-gate";
 import {
@@ -18,6 +20,7 @@ import {
 } from "@/lib/api-client";
 import { useWorkspace, Icon, Avatar, Modal } from "./shared";
 import { renderMentions } from "./helpers";
+import { perfMarkFirstCard } from "@/lib/workspace-perf";
 
 // 优先级竖条：蓝白黑三色系统（高=亮蓝 / 中=品牌蓝 / 低=灰蓝）
 const PRIO_COLOR: Record<string, string> = { high: "#9cc0ff", medium: "#3b6ef5", low: "#46506b" };
@@ -108,6 +111,7 @@ export function TaskPanel() {
 export function TaskCard({ task: t, showProject }: { task: TaskItem; showProject?: boolean }) {
   const ws = useWorkspace();
   const [expanded, setExpanded] = useState(false);
+  useEffect(() => { perfMarkFirstCard(); }, []);
   const due = t.dueOn ? dueInfo(t.dueOn) : null;
   const dueCls = due ? (due.overdue ? "due-over" : due.soon ? "due-soon" : "due-norm") : "";
   return (
@@ -221,6 +225,7 @@ export function NotificationsView() {
 
 /* ---------- 任务详情抽屉 ---------- */
 type TaskFull = {
+  projectId: number;
   members: { userId: number; displayName: string }[];
   collaborators: { id: number; displayName: string }[];
   id: number; code: string; title: string; description: string | null;
@@ -238,6 +243,7 @@ type TaskFull = {
 
 export function TaskDrawer() {
   const ws = useWorkspace();
+  const documentStatus = useDocumentResource<{ enabled: boolean }>("/api/document-status");
   const [wide, setWide] = useState(false);
   const [task, setTask] = useState<TaskFull | null>(null);
   const [comment, setComment] = useState("");
@@ -432,7 +438,10 @@ export function TaskDrawer() {
               </section>
               <section className="ws-task-detail-section" id={`task-${task.id}-discussion`}>
                 <h3>附件与讨论</h3>
-              {task.files.length > 0 && (
+              {documentStatus.data?.enabled && (
+                <DocumentAssociations key={task.id} kind="task" targetId={task.id} projectId={task.projectId} />
+              )}
+              {documentStatus.data?.enabled === false && task.files.length > 0 && (
                 <>
                   <div className="ws-sub-title">附件（{task.files.length}）</div>
                   {task.files.map((f) => (
@@ -504,7 +513,7 @@ export function TaskDrawer() {
           )}
         </div>
 
-        <div style={{ padding: "10px 20px", borderTop: "1px solid #22242f", display: "flex", gap: 8 }}>
+        {documentStatus.data?.enabled === false && task && <div style={{ padding: "10px 20px", borderTop: "1px solid #22242f", display: "flex", gap: 8 }}>
           <button className="ws-btn" disabled={!!busy} style={{ flex: 1 }} onClick={() => fileRef.current?.click()}>
             <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}><Icon name="paperclip" size={13} /> 上传附件</span>
           </button>
@@ -516,11 +525,11 @@ export function TaskDrawer() {
               e.target.value = "";
               if (!file || busy) return;
               void runAction("上传附件", async () => {
-                await apiUpload(`/api/projects/${ws.selectedId}/files`, file, id!);
+                await apiUpload(`/api/projects/${task.projectId}/files`, file, task.id);
               }, async () => { await Promise.all([load(), ws.refreshTasks(), ws.refreshFiles(), ws.refreshActivities()]); });
             }}
           />
-        </div>
+        </div>}
       </aside>
     </>
   );

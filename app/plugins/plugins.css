@@ -19,11 +19,26 @@
 .plg-head h1 { margin: 0 0 6px; font-size: 26px; }
 .plg-head p { margin: 0; font-size: 13px; opacity: 0.72; }
 .plg-back {
-  border: 1px solid var(--ws-color-262a38, #262a38);
-  background: transparent; color: inherit; border-radius: 9px;
-  padding: 8px 16px; font-size: 13px; cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  border: 1px solid var(--ws-color-6f9bff, #6f9bff);
+  border-radius: 9px;
+  background: var(--ws-color-1c3154, #1c3154);
+  color: var(--ws-color-9cbcff, #9cbcff);
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
 }
-.plg-back:hover { border-color: var(--ws-color-4a4f60, #4a4f60); }
+
+.plg-back__arrow { font-size: 18px; line-height: 1; }
+.plg-back:hover { background: var(--ws-color-24407a, #24407a); }
+.plg-back:focus-visible {
+  outline: 2px solid var(--ws-color-6f9bff, #6f9bff);
+  outline-offset: 3px;
+}
 
 .plg-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));

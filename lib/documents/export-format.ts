@@ -1,9 +1,11 @@
 import type {BodyNode} from "./body";
+import { renderMarkdown } from "../markdown";
 const escape=(text:unknown)=>String(text??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]!));
 export function imageIds(body:BodyNode):number[]{const result=new Set<number>();function walk(n:BodyNode){if(n.type==="image")result.add(Number(n.attrs?.resourceId));for(const c of n.content??[])walk(c);}walk(body);return [...result];}
 export function bodyMarkdown(body:BodyNode,image:(id:number)=>string):string {
   function render(n:BodyNode,depth=0):string {
     const children=()=>n.content?.map(c=>render(c,depth+1)).join("")??"";
+    if(n.type==="markdown") return n.text ?? "";
     if(n.type==="text"){let text=(n.text??"").replace(/([\\`*_{}\[\]<>])/g,"\\$1");for(const m of n.marks??[]){if(m.type==="bold")text=`**${text}**`;if(m.type==="italic")text=`*${text}*`;if(m.type==="code")text=`\`${text}\``;if(m.type==="link")text=`[${text}](${encodeURI(String(m.attrs?.href??"")).replace(/[()]/g,c=>c==="("?"%28":"%29")})`;}return text;}
     if(n.type==="paragraph")return children()+"\n\n";
     if(n.type==="heading")return "#".repeat(Math.min(6,Math.max(1,Number(n.attrs?.level??2))))+" "+children()+"\n\n";
@@ -20,6 +22,7 @@ export function bodyMarkdown(body:BodyNode,image:(id:number)=>string):string {
 export function bodyHtml(body:BodyNode,image:(id:number)=>string):string {
   function render(n:BodyNode):string {
     const children=()=>n.content?.map(render).join("")??"";
+    if(n.type==="markdown") return renderMarkdown(n.text ?? "");
     if(n.type==="text"){let text=escape(n.text);for(const mark of n.marks??[]){if(mark.type==="bold")text=`<strong>${text}</strong>`;if(mark.type==="italic")text=`<em>${text}</em>`;if(mark.type==="code")text=`<code>${text}</code>`;if(mark.type==="underline")text=`<u>${text}</u>`;if(mark.type==="strike")text=`<s>${text}</s>`;if(mark.type==="link"&&/^https?:\/\//.test(String(mark.attrs?.href)))text=`<a href="${escape(mark.attrs?.href)}">${text}</a>`;}return text;}
     if(n.type==="image")return `<img src="${escape(image(Number(n.attrs?.resourceId)))}" alt="${escape(n.attrs?.alt)}">`;
     if(n.type==="hardBreak")return "<br>";if(n.type==="horizontalRule")return "<hr>";

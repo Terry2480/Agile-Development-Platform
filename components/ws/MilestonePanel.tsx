@@ -16,6 +16,7 @@ export function MilestonePanel({ projectId }: { projectId: number }) {
   const [items, setItems] = useState<Milestone[] | null>(null);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState<Milestone | "new" | null>(null);
+  const [expandedResources, setExpandedResources] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<Milestone | null>(null);
   const canManage = ws.detail?.project.id === projectId && ["owner", "admin"].includes(ws.detail.myRole);
   const url = `/api/projects/${projectId}/milestones`;
@@ -42,8 +43,9 @@ export function MilestonePanel({ projectId }: { projectId: number }) {
         <div className="ws-panel-head"><h3>{m.name}</h3><span className="ws-role-tag">{m.completed ? "已完成" : days < 0 ? "已逾期" : "未完成"}</span></div>
         <p className="ws-team-note">{m.teachingWeek ? `第 ${m.teachingWeek} 周 · ${m.teachingWeekday === 7 ? "周末截止" : `星期${["", "一", "二", "三", "四", "五", "六"][m.teachingWeekday ?? 7]}`} · ` : "截止日期："}{m.dueOn}</p><p className="ws-milestone-requirements">{m.requirements || "未填写交付要求"}</p>
         {m.taskIds.length > 0 && <><p className="ws-team-note">关联任务 {done} / {m.taskIds.length} 已完成{ready && !m.completed ? " · 可以确认完成" : ""}</p><div className="ws-progress"><i style={{ width: `${done / m.taskIds.length * 100}%` }} /></div>{linked.map((t) => <button className="ws-milestone-task" key={t.id} onClick={() => ws.openTask(t.id)}>{t.status === "done" ? "✓" : "○"} {t.code} {t.title}</button>)}</>}
-        {documentStatus.data&&!documentStatus.data.enabled&&<MilestoneResources projectId={projectId} milestoneId={m.id} canManage={!!canManage} />}
-        <DocumentAssociations kind="milestone" targetId={m.id} projectId={projectId} />
+        <button className="ws-btn" aria-expanded={expandedResources === m.id} onClick={() => setExpandedResources(current => current === m.id ? null : m.id)}>{expandedResources === m.id ? "收起关联资料" : "查看关联资料"}</button>
+        {expandedResources === m.id && documentStatus.data&&!documentStatus.data.enabled&&<MilestoneResources projectId={projectId} milestoneId={m.id} canManage={!!canManage} />}
+        {expandedResources === m.id && <DocumentAssociations kind="milestone" targetId={m.id} projectId={projectId} />}
         {canManage && <div className="ws-management-actions"><button className="ws-btn" onClick={() => setEditing(m)}>编辑 / {m.completed ? "重新开启" : "确认完成"}</button><button className="ws-btn danger" onClick={() => setDeleting(m)}>删除</button></div>}
       </article>;
     })}

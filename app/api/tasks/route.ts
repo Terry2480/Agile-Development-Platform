@@ -97,15 +97,17 @@ export async function GET(request: Request) {
           .where(inArray(comments.taskId, taskIds))
           .groupBy(comments.taskId)
       : [];
-    let fileCounts = taskIds.length
-      ? await db
+    const useDocuments = taskIds.length > 0 && typeof db.execute === "function"
+      && await (await import("@/lib/documents/lifecycle")).documentsEnabled(db);
+    const fileCounts = useDocuments
+      ? [...await (await import("@/lib/documents/legacy")).canonicalTaskFileCounts(taskIds)]
+      : taskIds.length ? await db
           .select({ taskId: attachments.taskId, count: sql<number>`count(*)::int` })
           .from(attachments)
           .where(inArray(attachments.taskId, taskIds))
           .groupBy(attachments.taskId)
       : [];
 
-    if(typeof db.execute==="function"){const {documentsEnabled}=await import("@/lib/documents/lifecycle");if(await documentsEnabled(db)){const {canonicalTaskFileCounts}=await import("@/lib/documents/legacy");fileCounts=[...await canonicalTaskFileCounts(taskIds)];}}
     const result = rows.map((r) => ({
       ...r.task,
       code: taskCode(r.projectKey, r.task.number),

@@ -15,17 +15,20 @@ export function ManagementPanel({ kind }: { kind: "project" | "team" }) {
   const [notice, setNotice] = useState("");
   const [busy,setBusy]=useState(false);
   const isTeam = kind === "team";
+  const teamsReady = !!ws.loaded.teams;
   const items = (isTeam ? ws.teams : ws.projects).filter((item) => `${item.name} ${"courseName" in item ? item.courseName ?? "" : ""}`.toLowerCase().includes(query.toLowerCase()));
   const selectedTeam = ws.teams.find((t) => t.id === teamId);
   return <section className="ws-management">
-    <div className="ws-panel-head"><h2>{isTeam ? "团队管理" : "项目管理"}<span className="ws-count-pill">{isTeam ? ws.teams.length : ws.projects.length}</span></h2>
+    <div className="ws-panel-head"><h2>{isTeam ? "团队管理" : "项目管理"}<span className="ws-count-pill">{isTeam ? (teamsReady ? ws.teams.length : "—") : ws.projects.length}</span></h2>
       <button className="ws-btn primary" onClick={() => ws.openModal({ type: isTeam ? "newTeam" : "newProject" })}>＋ {isTeam ? "创建团队" : "创建项目"}</button></div>
     <p className="ws-team-note">{isTeam ? "统一查看团队、管理成员与分工。" : "在这里创建、查看和删除课程项目。"}</p>
     {isTeam && <TeamInvitations />}
+    {!isTeam && !teamsReady && <p className="ws-team-note" role="status">正在加载团队权限…</p>}
     <input className="ws-input" aria-label={isTeam ? "搜索团队" : "搜索项目"} placeholder={isTeam ? "搜索团队…" : "搜索项目…"} value={query} onChange={(e) => setQuery(e.target.value)} />
     {notice && <p role="status">{notice}</p>}
     <div className="ws-management-list">
-      {items.length === 0 && <div className="ws-empty">{query ? "没有匹配的结果" : isTeam ? "还没有团队，点击上方创建团队。" : "还没有项目，点击上方创建项目。"}</div>}
+      {isTeam && !teamsReady && <div className="ws-empty" role="status">正在加载团队…</div>}
+      {(!isTeam || teamsReady) && items.length === 0 && <div className="ws-empty">{query ? "没有匹配的结果" : isTeam ? "还没有团队，点击上方创建团队。" : "还没有项目，点击上方创建项目。"}</div>}
       {items.map((item) => {
         const project = !isTeam ? ws.projects.find((p) => p.id === item.id) : null;
         const team = isTeam ? ws.teams.find((t) => t.id === item.id) : ws.teams.find((t) => t.id === project?.teamId);

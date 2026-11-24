@@ -6,7 +6,7 @@ import { requireUser, parseBody, parseId, requireProjectAccess, ApiError, handle
 
 // 表情回应（飞书式）：POST /api/chat/[id]/like  { emoji? }（默认 👍，切换该表情）
 // 同一条消息同一人可对多个表情各回应一次，再点同表情取消
-export const REACTION_EMOJIS = ["👍", "🎉", "😂", "🙏", "💪", "❤️"];
+const REACTION_EMOJIS = ["👍", "🎉", "😂", "🙏", "💪", "❤️"];
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {

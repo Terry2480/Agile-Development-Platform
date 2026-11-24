@@ -18,7 +18,7 @@ import { TopBar } from "@/components/ws/TopBar";
 import { TaskPanel, TodosView, NotificationsView, TaskDrawer, NewTaskModal } from "@/components/ws/TaskPanel";
 import { ChatPanel } from "@/components/ws/ChatPanel";
 import { MessagesPanel } from "@/components/ws/MessagesPanel";
-import { ProjectDocuments } from "@/components/ws/documents/ProjectDocuments";
+import { DocumentsPanel } from "@/components/ws/documents/DocumentsPanel";
 import { TodayPanel } from "@/components/ws/TodayPanel";
 import { ShortcutsPanel } from "@/components/ws/ShortcutsPanel";
 import { ScaleFrame } from "@/components/ws/ScaleFrame";
@@ -33,13 +33,22 @@ import { NewTeamModal, NewProjectModal } from "@/components/ws/Modals";
 
 import { RequestGate } from "@/lib/request-gate";
 import { startPolling } from "@/lib/polling";
+import {
+  PROJECT_RESOURCES, deferredWaves, initialBurst, pollingPlan, projectOpenPlan, readScheduleMode, viewResource,
+  type ResourceKey, type ScheduleMode,
+} from "@/lib/workspace-schedule";
+import { perfMark } from "@/lib/workspace-perf";
 
-const projectResources = ["detail", "tasks", "chat", "activities", "files"];
+const projectResources = PROJECT_RESOURCES;
 const resourceNames: Record<string, string> = { projects: "项目列表", teams: "团队列表", overview: "统计", notifications: "通知", myTasks: "我的待办", detail: "项目详情", tasks: "项目任务", chat: "团队聊天", activities: "项目日志", files: "文件列表", dms: "私信列表" };
 type LoadState = { loading: boolean; loaded: boolean; error: string | null };
 
 export default function WorkspacePage() {
   const router = useRouter();
+  // 同一份生产构建里用 ?sched=legacy 复现旧调度；默认走新调度。
+  const [scheduleMode] = useState<ScheduleMode>(() =>
+    typeof window === "undefined" ? "priority" : readScheduleMode(window.location.search),
+  );
 
   /* ---------- 登录守卫 ---------- */
   const [me, setMe] = useState<Me | null>(null);
@@ -47,7 +56,7 @@ export default function WorkspacePage() {
   const [authError, setAuthError] = useState("");
   const authenticate = useCallback(async () => {
     setAuthLoading(true); setAuthError("");
-    try { const d = await api<{ user: Me }>("/api/auth/me"); setMe(d.user); }
+    try { const d = await api<{ user: Me }>("/api/auth/me"); setMe(d.user); perfMark("ws:auth", true); }
     catch (e) {
       if (e instanceof ApiError && e.status === 401) router.replace("/login");
       else setAuthError((e as Error).message);
@@ -80,10 +89,19 @@ export default function WorkspacePage() {
   const [modal, setModal] = useState<ModalState>(null);
   const [drawerTaskId, setDrawerTaskId] = useState<number | null>(null);
   const selectedIdRef = useRef<number | null>(null);
+  const focusSectionRef = useRef(focusSection);
+  const railViewRef = useRef(railView);
   const [gate] = useState(() => new RequestGate());
   const [loads, setLoads] = useState<Record<string, LoadState>>({});
+  const loadsRef = useRef(loads);
+  const [deferredReady, setDeferredReady] = useState(false);
+  const deferredStartedRef = useRef(false);
   const [notice, setNotice] = useState("");
+  // 先于下方所有读取 ref 的 effect 声明，保证同一轮提交里 ref 已是新值。
+  useEffect(() => { loadsRef.current = loads; }, [loads]);
+  useEffect(() => { focusSectionRef.current = focusSection; railViewRef.current = railView; }, [focusSection, railView]);
   useEffect(() => () => gate.cancel(), [gate]);
+  useEffect(() => { perfMark("ws:script", true); }, []);
 
   /* ---------- 首页深链：#hash 直达模块，?project=ID 直达项目 ---------- */
   const deepProjectRef = useRef<number | null>(null);
@@ -117,10 +135,11 @@ export default function WorkspacePage() {
     setModal((m) => m?.type === "newTeam" || m?.type === "newProject" ? m : null);
     setLoads((prev) => {
       const next = { ...prev };
-      for (const key of projectResources) next[key] = { loading: id !== null, loaded: false, error: null };
+      // 旧调度保留"五个资源同时开始"的加载标记；新调度只标记未加载，等真正请求时再置 loading。
+      for (const key of projectResources) next[key] = { loading: scheduleMode === "legacy" && id !== null, loaded: false, error: null };
       return next;
     });
-  }, [gate]);
+  }, [gate, scheduleMode]);
   const loadResource = useCallback(async <T,>(key: string, path: string, commit: (data: T) => void) => {
     const request = gate.begin(key);
     setLoads((prev) => ({ ...prev, [key]: { loaded: prev[key]?.loaded ?? false, loading: true, error: null } }));
@@ -128,6 +147,8 @@ export default function WorkspacePage() {
       const data = await api<T>(path, { signal: request.signal });
       if (!request.current()) return;
       commit(data);
+      if (key === "projects") perfMark("ws:projects", true);
+      if (key === "tasks") perfMark("ws:tasks", true);
       setLoads((prev) => ({ ...prev, [key]: { loaded: true, loading: false, error: null } }));
     } catch (e) {
       if (!request.current()) return;
@@ -187,28 +208,137 @@ export default function WorkspacePage() {
     await Promise.all([refreshDetail(), refreshTasks(), refreshChat(), refreshActivities(), refreshFiles()]);
   }, [refreshDetail, refreshTasks, refreshChat, refreshActivities, refreshFiles]);
 
-  // 初始加载 + 轻量轮询（通知/统计/我的任务/私信列表）
+  const refreshResource = useCallback((key: ResourceKey): Promise<void> => {
+    switch (key) {
+      case "projects": return refreshProjects();
+      case "teams": return refreshTeams();
+      case "overview": return refreshOverview();
+      case "notifications": return refreshNotifications();
+      case "myTasks": return refreshMyTasks();
+      case "dms": return refreshDms();
+      case "detail": return refreshDetail();
+      case "tasks": return refreshTasks();
+      case "chat": return refreshChat();
+      case "activities": return refreshActivities();
+      case "files": return refreshFiles();
+    }
+  }, [refreshProjects, refreshTeams, refreshOverview, refreshNotifications, refreshMyTasks, refreshDms, refreshDetail, refreshTasks, refreshChat, refreshActivities, refreshFiles]);
+
+  // 按需加载：已加载、进行中或已失败的资源不自动重发；失败由顶部错误条的重试按钮处理，避免自动重试循环。
+  const ensureResource = useCallback((key: ResourceKey) => {
+    const state = loadsRef.current[key];
+    if (state?.loaded || state?.loading || state?.error || gate.isPending(key)) return;
+    void refreshResource(key).catch(() => {});
+  }, [gate, refreshResource]);
+
+  // 初始加载：旧调度保留六并发；新调度只等项目列表。
   useEffect(() => {
     if (!me) return;
-    Promise.all([refreshTeams(), refreshProjects(), refreshOverview(), refreshNotifications(), refreshMyTasks(), refreshDms()]).catch(() => {});
+    if (scheduleMode === "legacy") {
+      Promise.all(initialBurst(scheduleMode).map((key) => refreshResource(key))).catch(() => {});
+      return;
+    }
+    void refreshProjects().catch(() => {});
+  }, [me, scheduleMode, refreshProjects, refreshResource]);
+
+  // 旧调度的用户级轮询保持原样。
+  useEffect(() => {
+    if (!me || scheduleMode !== "legacy") return;
     const stop = [
       ["notifications", refreshNotifications], ["overview", refreshOverview], ["myTasks", refreshMyTasks],
       ["dms", refreshDms],
     ].map(([key, refresh]) => startPolling(() => gate.isPending(key as string) ? Promise.resolve() : (refresh as () => Promise<void>)(), 20000));
     return () => stop.forEach((cancel) => cancel());
-  }, [me, gate, refreshTeams, refreshProjects, refreshOverview, refreshNotifications, refreshMyTasks, refreshDms]);
+  }, [me, scheduleMode, gate, refreshNotifications, refreshOverview, refreshMyTasks, refreshDms]);
 
-  // 切换项目时拉取项目数据
-  useEffect(() => {
-    if (!me || selectedId === null) {
-      return;
-    }
-    refreshProjectData().catch(() => {});
-  }, [me, selectedId, refreshProjectData]);
-
-  // 项目数据轮询；文件库同步其他成员的上传和撤回。
+  // 选定项目：旧调度五并发；新调度先当前分区主资源，再补右侧栏的详情/日志。
   useEffect(() => {
     if (!me || selectedId === null) return;
+    if (scheduleMode === "legacy") {
+      refreshProjectData().catch(() => {});
+      return;
+    }
+    const plan = projectOpenPlan(scheduleMode, focusSectionRef.current);
+    const projectId = selectedId;
+    void (async () => {
+      await Promise.allSettled(plan.primary.map((key) => refreshResource(key)));
+      if (railViewRef.current === "projects" && selectedIdRef.current === projectId) {
+        // 右侧栏的任务/详情/日志与视图按需 effect 可能同时想发；ensureResource 会复用进行中的请求。
+        for (const key of plan.secondary) ensureResource(key);
+      }
+    })();
+  }, [me, selectedId, scheduleMode, refreshProjectData, refreshResource, ensureResource]);
+
+  useEffect(() => { if (selectedId !== null) perfMark("ws:selected", true); }, [selectedId]);
+
+  // 菜单按需：切到还没加载的面板时，复用进行中的请求或现发一次。
+  useEffect(() => {
+    if (scheduleMode !== "priority" || !me) return;
+    const key = viewResource(railView, focusSection);
+    if (key) ensureResource(key);
+    if (railView === "projects" && selectedId !== null) {
+      const primaryKey = focusSection === "chat" ? "chat" : focusSection === "space" ? "detail" : "tasks";
+      // 右侧栏进度同时依赖 tasks 和 detail；等主资源落定后再补，避免和第一张卡抢同一轮请求。
+      if (loads[primaryKey]?.loaded || loads[primaryKey]?.error) {
+        ensureResource("detail");
+        ensureResource("activities");
+        if (focusSection !== "tasks") ensureResource("tasks");
+      }
+    }
+    if (railView === "projectManagement") ensureResource("teams");
+    if (railView === "today") {
+      ensureResource("overview");
+      ensureResource("dms");
+    }
+  }, [scheduleMode, me, railView, focusSection, selectedId, loads, ensureResource]);
+
+  // 首屏就绪后的用户级补齐：角标 → 统计/待办 → 团队。
+  const primaryKey = viewResource(railView, focusSection);
+  const primaryState = primaryKey ? loads[primaryKey] : undefined;
+  const deferredEligible = scheduleMode === "priority" && !!me && !!loads.projects?.loaded
+    && (selectedId === null || primaryKey === null || !!primaryState?.loaded || !!primaryState?.error);
+  useEffect(() => {
+    if (!deferredEligible || deferredStartedRef.current) return;
+    let frame = 0;
+    let timer = 0;
+    const start = () => {
+      if (deferredStartedRef.current) return;
+      deferredStartedRef.current = true;
+      perfMark("ws:deferred-start", true);
+      // 用户可能已经点开某个面板并先发了请求；这里复用/跳过，避免 abort 后重发。
+      const fill = (key: ResourceKey) => {
+        const state = loadsRef.current[key];
+        if (state?.loaded || state?.loading || state?.error || gate.isPending(key)) return Promise.resolve();
+        return refreshResource(key);
+      };
+      void (async () => {
+        for (const wave of deferredWaves()) {
+          await Promise.allSettled(wave.map(fill));
+        }
+        perfMark("ws:deferred-done", true);
+        setDeferredReady(true);
+      })();
+    };
+    frame = window.requestAnimationFrame(() => { timer = window.setTimeout(start, 0); });
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [deferredEligible, refreshResource, gate]);
+
+  // 新调度：首屏补齐后再启动用户级轮询。
+  useEffect(() => {
+    if (scheduleMode !== "priority" || !me || !deferredReady) return;
+    const stop = [
+      ["notifications", refreshNotifications], ["overview", refreshOverview], ["myTasks", refreshMyTasks],
+      ["dms", refreshDms],
+    ].map(([key, refresh]) => startPolling(() => gate.isPending(key as string) ? Promise.resolve() : (refresh as () => Promise<void>)(), 20000));
+    return () => stop.forEach((cancel) => cancel());
+  }, [scheduleMode, me, deferredReady, gate, refreshNotifications, refreshOverview, refreshMyTasks, refreshDms]);
+
+  // 旧调度：项目数据轮询与文件库同步保持原样。
+  useEffect(() => {
+    if (!me || selectedId === null || scheduleMode !== "legacy") return;
     const stopChat = startPolling(() => gate.isPending("chat") ? Promise.resolve() : refreshChat(), 8000);
     const stopActivities = startPolling(() => gate.isPending("activities") ? Promise.resolve() : refreshActivities(), 8000);
     const stopDetail = startPolling(() => gate.isPending("detail") ? Promise.resolve() : refreshDetail(), 20000);
@@ -225,7 +355,16 @@ export default function WorkspacePage() {
       window.removeEventListener("focus", onFilesVisible);
       document.removeEventListener("visibilitychange", onFilesVisible);
     };
-  }, [me, selectedId, gate, refreshChat, refreshActivities, refreshDetail, refreshFiles]);
+  }, [me, selectedId, scheduleMode, gate, refreshChat, refreshActivities, refreshDetail, refreshFiles]);
+
+  // 新调度：只轮询当前视图可见的项目数据，聊天不进任务/概览视图。
+  useEffect(() => {
+    if (scheduleMode !== "priority" || !me || selectedId === null || railView !== "projects") return;
+    const stops = pollingPlan(scheduleMode, railView, focusSection).map(({ key, interval }) =>
+      startPolling(() => gate.isPending(key) ? Promise.resolve() : refreshResource(key), interval));
+    return () => stops.forEach((stop) => stop());
+  }, [scheduleMode, me, selectedId, railView, focusSection, gate, refreshResource]);
+
 
   /* ---------- 动作 ---------- */
   const afterProjectMutation = useCallback(async () => {
@@ -236,6 +375,14 @@ export default function WorkspacePage() {
     await afterSaved([refreshTasks(), refreshProjects(), refreshActivities(), refreshMyTasks(), refreshOverview()]);
   }, [refreshTasks, refreshProjects, refreshActivities, refreshMyTasks, refreshOverview, afterSaved]);
 
+  // 只把 loaded 布尔暴露给组件：loading 翻转不改变 store，避免整棵工作台跟着重渲染。
+  const loadedSignature = useMemo(() => Object.keys(loads).filter((key) => loads[key].loaded).sort().join("|"), [loads]);
+  const loaded = useMemo(() => {
+    const map: Record<string, boolean> = {};
+    for (const key of loadedSignature ? loadedSignature.split("|") : []) map[key] = true;
+    return map;
+  }, [loadedSignature]);
+
   const store: WorkspaceStore = useMemo(() => ({
     me: me!,
     railView, setRailView: (view) => { gate.cancel(["notificationNavigation"]); setRailView(view); },
@@ -243,6 +390,7 @@ export default function WorkspacePage() {
     teams, projects, selectedId, detail, tasks, myTasks, chat, activities, files,
     notifications, unreadCount, overview,
     dmConversations, dmUnreadTotal, dmTargetId, dmsLoaded,
+    loaded, ensureResource,
     refreshDms, docTarget,
     openDoc: (id) => { gate.cancel(["notificationNavigation"]); setDocTarget({ id, n: ++docTargetNonce.current }); setRailView("docs"); },
     taskSearch, setTaskSearch,
@@ -426,14 +574,20 @@ export default function WorkspacePage() {
     afterProjectMutation, afterTaskMutation, afterSaved,
     gate,
     loadResource,
+    loaded, ensureResource,
   ]);
 
   /* ---------- 渲染 ---------- */
   if (authLoading) return <div className="ws-empty" role="status">正在加载工作空间…</div>;
   if (!me) return <div className="ws-empty" role="alert">{authError || "正在前往登录页面…"}{authError && <button className="ws-btn" onClick={() => void authenticate()}>重试</button>}</div>;
-  const retries: Record<string, () => Promise<void>> = { projects: refreshProjects, teams: refreshTeams, overview: refreshOverview, notifications: refreshNotifications, myTasks: refreshMyTasks, detail: refreshDetail, tasks: refreshTasks, chat: refreshChat, activities: refreshActivities, files: refreshFiles };
-  const activeKey = railView === "todos" ? "myTasks" : railView === "notifications" ? "notifications" : railView === "messages" ? "dms" : railView === "docs" ? "docs" : railView === "projectManagement" ? "projects" : railView === "teamManagement" ? "teams" : focusSection === "tasks" ? "tasks" : focusSection === "chat" ? "chat" : "files";
-  const initialPending = loads[activeKey] && !loads[activeKey].loaded && (loads[activeKey].loading || loads[activeKey].error);
+  const retries: Record<string, () => Promise<void>> = { projects: refreshProjects, teams: refreshTeams, overview: refreshOverview, notifications: refreshNotifications, myTasks: refreshMyTasks, detail: refreshDetail, tasks: refreshTasks, chat: refreshChat, activities: refreshActivities, files: refreshFiles, dms: refreshDms };
+  const activeKey = viewResource(railView, focusSection);
+  const activeState = activeKey ? loads[activeKey] : undefined;
+  const centerManaged = railView !== "messages" && railView !== "docs" && railView !== "today";
+  // 项目列表已加载但一个项目都没有时，任务/聊天分区显示空态，而不是永远转圈。
+  const noProject = selectedId === null && (activeKey === "tasks" || activeKey === "chat");
+  const initialPending = centerManaged && activeKey !== null && !activeState?.loaded && !(noProject && loads.projects?.loaded);
+  const detailState = loads.detail;
 
   const project = projects.find((p) => p.id === selectedId);
 
@@ -450,7 +604,7 @@ export default function WorkspacePage() {
           {Object.entries(loads).filter(([, state]) => state.error).map(([key, state]) => <div className="ws-error" role="alert" key={key}>{resourceNames[key]}加载失败：{state.error} <button className="ws-btn" disabled={state.loading} onClick={() => void retries[key]().catch(() => {})}>{state.loading ? "重试中…" : "重试"}</button></div>)}
           <div className="ws-body">
             <div className="ws-center" id="ws-center">
-              {initialPending && railView !== "messages" && railView !== "docs" && (loads[activeKey].error
+              {initialPending && centerManaged && activeKey && (activeState?.error
                 ? <div className="ws-empty" role="alert">加载失败，请点击上方重试</div>
                 : activeKey === "tasks" ? <TaskListSkeleton />
                 : activeKey === "chat" ? <ConversationSkeleton rows={5} />
@@ -463,7 +617,7 @@ export default function WorkspacePage() {
               {railView === "todos" && !initialPending && <TodosView />}
               {railView === "notifications" && !initialPending && <NotificationsView />}
               {railView === "messages" && <MessagesPanel />}
-              {railView === "docs" && <ProjectDocuments />}
+              {railView === "docs" && <DocumentsPanel />}
               {railView === "today" && <TodayPanel />}
             </div>
             {railView === "projects" && <ProjectActivitySidebar />}
@@ -471,7 +625,7 @@ export default function WorkspacePage() {
           <div className="ws-statusbar">
             <span className="ws-dot" /> {Object.values(loads).some((s) => s.error) ? "部分数据加载失败" : "工作空间"}
             <span>· {project ? project.name : "未选择项目"}</span>
-            <span>· {detail?.members.length ?? 0} 位成员</span>
+            <span>· {detailState?.loaded ? `${detail?.members.length ?? 0} 位成员` : detailState?.error ? "成员数未知" : "成员加载中…"}</span>
             <span style={{ marginLeft: "auto" }}>AgileCampus 敏捷校园</span>
           </div>
         </div>

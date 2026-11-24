@@ -47,6 +47,8 @@ test("phase-2 baseline: two teams and three accounts", async t => {
       shared["./api"] = api;
       shared["@/lib/rate-limit"] = load("../lib/rate-limit.ts", shared);
       shared["@/lib/activity"] = load("../lib/activity.ts", shared);
+      shared["./dm"] = load("../lib/dm.ts", shared);
+      shared["@/lib/documents/lifecycle"] = { documentsEnabled: async () => false };
       shared["./notify"] = load("../lib/notify.ts", shared);
       shared["@/lib/task-collaborators"] = load("../lib/task-collaborators.ts", shared);
       const password = `Baseline-${suffix}`;

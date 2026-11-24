@@ -6,6 +6,7 @@ import type {
   Me, Team, ProjectSummary, ProjectDetail, TaskItem, ChatMessage,
   ActivityItem, FileItem, NotificationItem, Overview, DmConversation,
 } from "@/lib/api-client";
+import type { ResourceKey } from "@/lib/workspace-schedule";
 
 /* ---------- 图标（feather 风格线条图标，stroke 继承 currentColor） ---------- */
 const ICON_PATHS: Record<string, string> = {
@@ -119,6 +120,9 @@ export interface WorkspaceStore {
   dmUnreadTotal: number;
   dmTargetId: number | null;
   dmsLoaded: boolean;
+  // 资源是否已成功加载过；加载中/失败不置位，组件据此区分"未知"和"0"。
+  loaded: Record<string, boolean>;
+  ensureResource(key: ResourceKey): void;
   refreshDms(): Promise<void>;
   openDmConversation(id: number): void;
   openDmWithPeer(peerId: number): Promise<void>;

@@ -78,6 +78,7 @@ test("upload log failure rolls back attachment metadata and cleans the written f
       common["node:fs/promises"] = { mkdir: async () => {}, writeFile: async (name) => { files.add(name); } };
       let logFails = true;
       common["@/lib/activity"] = { logActivity: async () => { if (logFails) throw new Error("log failed"); } };
+      common["@/lib/documents/lifecycle"] = { documentsEnabled: async () => false };
       const route = load("../app/api/projects/[id]/files/route.ts", common);
       const request = () => { const form = new FormData(); form.set("file", new File(["content"], "test.txt")); return new Request("http://localhost/api", { method: "POST", body: form }); };
       const context = { params: Promise.resolve({ id: String(project.id) }) };

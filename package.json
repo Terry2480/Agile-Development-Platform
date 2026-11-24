@@ -36,7 +36,8 @@
     "db:studio": "drizzle-kit studio",
     "setup:documents": "tsx scripts/setup-document-review.mjs",
     "test:document-ui": "node scripts/check-document-ui.mjs",
-    "test:baseline": "node scripts/test-baseline.mjs"
+    "test:baseline": "node scripts/test-baseline.mjs",
+    "measure:workspace": "node scripts/measure-workspace-open.mjs"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.3",

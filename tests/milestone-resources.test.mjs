@@ -41,6 +41,7 @@ test("milestone files and links respect ownership, project boundaries, and atomi
   const common={"@/db":{db},"@/db/schema":schema,"@/lib/auth":{getSessionUser:async()=>actor}};
   common["@/lib/api"]=moduleAt("../lib/api.ts",common);common["@/lib/activity"]=moduleAt("../lib/activity.ts",common);
   common["@/lib/file-cleanup"]={uploadPath:name=>`/virtual/${name}`,tryFileCleanup:async()=>{for(const key of memoryFiles.keys()){const name=key.split('/').at(-1);if(!(await tx.select().from(attachments).where(eq(attachments.storedName,name))).length){memoryFiles.delete(key);await tx.delete(fileCleanup).where(eq(fileCleanup.storedName,name));}}}};
+  common["@/lib/documents/lifecycle"] = { documentsEnabled: async () => false };
   const route=moduleAt("../app/api/projects/[id]/milestones/[milestoneId]/resources/route.ts",common);
   const upload=moduleAt("../app/api/projects/[id]/files/route.ts",{...common,"node:fs/promises":{mkdir:async()=>{},writeFile:async(path,data)=>memoryFiles.set(path,data)},"@/lib/upload-limits":{MAX_UPLOAD_BYTES:100*1024*1024,UPLOAD_LIMIT_MESSAGE:"超限"}}).POST;
   const call=(method,body,m=milestone.id)=>route[method](new Request("http://localhost/api",{method,...(body?{body:JSON.stringify(body)}:{})}),{params:Promise.resolve({id:String(project.id),milestoneId:String(m)})});
