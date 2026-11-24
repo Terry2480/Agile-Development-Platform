@@ -17,8 +17,8 @@ Switch 是平台内置的 AI 工作辅助 agent 插件，定位类似 [CC Switch
 ## 二、使用步骤
 
 1. 打开「插件商城」（`/plugins`），启用「Switch 工作助手」。
-2. 点击页面左下角「Switch」悬浮按钮打开面板 → ⚙ → 「＋ 添加 Agent」：选择预设，填写名称、Base URL、API Key、模型，保存。
-3. 面板顶部下拉选择当前 Agent；输入任务或点快捷指令（📖 读文档会弹出平台文档列表）。
+2. 点击**工作台左侧功能列队尾**的「⚡ Switch」按钮打开面板 → ⚙ → 「＋ 添加 Agent」：选择预设，填写名称、Base URL、API Key、模型，保存。
+3. 面板顶部下拉选择当前 Agent；输入任务或点快捷指令（📖 读文档会弹出平台文档列表）；输入栏随内容自动增高。
 
 ## 三、数据与安全
 
@@ -30,15 +30,16 @@ Switch 是平台内置的 AI 工作辅助 agent 插件，定位类似 [CC Switch
 
 ```
 plugins/switch/
-  plugin.ts      # 主插件：悬浮入口、对话面板、设置与文档选择 UI、生命周期
+  plugin.ts      # 主插件：栏位事件入口、对话面板、设置与文档选择 UI、生命周期
   client.ts      # 纯逻辑：配置模型/校验/序列化、请求构造、SSE 流解析、错误提取
   presets.ts     # 供应商预设数据
-  style.ts       # 注入式样式（--ws-color 令牌，昼夜主题可读）
+  style.ts       # 注入式样式（昼夜双套控件对比度，--ws-color 令牌）
   README.md      # 插件说明（规范要求）
 tests/switch.test.ts   # 19 个单测用例
 ```
 
 权限声明：`ui:mount`、`storage:local`、`api:read`、`network:external`（各权限用途见插件 README）。
+栏位入口：manifest 声明 `railEntry: { icon: "⚡", label: "Switch" }`——宿主在插件启用时把图标渲染进左侧功能列队尾（云文档之后），点击派发 `agilecampus-plugin-rail` 事件由插件开合面板；不声明该字段的插件（如多语言）不占栏位。
 
 ## 五、验证
 

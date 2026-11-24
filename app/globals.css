@@ -787,9 +787,12 @@ html[data-theme="day"] .ws-avatar[data-av="4"]{background:#8a4710}
 .guide-block-item.muted{color:#7c8194}
 .guide-block-tip{margin:4px 4px 2px;font-size:10.5px;color:#7c8194}
 
-/* 图标栏纵向滚动：按钮增多（如今后插件类入口）超出高度时可上下滑动 */
+/* 图标栏纵向滚动：按钮增多（如插件类入口）超出高度时可上下滑动；
+   按钮与品牌标固定尺寸不被压缩，弹性间隔保底 18px，滚动时图标大小恒定 */
 .ws-rail{overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--ws-color-4a4f60) transparent}
 .ws-rail::-webkit-scrollbar{width:4px}
 .ws-rail::-webkit-scrollbar-thumb{background:var(--ws-color-4a4f60);border-radius:999px}
 .ws-rail::-webkit-scrollbar-track{background:transparent}
+.ws-rail>.ws-rail-btn,.ws-rail>.ws-rail-logo{flex:none}
+.ws-rail>.ws-rail-gap{flex:1 0 18px}
 .ws-rail .ws-rail-gap{flex:1 0 18px;min-height:18px}

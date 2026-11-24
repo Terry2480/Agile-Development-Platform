@@ -36,6 +36,20 @@ export interface AgileCampusPlugin {
   /** 展示图标（emoji 或单字符） */
   icon: string;
   permissions: PluginPermission[];
+  /**
+   * 可选：声明工作台左侧功能列入口（排在云文档之后的队尾）。
+   * 声明后宿主会在插件启用时渲染图标按钮；点击向 document 派发
+   * "agilecampus-plugin-rail" 事件（detail.pluginId = 插件 id），由插件自行响应。
+   * 不声明则不占栏位（如多语言走自带悬浮球）。
+   */
+  railEntry?: {
+    /** 栏内显示的图标（emoji 或单字符） */
+    icon: string;
+    /** 图标下方文字标签（≤4 字为宜） */
+    label: string;
+    /** 悬停提示，缺省用插件名 */
+    title?: string;
+  };
   /** 生命周期：启用时调用；返回清理函数或由 deactivate 负责 */
   activate?(ctx: PluginContext): void | Promise<void>;
   /** 生命周期：停用时必须完全还原（卸载 UI、断开观察器、还原文本） */

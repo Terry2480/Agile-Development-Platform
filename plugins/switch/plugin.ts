@@ -1,7 +1,9 @@
 // 插件：Switch 工作助手（switch）
 // ------------------------------------------------------------------
 // 按 AgileCampus 插件标准格式实现（docs/PLUGIN-SPEC.md）。
-// 能力：页面左下悬浮入口打开对话面板，作为 AI 工作辅助 agent：
+// 入口：声明 railEntry，启用后图标进入工作台左侧功能列队尾（云文档之后）；
+//       宿主点击时派发 "agilecampus-plugin-rail" 事件，插件据此开合对话面板。
+// 能力：作为 AI 工作辅助 agent：
 //   · 文档阅读（直读平台云文档 /api/docs，api:read）、要点整理、内容总结
 //   · 多语言翻译（中/英/日/法/俄等，随用户指令）
 //   · 像 CC Switch 一样管理多个 LLM 供应商（预设 + 自定义 Base URL / API Key / 模型），一键切换
@@ -24,11 +26,11 @@ type DocDetail = { doc: { title: string; content: string } };
 
 const STYLE_ID = "sw-plugin-style";
 const MAX_HISTORY = 12; // 上下文里最多保留的消息条数
+const RAIL_EVENT = "agilecampus-plugin-rail";
 
 /* ---------------- 模块级状态（插件激活期间有效） ---------------- */
 
 let ctxRef: PluginContext | null = null;
-let launcher: HTMLButtonElement | null = null;
 let panel: HTMLDivElement | null = null;
 let chatView: HTMLElement | null = null;
 let settingsView: HTMLElement | null = null;
@@ -111,18 +113,11 @@ function ensureStyle() {
   document.head.appendChild(style);
 }
 
-function buildLauncher() {
-  if (launcher?.isConnected) return;
-  launcher = el("button", "sw-launcher");
-  launcher.type = "button";
-  launcher.title = "Switch 工作助手";
-  launcher.setAttribute("aria-label", "打开 Switch 工作助手");
-  launcher.append(el("span", "sw-launcher__dot"), document.createTextNode("Switch"));
-  on(launcher, "click", () => {
-    if (panel?.hidden) openPanel();
-    else closePanel();
-  });
-  document.body.appendChild(launcher);
+/** 输入栏自适应高度：随内容增高（上限 150px），清空后回落 */
+function autosizeComposer() {
+  if (!composer) return;
+  composer.style.height = "auto";
+  composer.style.height = `${Math.min(composer.scrollHeight, 150)}px`;
 }
 
 function openPanel() {
@@ -486,7 +481,10 @@ async function sendNow(presetText?: string) {
     setStatus("请先配置一个 Agent（API Key + 模型）", true);
     return;
   }
-  if (composer && !presetText) composer.value = "";
+  if (composer && !presetText) {
+    composer.value = "";
+    autosizeComposer();
+  }
   history.push({ role: "user", content: text });
   history = history.slice(-MAX_HISTORY);
   renderMessage("user", text);
@@ -524,17 +522,17 @@ export const switchPlugin: AgileCampusPlugin = {
   name: "Switch 工作助手",
   version: "1.0.0",
   author: "AgileCampus 团队",
-  description: "可接入任意 LLM 供应商的 AI 工作辅助 agent：文档阅读/整理/总结、多语言翻译；像 CC Switch 一样管理多个 API Key 并一键切换。",
+  description: "可接入任意 LLM 供应商的 AI 工作辅助 agent：文档阅读/整理/总结、多语言翻译；像 CC Switch 一样管理多个 API Key 并一键切换。启用后入口并入左侧功能列。",
   category: "integration",
   icon: "⚡",
   permissions: ["ui:mount", "storage:local", "api:read", "network:external"],
+  railEntry: { icon: "⚡", label: "Switch", title: "Switch 工作助手 · AI agent" },
   activate(ctx) {
     // 幂等：重复激活前先完整清理
     switchPlugin.deactivate?.();
     ctxRef = ctx;
     loadAgents();
     ensureStyle();
-    buildLauncher();
 
     panel = el("div", "sw-panel");
     panel.hidden = true;
@@ -581,7 +579,8 @@ export const switchPlugin: AgileCampusPlugin = {
     const composerRow = el("div", "sw-composer");
     composer = el("textarea", "sw-input");
     composer.rows = 1;
-    composer.placeholder = "输入任务，如「翻译成英文：你好」；Enter 发送，Shift+Enter 换行";
+    composer.placeholder = "输入任务，Enter 发送";
+    on(composer, "input", () => autosizeComposer());
     on(composer, "keydown", (e) => {
       const ev = e as KeyboardEvent;
       if (ev.key === "Enter" && !ev.shiftKey) {
@@ -698,12 +697,17 @@ export const switchPlugin: AgileCampusPlugin = {
 
     document.body.appendChild(panel);
 
-    // 全局交互：Esc 关闭、点击面板外关闭
+    // 全局交互：左侧栏入口事件开合面板；Esc 关闭；点击面板外关闭（栏位点击除外，交给开合逻辑）
+    on(document, RAIL_EVENT, (e) => {
+      if ((e as CustomEvent<{ pluginId?: string }>).detail?.pluginId !== "switch") return;
+      if (panel?.hidden) openPanel();
+      else closePanel();
+    });
     on(document, "keydown", (e) => {
       if ((e as KeyboardEvent).key === "Escape") closePanel();
     });
     on(document, "click", (e) => {
-      if (panel && !panel.hidden && !panel.contains(e.target as Node) && !launcher?.contains(e.target as Node)) {
+      if (panel && !panel.hidden && !panel.contains(e.target as Node) && !(e.target as HTMLElement)?.closest?.(".ws-rail")) {
         closePanel();
       }
     });
@@ -717,10 +721,8 @@ export const switchPlugin: AgileCampusPlugin = {
     offAll();
     if (toastTimer) clearTimeout(toastTimer);
     toastTimer = null;
-    launcher?.remove();
     panel?.remove();
     document.getElementById(STYLE_ID)?.remove();
-    launcher = null;
     panel = null;
     chatView = null;
     settingsView = null;

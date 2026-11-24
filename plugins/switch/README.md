@@ -1,6 +1,6 @@
 # Switch 工作助手（switch）
 
-按 AgileCampus 插件标准格式（`docs/PLUGIN-SPEC.md`）实现的内置插件。启用后页面左下角出现「Switch」悬浮入口，打开对话面板即可使用。
+按 AgileCampus 插件标准格式（`docs/PLUGIN-SPEC.md`）实现的内置插件。启用后插件图标「⚡」进入**工作台左侧功能列队尾**（云文档之后，声明 `railEntry`），点击开合对话面板。
 
 ## 功能说明
 
@@ -15,7 +15,7 @@ Switch 是一个 AI 工作辅助 agent，能力包括（但不限于）：
 
 | 权限 | 用途 |
 |---|---|
-| `ui:mount` | 挂载悬浮入口、对话面板、设置与文档选择界面；停用时全部移除 |
+| `ui:mount` | 挂载对话面板、设置与文档选择界面；停用时全部移除 |
 | `storage:local` | 在 `plugin.switch.*` 命名空间保存 Agent 配置（含 API Key）与当前选用项 |
 | `api:read` | 以当前登录态只读调用平台接口：`GET /api/docs`、`GET /api/docs/[id]`（用于文档阅读） |
 | `network:external` | 浏览器直连用户配置的 LLM 供应商地址（chat/completions、v1/messages） |
@@ -35,5 +35,10 @@ Switch 是一个 AI 工作辅助 agent，能力包括（但不限于）：
 ## 使用说明
 
 1. 打开「插件商城」（/plugins），启用「Switch 工作助手」。
-2. 点击页面左下角「Switch」打开面板 → ⚙ 设置 →「＋ 添加 Agent」，选择预设并填写 Base URL / API Key / 模型，保存。
-3. 面板顶部下拉选择当前 Agent（一键切换），输入任务或使用快捷指令。
+2. 点击工作台左侧功能列队尾的「⚡ Switch」打开面板 → ⚙ 设置 →「＋ 添加 Agent」，选择预设并填写 Base URL / API Key / 模型，保存。
+3. 面板顶部下拉选择当前 Agent（一键切换），输入任务或使用快捷指令；输入栏随内容自动增高（上限 150px）。
+
+## 界面定制
+
+- 控件表面/描边定义在 `.sw-panel` 局部变量（`--sw-surface` / `--sw-line`），并按 `html[data-theme="day"]` 整套切换：夜间提亮、日间暖棕，保证与面板背景区分。
+- 入口走宿主 `railEntry` 机制（详见 `docs/PLUGIN-SPEC.md`），插件自身不再渲染悬浮球。
