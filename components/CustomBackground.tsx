@@ -5,7 +5,7 @@
 // 半透明叠加在页面最底层，不改动任何已有页面布局，清除后完全还原。
 // 存储键 agile-custom-bg；跨页签同步走 storage 事件，同页签即时生效走自定义事件。
 // 读取用 useSyncExternalStore + 引用稳定的缓存快照（SSR 安全、避免 effect 内同步 setState）。
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
 export const CUSTOM_BG_KEY = "agile-custom-bg";
 export const CUSTOM_BG_EVENT = "agile-custom-bg-change";
@@ -70,18 +70,25 @@ export function useCustomBg(): CustomBgSetting {
 
 export function CustomBackground() {
   const bg = useCustomBg();
-  if (bg.mode === "none" || !bg.value) return null;
-  const isImage = bg.mode === "image";
-  return (
-    <div
-      id="custom-bg-layer"
-      aria-hidden
-      style={{
-        position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none",
-        backgroundImage: isImage ? `url("${bg.value.replace(/"/g, "%22")}")` : bg.value,
-        backgroundSize: "cover", backgroundPosition: "center",
-        opacity: isImage ? 0.22 : 0.55,
-      }}
-    />
-  );
+  const active = bg.mode !== "none" && !!bg.value;
+
+  // 背景直接画在 html 画布上（而不是叠一个 fixed 图层）：
+  // 画布永远在所有内容之下，不会像 z-index:-1 的图层那样被 body 的不透明底色挡住。
+  // data-custom-bg 同时通知各页面把壳体调成半透明，让氛围透出来。
+  useEffect(() => {
+    const root = document.documentElement;
+    if (!active) {
+      delete root.dataset.customBg;
+      root.style.removeProperty("--custom-bg-image");
+      return;
+    }
+    root.dataset.customBg = "1";
+    const image = bg.mode === "image"
+      // 图片模式压一层暗色薄纱，避免照片太抢文字
+      ? `linear-gradient(rgba(10,11,16,.62), rgba(10,11,16,.62)), url("${bg.value.replace(/"/g, "%22")}")`
+      : bg.value;
+    root.style.setProperty("--custom-bg-image", image);
+  }, [active, bg.mode, bg.value]);
+
+  return null;
 }
