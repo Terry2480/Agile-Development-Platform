@@ -1,19 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { api, daysUntil, type ActivityItem } from "@/lib/api-client";
 import { useWorkspace, Icon } from "./shared";
 import { canCreateSprint } from "@/lib/sprint-permissions";
 
 type SidebarMode = "compact" | "expanded" | "collapsed";
 
+/** 窄于该宽度时右栏默认收起，把整块宽度让给任务列表（T3 分级响应） */
+const COMPACT_BREAKPOINT = 1120;
+
+function subscribeNarrow(onChange: () => void) {
+  const mq = window.matchMedia(`(max-width:${COMPACT_BREAKPOINT}px)`);
+  mq.addEventListener("change", onChange);
+  return () => mq.removeEventListener("change", onChange);
+}
+
 export function ProjectActivitySidebar() {
   const ws = useWorkspace();
-  const [mode, setMode] = useState<SidebarMode>("compact");
+  // 用户手动展开/收起优先；未手动操作时，窄窗口默认收起
+  const [manual, setManual] = useState<SidebarMode | null>(null);
+  const narrow = useSyncExternalStore(
+    subscribeNarrow,
+    () => window.matchMedia(`(max-width:${COMPACT_BREAKPOINT}px)`).matches,
+    () => false,
+  );
+  const mode: SidebarMode = manual ?? (narrow ? "collapsed" : "compact");
   return (
     <aside className={`ws-activity-sidebar ${mode}`} aria-label="项目进度与日志">
       {mode === "collapsed" ? (
-        <button className="ws-activity-reopen" onClick={() => setMode("compact")} title="展开项目进度与日志" aria-expanded={false}>
+        <button className="ws-activity-reopen" onClick={() => setManual("compact")} title="展开项目进度与日志" aria-expanded={false}>
           <Icon name="flag" size={16} /><span>进度与日志</span><span>‹</span>
         </button>
       ) : (
@@ -21,10 +37,10 @@ export function ProjectActivitySidebar() {
           <header className="ws-activity-header">
             <b>{mode === "compact" ? "项目速览" : "进度与日志"}</b>
             <div>
-              <button onClick={() => setMode(mode === "compact" ? "expanded" : "compact")} aria-expanded={mode === "expanded"}>
+              <button onClick={() => setManual(mode === "compact" ? "expanded" : "compact")} aria-expanded={mode === "expanded"}>
                 {mode === "compact" ? "完整展开" : "速览"}
               </button>
-              <button title="收起整个侧边栏" aria-label="收起整个侧边栏" onClick={() => setMode("collapsed")}><Icon name="x" size={14} /></button>
+              <button title="收起整个侧边栏" aria-label="收起整个侧边栏" onClick={() => setManual("collapsed")}><Icon name="x" size={14} /></button>
             </div>
           </header>
           {ws.selectedId ? <ActivityContent key={ws.selectedId} compact={mode === "compact"} /> : <div className="ws-empty">选择项目查看进度与日志</div>}

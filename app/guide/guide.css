@@ -132,7 +132,7 @@
 .og-mock-stepbadge { position: absolute; right: 10px; top: 36px; font-size: 9px; color: #9aa3b2; background: rgba(255,255,255,.9); padding: 2px 7px; border-radius: 4px; }
 
 /* 底部操作 */
-.og-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 30px; padding-top: 22px; border-top: 1px solid var(--og-line); }
+.og-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 30px; padding: 22px 0 0; border-top: 1px solid var(--og-line); background: transparent; color: inherit; font-weight: inherit; }
 .og-btn { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; padding: 10px 20px; border-radius: 9px; cursor: pointer; border: 1px solid transparent; font-family: inherit; transition: .18s; text-decoration: none; }
 .og-btn.primary { background: var(--og-blue); color: #fff; }
 .og-btn.primary:hover { background: #1d365c; }

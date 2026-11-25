@@ -1096,6 +1096,12 @@
 .ac-footer {
   margin-top: 24px;
   border-top: 1px solid var(--ac-line);
+  /* globals.css 里旧落地页的 footer{background:var(--blue);padding:35px 6vw} 会命中本页页脚，
+     这里显式复位：页脚与页面同色，只留一条细分割线 */
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  font-weight: inherit;
 }
 
 .ac-footer__inner {

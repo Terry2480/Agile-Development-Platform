@@ -14,6 +14,7 @@ const ICON_PATHS: Record<string, string> = {
   chevronDown: "M5 9l7 7 7-7",
   collapse: "M8 3h11a2 2 0 012 2v11M5 7h10a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V9a2 2 0 012-2zM7 14h6",
   grid: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z",
+  menu: "M4 7h16M4 12h16M4 17h16",
   list: "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01",
   link: "M10 13a5 5 0 007 0l3-3a5 5 0 00-7-7l-2 2M14 11a5 5 0 00-7 0l-3 3a5 5 0 007 7l2-2",
   bell: "M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0",
@@ -104,6 +105,9 @@ export interface WorkspaceStore {
   setRailView(v: RailView): void;
   focusSection: FocusSection;
   setFocusSection(s: FocusSection): void;
+  // 窄窗口（<960）中间的项目列表改为抽屉：由顶栏 ≡ 开关，选中项目后自动关闭；最左侧图标栏始终保留
+  sidebarOpen: boolean;
+  setSidebarOpen(v: boolean): void;
   teams: Team[];
   projects: ProjectSummary[];
   selectedId: number | null;

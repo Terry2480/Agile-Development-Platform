@@ -62,14 +62,14 @@ git status --short --branch
 npx tsc --noEmit
 npm test
 npm run lint
-npx next build --webpack
+npm run build
 ```
 
 通过标准：`tsc` 退出码 0；`npm test` 除下文已知项外全部 pass；`lint` 0 error；`build` 退出码 0 且输出路由表。
 
-### 2.2 本机两个已知限制（不是代码缺陷）
+### 2.2 本机已知限制（不是代码缺陷）
 
-- **`next build` 必须带 `--webpack`**：本仓库 `node_modules` 是指向同级目录 `Agile-Development-Platform-terry\node_modules` 的目录联接（junction），Turbopack 会拒绝解析工作区以外的符号链接，报 `Symlink [project]/node_modules is invalid, it points out of the filesystem root`。服务器上是 `npm ci` 装出的真实目录，不受影响；本机用 `--webpack` 只是为了拿到同样有效的编译与类型结果。
+- **`node_modules` 必须是真实目录（2026-11-25 已修复）**：此前本仓库的 `node_modules` 是指向同级目录 `Agile-Development-Platform-terry\node_modules` 的目录联接（junction），Turbopack 会拒绝解析工作区以外的符号链接，报 `Symlink [project]/node_modules is invalid, it points out of the filesystem root`。现已改为项目内 `npm ci` 装出的真实目录，`npm run build`（Turbopack）可直接通过；只有重新建过 junction 的目录才需要退回 `npx next build --webpack`。
 - **`npm test` 需要显式测试库**：`tests/phase-2-baseline.test.mjs` 故意要求 `DATABASE_URL` 指向专用库 `agilecampus_test_20261112`；不设置时该项报 `explicit test DATABASE_URL is required`，这是环境前置条件，不是回归。把 `DATABASE_URL` 指向该库后为 **114 pass / 0 fail / 2 skipped**。
 
 ### 2.3 本次实测记录（2026-11-24，发布代码状态）
@@ -83,6 +83,29 @@ npx next build --webpack
 | 工作台首屏 A/B | 24 对交替样本：第一张卡 128.6→104.7 ms（-18.6%），见 `workspace-loading-measurement.md` |
 
 提交完成后已对最终提交重跑 2.1；部署时把实际提交号和结果填进第 16 节记录表。
+
+### 2.4 本轮（2026-11-25）回归记录：响应式与页脚修正
+
+改动范围：工作台响应式重构（`globals.css` / `workspace/page.tsx` / `TopBar.tsx` / `shared.tsx` / `ProjectActivitySidebar.tsx` / 新增 `WorkspaceShell.tsx`）、首页与导引页页脚配色（`home.css` / `guide/guide.css`）。
+
+| 命令 | 结果 |
+|---|---|
+| `npx tsc --noEmit` | 退出码 0，无输出 |
+| `npm test`（`DATABASE_URL` → `agilecampus_test_20261112`） | 114 pass / 0 fail / 2 skipped |
+| `npm run lint` | 0 error，0 warning |
+| `npm run build`（Turbopack，未经 `--webpack`） | 退出码 0，路由表完整输出 |
+
+浏览器实测（Chrome 无头 + 真实组件 + 接口 mock，1440×900 视口）：
+
+| 视口 | 左侧图标栏 | 项目列表 | 右侧概览 | 横向溢出 |
+|---|---|---|---|---|
+| 1600 | 0~64 | 64~314（常驻） | 248（速览） | 无 |
+| 1100 | 0~64 | 64~314（常驻） | 36（自动收起） | 无 |
+| 950 | 0~64 | 屏外 -250~0（`≡` 呼出） | 36 | 无 |
+| 780 | 0~64 | 屏外 -250~0（`≡` 呼出） | 36 | 无 |
+| 950（抽屉打开） | 0~64 | 64~314 + 遮罩 | 36 | 无 |
+
+另：首页深/浅两套主题页脚背景均为透明（旧落地页 `footer{background:var(--blue)}` 已复位），导引页底部操作条 padding 由 `22px 6vw 35px` 恢复为 `22px 0 0`。
 
 ---
 

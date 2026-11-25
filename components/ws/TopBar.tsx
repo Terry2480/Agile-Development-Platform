@@ -26,6 +26,18 @@ export function TopBar() {
 
   return (
     <header className="ws-topbar">
+      {/* 窄窗口（<960）项目列表收成抽屉，这里给它一个开关；宽窗口该按钮由 CSS 隐藏 */}
+      {ws.railView === "projects" && (
+        <button
+          className="ws-nav-toggle"
+          title={ws.sidebarOpen ? "收起项目列表" : "展开项目列表"}
+          aria-label="展开或收起项目列表"
+          aria-expanded={ws.sidebarOpen}
+          onClick={() => ws.setSidebarOpen(!ws.sidebarOpen)}
+        >
+          <Icon name="menu" size={17} />
+        </button>
+      )}
       <div className="ws-brand"><i>◇</i>AgileCampus</div>
 
       {/* 分区菜单降级为「项目视图」内的上下文标签：其他视图不显示，导航层级唯一化 */}

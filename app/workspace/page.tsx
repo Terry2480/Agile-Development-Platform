@@ -21,7 +21,7 @@ import { MessagesPanel } from "@/components/ws/MessagesPanel";
 import { DocumentsPanel } from "@/components/ws/documents/DocumentsPanel";
 import { TodayPanel } from "@/components/ws/TodayPanel";
 import { ShortcutsPanel } from "@/components/ws/ShortcutsPanel";
-import { ScaleFrame } from "@/components/ws/ScaleFrame";
+import { WorkspaceShell } from "@/components/ws/WorkspaceShell";
 import { ToastHost } from "@/components/ws/ToastHost";
 import { CommandPalette } from "@/components/ws/CommandPalette";
 import { TaskListSkeleton, ConversationSkeleton } from "@/components/ws/LoadingSkeleton";
@@ -67,6 +67,8 @@ export default function WorkspacePage() {
   /* ---------- 状态 ---------- */
   const [railView, setRailView] = useState<RailView>("projects");
   const [focusSection, setFocusSection] = useState<FocusSection>("tasks");
+  // 窄窗口（<960）下中间的项目列表收起为抽屉；最左侧功能图标栏始终保留
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [teams, setTeams] = useState<Team[]>([]);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -132,6 +134,7 @@ export default function WorkspacePage() {
     setSelectedId(id);
     setDetail(null); setTasks([]); setChat([]); setActivities([]); setFiles([]);
     setDrawerTaskId(null); setTaskSearch(""); setNotice("");
+    setSidebarOpen(false);
     setModal((m) => m?.type === "newTeam" || m?.type === "newProject" ? m : null);
     setLoads((prev) => {
       const next = { ...prev };
@@ -385,8 +388,9 @@ export default function WorkspacePage() {
 
   const store: WorkspaceStore = useMemo(() => ({
     me: me!,
-    railView, setRailView: (view) => { gate.cancel(["notificationNavigation"]); setRailView(view); },
+    railView, setRailView: (view) => { gate.cancel(["notificationNavigation"]); setSidebarOpen(false); setRailView(view); },
     focusSection, setFocusSection: (section) => { gate.cancel(["notificationNavigation"]); setFocusSection(section); },
+    sidebarOpen, setSidebarOpen,
     teams, projects, selectedId, detail, tasks, myTasks, chat, activities, files,
     notifications, unreadCount, overview,
     dmConversations, dmUnreadTotal, dmTargetId, dmsLoaded,
@@ -566,7 +570,7 @@ export default function WorkspacePage() {
       } finally { request.finish(); }
     },
   }), [
-    me, railView, focusSection, teams, projects, selectedId, detail, tasks, myTasks, chat,
+    me, railView, focusSection, sidebarOpen, teams, projects, selectedId, detail, tasks, myTasks, chat,
     activities, files, notifications, unreadCount, overview, dmConversations, dmUnreadTotal, dmTargetId, dmsLoaded, docTarget,
     taskSearch, modal, drawerTaskId,
     selectProject, refreshProjects, refreshProjectData, refreshTasks, refreshChat,
@@ -593,10 +597,13 @@ export default function WorkspacePage() {
 
   return (
     <WorkspaceContext.Provider value={store}>
-      <ScaleFrame>
-        <div className="ws-app">
+      <WorkspaceShell>
+        <div className={`ws-app${sidebarOpen ? " sidebar-open" : ""}`}>
         <IconRail />
         {railView === "projects" && <ProjectSidebar />}
+        {railView === "projects" && sidebarOpen && (
+          <button className="ws-sidebar-backdrop" aria-label="关闭项目列表" onClick={() => setSidebarOpen(false)} />
+        )}
 
         <div className="ws-main">
           <TopBar />
@@ -638,7 +645,7 @@ export default function WorkspacePage() {
       {modal?.type === "newTask" && (selectedId ? <NewTaskModal onClose={() => setModal(null)} /> : null)}
       {modal?.type === "newSprint" && (selectedId ? <NewSprintModal onClose={() => setModal(null)} /> : null)}
       {modal?.type === "invite" && (detail ? <InviteModal onClose={() => setModal(null)} /> : null)}
-      </ScaleFrame>
+      </WorkspaceShell>
 
       <ToastHost />
       <CommandPalette />

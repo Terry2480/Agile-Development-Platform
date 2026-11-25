@@ -146,7 +146,7 @@
 .ws-duty-edit{align-self:flex-start;background:transparent;border:0;color:var(--ws-color-8fa9e6);font-size:12px;padding:3px 0;cursor:pointer}
 .ws-duty-edit:hover{color:var(--ws-color-fff)}
 .ws-team-identity .ws-team-note{margin:0;font-size:11px;line-height:1.5}
-@media(max-width:900px){.ws-team-summary{flex-wrap:wrap}.ws-team-summary>span{margin-left:0}.ws-topbar{height:auto;min-height:54px;flex-wrap:wrap;padding:10px 18px}.ws-top-menu{flex-wrap:wrap}.ws-top-right{margin-left:0}}
+@media(max-width:959px){.ws-team-summary{flex-wrap:wrap}.ws-team-summary>span{margin-left:0}}
 .ws-statusbar{height:27px;background:var(--ws-color-0a0b10);border-top:1px solid var(--ws-color-1c1e28);display:flex;align-items:center;gap:9px;padding:0 16px;font-size:11px;color:var(--ws-color-5d6273);flex-shrink:0}
 .ws-dot{width:7px;height:7px;border-radius:50%;background:var(--ws-color-6f9bff)}
 /* ── 任务面板 ── */
@@ -343,9 +343,25 @@
 .ws-activity-reopen:hover{background:var(--ws-color-1b2030)}
 @media(max-width:1000px){.ws-activity-sidebar.expanded{width:280px}.ws-activity-sidebar.compact{width:210px;margin:10px 10px 0 0}.ws-activity-header{padding:10px}}
 @media(max-width:700px){.ws-body{position:relative}.ws-activity-sidebar:not(.collapsed){position:absolute;right:0;top:0;bottom:0;max-width:calc(100% - 24px);z-index:20;box-shadow:-10px 0 30px var(--ws-color-0006)}.ws-activity-sidebar.compact{bottom:auto;max-height:calc(100% - 20px)}}
-@media(max-width:1400px){.ws-space{display:none}}
-@media(max-width:1120px){.ws-chat{display:none}.ws-searchbox{width:150px}}
-@media(max-width:860px){.ws-sidebar{width:200px}.ws-top-menu{display:none}}
+/* ══════════ 分级响应：窗口变窄时按信息价值逐级收敛，不再整体等比缩放 ══════════ */
+/* T1 ≥1280：桌面态，一条规则都不加（设计基准宽度，字号与面板尺寸不变） */
+/* T2 1120–1279：只收紧密度，三栏结构保持完整 */
+@media(max-width:1279px){.ws-center{padding:16px 18px 56px}.ws-searchbox{width:190px}.ws-task-filter-bar{margin:10px 0 16px}.ws-board-columns{grid-template-columns:repeat(3,minmax(220px,1fr))}}
+/* T3 960–1119：右侧「项目概览」默认收起（ProjectActivitySidebar 内自动切换），搜索框进一步收窄 */
+@media(max-width:1119px){.ws-searchbox{width:150px}.ws-searchbox kbd{display:none}}
+/* 窄窗口才出现的「项目列表」抽屉开关；桌面态隐藏 */
+.ws-nav-toggle{display:none;place-items:center;width:34px;height:34px;border:1px solid var(--ws-color-262a38);border-radius:8px;background:var(--ws-color-191b26);color:var(--ws-color-9aa1b5);cursor:pointer;flex-shrink:0}
+.ws-nav-toggle:hover{color:var(--ws-color-e8eaf2);border-color:var(--ws-color-3b6ef5)}
+/* 抽屉遮罩：只盖工作区，不盖最左侧图标栏；宽窗口不启用 */
+.ws-sidebar-backdrop{position:fixed;left:64px;top:0;right:0;bottom:0;z-index:35;border:0;padding:0;background:var(--ws-color-0006);cursor:default}
+@media(min-width:960px){.ws-sidebar-backdrop{display:none}}
+/* T4 960 以下：中间「项目列表」收起为抽屉（默认隐藏），最左侧功能图标栏永久保留，内容区拿满宽度 */
+@media(max-width:959px){.ws-sidebar{position:fixed;left:64px;top:0;bottom:0;z-index:40;width:250px;box-shadow:12px 0 32px var(--ws-color-0003);transform:translateX(calc(-100% - 64px));transition:transform .18s ease}.ws-app.sidebar-open .ws-sidebar{transform:none}.ws-nav-toggle{display:grid}.ws-brand{display:none}.ws-topbar{gap:10px;padding:0 12px}.ws-top-menu button{padding:5px 8px;font-size:12px}.ws-center{padding:14px 14px 56px}}
+/* T5 极窄（<760）：不设硬下限、不做缩放，继续自然收缩——顶栏只留必需入口（导引仍可从左侧图标栏进入，列表过滤用 Ctrl K） */
+@media(max-width:759px){.ws-searchbox{display:none}.ws-guide-entry{display:none}.ws-topbar{gap:8px;padding:0 10px}.ws-top-menu{overflow-x:auto;scrollbar-width:none}.ws-top-menu::-webkit-scrollbar{display:none}.ws-top-menu button{padding:4px 6px;font-size:12px}.ws-center{padding:12px 10px 56px}.ws-activity-sidebar.collapsed{width:30px}}
+
+
+
 
 .ws-rail .ws-rail-management{height:54px;width:56px;flex-direction:column;gap:2px;align-content:center}.ws-rail-management small{font-size:11px;white-space:nowrap;letter-spacing:.02em}.ws-management{max-width:1200px;margin:0 auto}.ws-management>.ws-input{max-width:420px;margin:12px 0}.ws-management-list{display:grid;gap:14px;margin:12px 0 32px}.ws-management-card{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:22px;background:var(--ws-color-141722);border:1px solid var(--ws-color-262a38);border-radius:12px}.ws-management-card>div:first-child{min-width:0}.ws-management-card h3{margin:0 0 10px;font-size:16px;overflow-wrap:anywhere}.ws-management-card p{font-size:13px;color:var(--ws-color-9aa1b5);overflow-wrap:anywhere}.ws-management-card small{color:var(--ws-color-7c8194)}.ws-management-actions{display:flex;gap:10px;flex-shrink:0}@media(max-width:700px){.ws-management-card{align-items:flex-start;flex-direction:column}.ws-management-actions{flex-wrap:wrap}}
 
@@ -466,30 +482,15 @@ html[data-theme="day"] .ws-task-description{background:#fffaf2;border-color:#b6a
 .ws-doc-version-actions{display:flex;gap:8px;flex-shrink:0}
 .ws-doc-version-preview{margin-top:14px;border:1px solid var(--ws-color-262a38);border-radius:10px;padding:14px 16px;max-height:280px;overflow-y:auto;background:var(--ws-color-11141c)}
 
-/* ══════════ 等比缩放：工作台固定 1280px 设计宽度整屏渲染，窗口变窄整体等比缩小 ══════════ */
+/* ══════════ 等比缩放：1280px 为工作台最小设计宽度，宽屏铺满视口，窄屏整体等比缩小 ══════════ */
 /* 缩放容器（见 components/ws/ScaleFrame.tsx）；颜色全部沿用调色板变量，昼夜主题不受影响 */
 .ws-scale-root{position:fixed;inset:0;overflow:hidden;background:var(--ws-color-0d0e14)}
+/* 画布铺满后，右侧 scrollbar-gutter 槽位会露出 html/body 的浅色画布（--bg）——
+   只在该页面把画布染成工作台底色，避免屏幕最右侧出现一条浅色竖线 */
+body:has(.ws-scale-root){background:var(--ws-color-0d0e14)}
+.ws-scale-frame{width:100%;height:100%}
 .ws-scale-frame .ws-app{height:100%}
-/* frame 内布局宽度恒 ≥1280px，而媒体查询按“真实窗口”判断会在窄窗口误触发重排/隐藏——
-   以下覆盖仅把各元素还原为 v4 桌面态的布局值（宽度/显示/定位），不改动任何配色 */
-.ws-scale-frame .ws-topbar{height:54px;min-height:54px;flex-wrap:nowrap;padding:0 18px}
-.ws-scale-frame .ws-top-menu{display:flex;flex-wrap:nowrap}
-.ws-scale-frame .ws-top-right{margin-left:auto}
-.ws-scale-frame .ws-searchbox{width:230px}
-.ws-scale-frame .ws-sidebar{width:250px}
-.ws-scale-frame .ws-chat{display:flex}
-.ws-scale-frame .ws-space{display:block}
-.ws-scale-frame .ws-body{position:static}
-.ws-scale-frame .ws-activity-sidebar:not(.collapsed){position:static;right:auto;top:auto;bottom:auto;max-width:40%;z-index:auto;box-shadow:none}
-.ws-scale-frame .ws-activity-sidebar.expanded{width:340px}
-.ws-scale-frame .ws-activity-sidebar.compact{width:248px;margin:16px 16px 0 0;bottom:auto;max-height:min(430px,calc(100% - 32px));box-shadow:0 8px 24px var(--ws-color-0003)}
-.ws-scale-frame .ws-activity-header{padding:14px 16px}
-.ws-scale-frame .ws-board-columns{grid-template-columns:repeat(3,minmax(250px,1fr))}
-.ws-scale-frame .ws-team-summary{flex-wrap:nowrap}
-.ws-scale-frame .ws-team-summary>span{margin-left:auto}
-.ws-scale-frame .ws-management-card{align-items:center;flex-direction:row;padding-bottom:54px}
-.ws-scale-frame .ws-management-actions{flex-wrap:nowrap}
-/* 用视口单位(vw/vh)计量的浮层改为固定设计宽度/百分比计量，保证缩放后比例一致 */
+/* 浮层尺寸沿用设计值（浮层原用 vw/vh 计量，并入工作台后统一为固定宽度） */
 .ws-scale-frame .ws-drawer{width:480px}
 .ws-scale-frame .ws-drawer.wide{width:820px}
 .ws-scale-frame .ws-modal{width:440px;max-height:86%}
