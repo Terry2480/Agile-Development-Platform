@@ -70,7 +70,8 @@ npm run build
 ### 2.2 本机已知限制（不是代码缺陷）
 
 - **`node_modules` 必须是真实目录（2026-11-25 已修复）**：此前本仓库的 `node_modules` 是指向同级目录 `Agile-Development-Platform-terry\node_modules` 的目录联接（junction），Turbopack 会拒绝解析工作区以外的符号链接，报 `Symlink [project]/node_modules is invalid, it points out of the filesystem root`。现已改为项目内 `npm ci` 装出的真实目录，`npm run build`（Turbopack）可直接通过；只有重新建过 junction 的目录才需要退回 `npx next build --webpack`。
-- **`npm test` 需要显式测试库**：`tests/phase-2-baseline.test.mjs` 故意要求 `DATABASE_URL` 指向专用库 `agilecampus_test_20261112`；不设置时该项报 `explicit test DATABASE_URL is required`，这是环境前置条件，不是回归。把 `DATABASE_URL` 指向该库后为 **114 pass / 0 fail / 2 skipped**。
+- **`npm test` 需要显式测试库**：`tests/phase-2-baseline.test.mjs` 故意要求 `DATABASE_URL` 指向专用库 `agilecampus_test_20261112`；不设置时该项报 `explicit test DATABASE_URL is required`，这是环境前置条件，不是回归。把 `DATABASE_URL` 指向该库后为 **115 pass / 0 fail / 2 skipped**。
+- **`AUTH_ALLOWED_ORIGINS` 会拦住本地写操作（2026-11-25 已修）**：旧实现在该变量非空时，只在「未配置白名单」的情况下才放行 localhost 同源请求；`.env.local` 里遗留的 `http://localhost:3113`（11-24 性能测量时留下）会让 `localhost:3000` 上的保存、新建等写操作一律返回 403「不允许来自该网站的操作请求」。现在开发环境只要 Origin 与请求地址同源就放行，生产环境仍必须显式配置 https 白名单。
 
 ### 2.3 本次实测记录（2026-11-24，发布代码状态）
 
@@ -91,9 +92,11 @@ npm run build
 | 命令 | 结果 |
 |---|---|
 | `npx tsc --noEmit` | 退出码 0，无输出 |
-| `npm test`（`DATABASE_URL` → `agilecampus_test_20261112`） | 114 pass / 0 fail / 2 skipped |
+| `npm test`（`DATABASE_URL` → `agilecampus_test_20261112`） | 115 pass / 0 fail / 2 skipped |
 | `npm run lint` | 0 error，0 warning |
 | `npm run build`（Turbopack，未经 `--webpack`） | 退出码 0，路由表完整输出 |
+
+另：本机 `localhost:3000` 的写操作曾因 `.env.local` 遗留 `AUTH_ALLOWED_ORIGINS=http://localhost:3113` 返回 403，已放宽为「开发环境同源即放行」并补了回归用例（`tests/request-security.test.mjs`）。
 
 浏览器实测（Chrome 无头 + 真实组件 + 接口 mock，1440×900 视口）：
 

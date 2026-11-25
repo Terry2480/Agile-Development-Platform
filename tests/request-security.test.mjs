@@ -23,3 +23,12 @@ test("referer fallback is checked and invalid configuration is rejected", () => 
   assert.equal(checkRequestOrigin(req, true, "https://app.example.com"), null);
   assert.equal(checkRequestOrigin(req, true, "https://app.example.com/").status, 503);
 });
+test("开发环境不会因为遗留白名单拒绝同源写请求", () => {
+  // 回归：.env.local 里残留 AUTH_ALLOWED_ORIGINS=http://localhost:3113 时，
+  // 本地 localhost:3000 上的保存操作曾被 403「不允许来自该网站的操作请求」拦掉。
+  const stale = "http://localhost:3113,http://127.0.0.1:3113";
+  assert.equal(checkRequestOrigin(request("http://localhost:3000", "POST", "http://localhost:3000/api/users/me"), false, stale), null);
+  assert.equal(checkRequestOrigin(request("http://192.168.1.5:3000", "POST", "http://192.168.1.5:3000/api/users/me"), false, stale), null);
+  // 跨源请求在开发环境同样拒绝
+  assert.equal(checkRequestOrigin(request("http://evil.example", "POST", "http://localhost:3000/api/users/me"), false, stale).status, 403);
+});
