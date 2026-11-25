@@ -713,3 +713,26 @@ systemctl start agile-platform
 | 文档系统：原库已装 / 本次首装 | |
 | 服务恢复时间 | |
 | 验收人 / 验收时间 | |
+
+### 16.1 增量发布记录 · 2026-11-25（响应式 / 页脚 / 自定义背景 / 来源校验）
+
+本次是在 11-24 演示实例基础上的一次**代码增量发布**：不重建演示库、不动 `.env.local`、不跑迁移。
+
+| 阶段 | 操作 | 时间 | 实际命令或操作 | 结果 |
+|---|---|---|---|---|
+| A | 本机预检 | 11-25 16:39 | `tsc --noEmit` / `npm test`（`DATABASE_URL`→`agilecampus_test_20261112`）/ `eslint .` / `npm run build` | tsc 0、**115 pass / 0 fail / 2 skipped**、lint 0、build `Compiled successfully in 5.2s` |
+| B | 锁定发布提交 | 11-25 16:40 | `git push origin terry/v74-project-docs`（本地代理 7890 未启动，改用 `-c http.proxy=` 直连成功） | `ff43b41..95cf4ba` |
+| C | 服务器只读盘点 | 11-25 16:40 | `systemctl is-active`、`git rev-parse`、`df -h`、`curl 127.0.0.1:3000/login` | 服务 active、HEAD `ff43b41`（detached）、磁盘 17%、`/login` 200 |
+| D/E/G/H | — | — | 本次不需要：演示库 `agilecampus_demo`、`.env.local`、表结构均沿用 11-24 结果 | — |
+| F | 更新代码 | 11-25 16:41 | `git fetch origin terry/v74-project-docs` → `git checkout -f 95cf4ba` | HEAD `95cf4ba`；依赖未变，未执行 `npm ci` |
+| I | 构建、启动、探活 | 11-25 16:42 | `systemctl stop` → `mv .next .next.bak` → `runuser -u agile -- npm run build` → `systemctl start` | 构建成功；服务 active；`/login` `/` `/workspace` 均 200；`Ready in 348ms`，日志无报错 |
+| I | 产物核对 | 11-25 16:44 | `find .next -name "*.css"` + `grep data-custom-bg` | 新规则已进产物（`.next/static/chunks/0qd2-00l_slcu.css`） |
+| L | 公网验收 | 11-25 16:45 | Playwright 打开 `https://39.96.70.129`：首页标题/H1 正常、页脚背景透明、设置自定义背景后 `html[data-custom-bg]` 生效、登录页表单正常 | 通过；控制台仅有未登录访问用户接口的 401（预期） |
+
+| 记录项 | 值 |
+|---|---|
+| 目标提交 | `95cf4ba` |
+| 回退提交 | `ff43b41` |
+| 旧构建备份 | `/var/www/agile-platform/.next.bak`（确认无问题后可删除） |
+| 回滚方式 | `systemctl stop agile-platform && rm -rf .next && mv .next.bak .next && git checkout -f ff43b41 && systemctl start agile-platform` |
+| 服务恢复时间 | 11-25 16:43（停机约 90 秒，期间仅构建） |
